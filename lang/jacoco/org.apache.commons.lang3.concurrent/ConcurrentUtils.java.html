@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConcurrentUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Lang</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.lang3.concurrent</a> &gt; <span class="el_source">ConcurrentUtils.java</span></div><h1>ConcurrentUtils.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.lang3.concurrent;
+
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.lang3.Validate;
+
+/**
+ * &lt;p&gt;
+ * An utility class providing functionality related to the {@code
+ * java.util.concurrent} package.
+ * &lt;/p&gt;
+ *
+ * @since 3.0
+ */
+public class ConcurrentUtils {
+
+    /**
+     * Private constructor so that no instances can be created. This class
+     * contains only static utility methods.
+     */
+<span class="nc" id="L40">    private ConcurrentUtils() {</span>
+<span class="nc" id="L41">    }</span>
+
+    /**
+     * Inspects the cause of the specified {@code ExecutionException} and
+     * creates a {@code ConcurrentException} with the checked cause if
+     * necessary. This method performs the following checks on the cause of the
+     * passed in exception:
+     * &lt;ul&gt;
+     * &lt;li&gt;If the passed in exception is &lt;b&gt;null&lt;/b&gt; or the cause is
+     * &lt;b&gt;null&lt;/b&gt;, this method returns &lt;b&gt;null&lt;/b&gt;.&lt;/li&gt;
+     * &lt;li&gt;If the cause is a runtime exception, it is directly thrown.&lt;/li&gt;
+     * &lt;li&gt;If the cause is an error, it is directly thrown, too.&lt;/li&gt;
+     * &lt;li&gt;In any other case the cause is a checked exception. The method then
+     * creates a {@link ConcurrentException}, initializes it with the cause, and
+     * returns it.&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * @param ex the exception to be processed
+     * @return a {@code ConcurrentException} with the checked cause
+     */
+    public static ConcurrentException extractCause(final ExecutionException ex) {
+<span class="fc bfc" id="L62" title="All 4 branches covered.">        if (ex == null || ex.getCause() == null) {</span>
+<span class="fc" id="L63">            return null;</span>
+        }
+
+<span class="fc" id="L66">        throwCause(ex);</span>
+<span class="fc" id="L67">        return new ConcurrentException(ex.getMessage(), ex.getCause());</span>
+    }
+
+    /**
+     * Inspects the cause of the specified {@code ExecutionException} and
+     * creates a {@code ConcurrentRuntimeException} with the checked cause if
+     * necessary. This method works exactly like
+     * {@link #extractCause(ExecutionException)}. The only difference is that
+     * the cause of the specified {@code ExecutionException} is extracted as a
+     * runtime exception. This is an alternative for client code that does not
+     * want to deal with checked exceptions.
+     *
+     * @param ex the exception to be processed
+     * @return a {@code ConcurrentRuntimeException} with the checked cause
+     */
+    public static ConcurrentRuntimeException extractCauseUnchecked(
+            final ExecutionException ex) {
+<span class="fc bfc" id="L84" title="All 4 branches covered.">        if (ex == null || ex.getCause() == null) {</span>
+<span class="fc" id="L85">            return null;</span>
+        }
+
+<span class="fc" id="L88">        throwCause(ex);</span>
+<span class="fc" id="L89">        return new ConcurrentRuntimeException(ex.getMessage(), ex.getCause());</span>
+    }
+
+    /**
+     * Handles the specified {@code ExecutionException}. This method calls
+     * {@link #extractCause(ExecutionException)} for obtaining the cause of the
+     * exception - which might already cause an unchecked exception or an error
+     * being thrown. If the cause is a checked exception however, it is wrapped
+     * in a {@code ConcurrentException}, which is thrown. If the passed in
+     * exception is &lt;b&gt;null&lt;/b&gt; or has no cause, the method simply returns
+     * without throwing an exception.
+     *
+     * @param ex the exception to be handled
+     * @throws ConcurrentException if the cause of the {@code
+     * ExecutionException} is a checked exception
+     */
+    public static void handleCause(final ExecutionException ex)
+            throws ConcurrentException {
+<span class="fc" id="L107">        final ConcurrentException cex = extractCause(ex);</span>
+
+<span class="fc bfc" id="L109" title="All 2 branches covered.">        if (cex != null) {</span>
+<span class="fc" id="L110">            throw cex;</span>
+        }
+<span class="fc" id="L112">    }</span>
+
+    /**
+     * Handles the specified {@code ExecutionException} and transforms it into a
+     * runtime exception. This method works exactly like
+     * {@link #handleCause(ExecutionException)}, but instead of a
+     * {@link ConcurrentException} it throws a
+     * {@link ConcurrentRuntimeException}. This is an alternative for client
+     * code that does not want to deal with checked exceptions.
+     *
+     * @param ex the exception to be handled
+     * @throws ConcurrentRuntimeException if the cause of the {@code
+     * ExecutionException} is a checked exception; this exception is then
+     * wrapped in the thrown runtime exception
+     */
+    public static void handleCauseUnchecked(final ExecutionException ex) {
+<span class="fc" id="L128">        final ConcurrentRuntimeException crex = extractCauseUnchecked(ex);</span>
+
+<span class="fc bfc" id="L130" title="All 2 branches covered.">        if (crex != null) {</span>
+<span class="fc" id="L131">            throw crex;</span>
+        }
+<span class="fc" id="L133">    }</span>
+
+    /**
+     * Tests whether the specified {@code Throwable} is a checked exception. If
+     * not, an exception is thrown.
+     *
+     * @param ex the {@code Throwable} to check
+     * @return a flag whether the passed in exception is a checked exception
+     * @throws IllegalArgumentException if the {@code Throwable} is not a
+     * checked exception
+     */
+    static Throwable checkedException(final Throwable ex) {
+<span class="fc bfc" id="L145" title="All 4 branches covered.">        Validate.isTrue(ex != null &amp;&amp; !(ex instanceof RuntimeException)</span>
+<span class="fc bfc" id="L146" title="All 2 branches covered.">                &amp;&amp; !(ex instanceof Error), &quot;Not a checked exception: &quot; + ex);</span>
+
+<span class="fc" id="L148">        return ex;</span>
+    }
+
+    /**
+     * Tests whether the cause of the specified {@code ExecutionException}
+     * should be thrown and does it if necessary.
+     *
+     * @param ex the exception in question
+     */
+    private static void throwCause(final ExecutionException ex) {
+<span class="fc bfc" id="L158" title="All 2 branches covered.">        if (ex.getCause() instanceof RuntimeException) {</span>
+<span class="fc" id="L159">            throw (RuntimeException) ex.getCause();</span>
+        }
+
+<span class="fc bfc" id="L162" title="All 2 branches covered.">        if (ex.getCause() instanceof Error) {</span>
+<span class="fc" id="L163">            throw (Error) ex.getCause();</span>
+        }
+<span class="fc" id="L165">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Invokes the specified {@code ConcurrentInitializer} and returns the
+     * object produced by the initializer. This method just invokes the {@code
+     * get()} method of the given {@code ConcurrentInitializer}. It is
+     * &lt;b&gt;null&lt;/b&gt;-safe: if the argument is &lt;b&gt;null&lt;/b&gt;, result is also
+     * &lt;b&gt;null&lt;/b&gt;.
+     *
+     * @param &lt;T&gt; the type of the object produced by the initializer
+     * @param initializer the {@code ConcurrentInitializer} to be invoked
+     * @return the object managed by the {@code ConcurrentInitializer}
+     * @throws ConcurrentException if the {@code ConcurrentInitializer} throws
+     * an exception
+     */
+    public static &lt;T&gt; T initialize(final ConcurrentInitializer&lt;T&gt; initializer)
+            throws ConcurrentException {
+<span class="fc bfc" id="L183" title="All 2 branches covered.">        return initializer != null ? initializer.get() : null;</span>
+    }
+
+    /**
+     * Invokes the specified {@code ConcurrentInitializer} and transforms
+     * occurring exceptions to runtime exceptions. This method works like
+     * {@link #initialize(ConcurrentInitializer)}, but if the {@code
+     * ConcurrentInitializer} throws a {@link ConcurrentException}, it is
+     * caught, and the cause is wrapped in a {@link ConcurrentRuntimeException}.
+     * So client code does not have to deal with checked exceptions.
+     *
+     * @param &lt;T&gt; the type of the object produced by the initializer
+     * @param initializer the {@code ConcurrentInitializer} to be invoked
+     * @return the object managed by the {@code ConcurrentInitializer}
+     * @throws ConcurrentRuntimeException if the initializer throws an exception
+     */
+    public static &lt;T&gt; T initializeUnchecked(final ConcurrentInitializer&lt;T&gt; initializer) {
+        try {
+<span class="fc" id="L201">            return initialize(initializer);</span>
+<span class="fc" id="L202">        } catch (final ConcurrentException cex) {</span>
+<span class="fc" id="L203">            throw new ConcurrentRuntimeException(cex.getCause());</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;
+     * Puts a value in the specified {@code ConcurrentMap} if the key is not yet
+     * present. This method works similar to the {@code putIfAbsent()} method of
+     * the {@code ConcurrentMap} interface, but the value returned is different.
+     * Basically, this method is equivalent to the following code fragment:
+     * &lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * if (!map.containsKey(key)) {
+     *     map.put(key, value);
+     *     return value;
+     * } else {
+     *     return map.get(key);
+     * }
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;
+     * except that the action is performed atomically. So this method always
+     * returns the value which is stored in the map.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This method is &lt;b&gt;null&lt;/b&gt;-safe: It accepts a &lt;b&gt;null&lt;/b&gt; map as input
+     * without throwing an exception. In this case the return value is
+     * &lt;b&gt;null&lt;/b&gt;, too.
+     * &lt;/p&gt;
+     *
+     * @param &lt;K&gt; the type of the keys of the map
+     * @param &lt;V&gt; the type of the values of the map
+     * @param map the map to be modified
+     * @param key the key of the value to be added
+     * @param value the value to be added
+     * @return the value stored in the map after this operation
+     */
+    public static &lt;K, V&gt; V putIfAbsent(final ConcurrentMap&lt;K, V&gt; map, final K key, final V value) {
+<span class="fc bfc" id="L243" title="All 2 branches covered.">        if (map == null) {</span>
+<span class="fc" id="L244">            return null;</span>
+        }
+
+<span class="fc" id="L247">        final V result = map.putIfAbsent(key, value);</span>
+<span class="fc bfc" id="L248" title="All 2 branches covered.">        return result != null ? result : value;</span>
+    }
+
+    /**
+     * Checks if a concurrent map contains a key and creates a corresponding
+     * value if not. This method first checks the presence of the key in the
+     * given map. If it is already contained, its value is returned. Otherwise
+     * the {@code get()} method of the passed in {@link ConcurrentInitializer}
+     * is called. With the resulting object
+     * {@link #putIfAbsent(ConcurrentMap, Object, Object)} is called. This
+     * handles the case that in the meantime another thread has added the key to
+     * the map. Both the map and the initializer can be &lt;b&gt;null&lt;/b&gt;; in this
+     * case this method simply returns &lt;b&gt;null&lt;/b&gt;.
+     *
+     * @param &lt;K&gt; the type of the keys of the map
+     * @param &lt;V&gt; the type of the values of the map
+     * @param map the map to be modified
+     * @param key the key of the value to be added
+     * @param init the {@link ConcurrentInitializer} for creating the value
+     * @return the value stored in the map after this operation; this may or may
+     * not be the object created by the {@link ConcurrentInitializer}
+     * @throws ConcurrentException if the initializer throws an exception
+     */
+    public static &lt;K, V&gt; V createIfAbsent(final ConcurrentMap&lt;K, V&gt; map, final K key,
+            final ConcurrentInitializer&lt;V&gt; init) throws ConcurrentException {
+<span class="fc bfc" id="L273" title="All 4 branches covered.">        if (map == null || init == null) {</span>
+<span class="fc" id="L274">            return null;</span>
+        }
+
+<span class="fc" id="L277">        final V value = map.get(key);</span>
+<span class="fc bfc" id="L278" title="All 2 branches covered.">        if (value == null) {</span>
+<span class="fc" id="L279">            return putIfAbsent(map, key, init.get());</span>
+        }
+<span class="fc" id="L281">        return value;</span>
+    }
+
+    /**
+     * Checks if a concurrent map contains a key and creates a corresponding
+     * value if not, suppressing checked exceptions. This method calls
+     * {@code createIfAbsent()}. If a {@link ConcurrentException} is thrown, it
+     * is caught and re-thrown as a {@link ConcurrentRuntimeException}.
+     *
+     * @param &lt;K&gt; the type of the keys of the map
+     * @param &lt;V&gt; the type of the values of the map
+     * @param map the map to be modified
+     * @param key the key of the value to be added
+     * @param init the {@link ConcurrentInitializer} for creating the value
+     * @return the value stored in the map after this operation; this may or may
+     * not be the object created by the {@link ConcurrentInitializer}
+     * @throws ConcurrentRuntimeException if the initializer throws an exception
+     */
+    public static &lt;K, V&gt; V createIfAbsentUnchecked(final ConcurrentMap&lt;K, V&gt; map,
+            final K key, final ConcurrentInitializer&lt;V&gt; init) {
+        try {
+<span class="fc" id="L302">            return createIfAbsent(map, key, init);</span>
+<span class="fc" id="L303">        } catch (final ConcurrentException cex) {</span>
+<span class="fc" id="L304">            throw new ConcurrentRuntimeException(cex.getCause());</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;
+     * Gets an implementation of &lt;code&gt;Future&lt;/code&gt; that is immediately done
+     * and returns the specified constant value.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This can be useful to return a simple constant immediately from the
+     * concurrent processing, perhaps as part of avoiding nulls.
+     * A constant future can also be useful in testing.
+     * &lt;/p&gt;
+     *
+     * @param &lt;T&gt; the type of the value used by this {@code Future} object
+     * @param value  the constant value to return, may be null
+     * @return an instance of Future that will return the value, never null
+     */
+    public static &lt;T&gt; Future&lt;T&gt; constantFuture(final T value) {
+<span class="fc" id="L325">        return new ConstantFuture&lt;&gt;(value);</span>
+    }
+
+    /**
+     * A specialized {@code Future} implementation which wraps a constant value.
+     * @param &lt;T&gt; the type of the value wrapped by this class
+     */
+    static final class ConstantFuture&lt;T&gt; implements Future&lt;T&gt; {
+        /** The constant value. */
+        private final T value;
+
+        /**
+         * Creates a new instance of {@code ConstantFuture} and initializes it
+         * with the constant value.
+         *
+         * @param value the value (may be &lt;b&gt;null&lt;/b&gt;)
+         */
+<span class="fc" id="L342">        ConstantFuture(final T value) {</span>
+<span class="fc" id="L343">            this.value = value;</span>
+<span class="fc" id="L344">        }</span>
+
+        /**
+         * {@inheritDoc} This implementation always returns &lt;b&gt;true&lt;/b&gt; because
+         * the constant object managed by this {@code Future} implementation is
+         * always available.
+         */
+        @Override
+        public boolean isDone() {
+<span class="fc" id="L353">            return true;</span>
+        }
+
+        /**
+         * {@inheritDoc} This implementation just returns the constant value.
+         */
+        @Override
+        public T get() {
+<span class="fc" id="L361">            return value;</span>
+        }
+
+        /**
+         * {@inheritDoc} This implementation just returns the constant value; it
+         * does not block, therefore the timeout has no meaning.
+         */
+        @Override
+        public T get(final long timeout, final TimeUnit unit) {
+<span class="fc" id="L370">            return value;</span>
+        }
+
+        /**
+         * {@inheritDoc} This implementation always returns &lt;b&gt;false&lt;/b&gt;; there
+         * is no background process which could be cancelled.
+         */
+        @Override
+        public boolean isCancelled() {
+<span class="fc" id="L379">            return false;</span>
+        }
+
+        /**
+         * {@inheritDoc} The cancel operation is not supported. This
+         * implementation always returns &lt;b&gt;false&lt;/b&gt;.
+         */
+        @Override
+        public boolean cancel(final boolean mayInterruptIfRunning) {
+<span class="fc" id="L388">            return false;</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

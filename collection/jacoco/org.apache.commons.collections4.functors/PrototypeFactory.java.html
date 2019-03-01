@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PrototypeFactory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.functors</a> &gt; <span class="el_source">PrototypeFactory.java</span></div><h1>PrototypeFactory.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.functors;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
+import org.apache.commons.collections4.Factory;
+import org.apache.commons.collections4.FunctorException;
+
+/**
+ * Factory implementation that creates a new instance each time based on a prototype.
+ * &lt;p&gt;
+ * &lt;b&gt;WARNING:&lt;/b&gt; from v4.1 onwards {@link Factory} instances returned by
+ * {@link #prototypeFactory(Object)} will &lt;b&gt;not&lt;/b&gt; be serializable anymore in order
+ * to prevent potential remote code execution exploits. Please refer to
+ * &lt;a href=&quot;https://issues.apache.org/jira/browse/COLLECTIONS-580&quot;&gt;COLLECTIONS-580&lt;/a&gt;
+ * for more details.
+ *
+ * @since 3.0
+ */
+public class PrototypeFactory {
+
+    /**
+     * Factory method that performs validation.
+     * &lt;p&gt;
+     * Creates a Factory that will return a clone of the same prototype object
+     * each time the factory is used. The prototype will be cloned using one of these
+     * techniques (in order):
+     * &lt;/p&gt;
+     *
+     * &lt;ul&gt;
+     * &lt;li&gt;public clone method&lt;/li&gt;
+     * &lt;li&gt;public copy constructor&lt;/li&gt;
+     * &lt;li&gt;serialization clone&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * @param &lt;T&gt;  the type the factory creates
+     * @param prototype  the object to clone each time in the factory
+     * @return the &lt;code&gt;prototype&lt;/code&gt; factory, or a {@link ConstantFactory#NULL_INSTANCE} if
+     * the {@code prototype} is {@code null}
+     * @throws IllegalArgumentException if the prototype cannot be cloned
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public static &lt;T&gt; Factory&lt;T&gt; prototypeFactory(final T prototype) {
+<span class="fc bfc" id="L66" title="All 2 branches covered.">        if (prototype == null) {</span>
+<span class="fc" id="L67">            return ConstantFactory.&lt;T&gt;constantFactory(null);</span>
+        }
+        try {
+<span class="fc" id="L70">            final Method method = prototype.getClass().getMethod(&quot;clone&quot;, (Class[]) null);</span>
+<span class="fc" id="L71">            return new PrototypeCloneFactory&lt;&gt;(prototype, method);</span>
+
+<span class="fc" id="L73">        } catch (final NoSuchMethodException ex) {</span>
+            try {
+<span class="fc" id="L75">                prototype.getClass().getConstructor(new Class&lt;?&gt;[] { prototype.getClass() });</span>
+<span class="fc" id="L76">                return new InstantiateFactory&lt;&gt;(</span>
+<span class="fc" id="L77">                    (Class&lt;T&gt;) prototype.getClass(),</span>
+<span class="fc" id="L78">                    new Class&lt;?&gt;[] { prototype.getClass() },</span>
+                    new Object[] { prototype });
+<span class="fc" id="L80">            } catch (final NoSuchMethodException ex2) {</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">                if (prototype instanceof Serializable) {</span>
+<span class="fc" id="L82">                    return (Factory&lt;T&gt;) new PrototypeSerializationFactory&lt;&gt;((Serializable) prototype);</span>
+                }
+            }
+        }
+<span class="fc" id="L86">        throw new IllegalArgumentException(&quot;The prototype must be cloneable via a public clone method&quot;);</span>
+    }
+
+    /**
+     * Restricted constructor.
+     */
+    private PrototypeFactory() {
+        super();
+    }
+
+    // PrototypeCloneFactory
+    //-----------------------------------------------------------------------
+    /**
+     * PrototypeCloneFactory creates objects by copying a prototype using the clone method.
+     */
+    static class PrototypeCloneFactory&lt;T&gt; implements Factory&lt;T&gt; {
+
+        /** The object to clone each time */
+        private final T iPrototype;
+        /** The method used to clone */
+        private transient Method iCloneMethod;
+
+        /**
+         * Constructor to store prototype.
+         */
+        private PrototypeCloneFactory(final T prototype, final Method method) {
+<span class="fc" id="L112">            super();</span>
+<span class="fc" id="L113">            iPrototype = prototype;</span>
+<span class="fc" id="L114">            iCloneMethod = method;</span>
+<span class="fc" id="L115">        }</span>
+
+        /**
+         * Find the Clone method for the class specified.
+         */
+        private void findCloneMethod() {
+            try {
+<span class="nc" id="L122">                iCloneMethod = iPrototype.getClass().getMethod(&quot;clone&quot;, (Class[]) null);</span>
+<span class="nc" id="L123">            } catch (final NoSuchMethodException ex) {</span>
+<span class="nc" id="L124">                throw new IllegalArgumentException(&quot;PrototypeCloneFactory: The clone method must exist and be public &quot;);</span>
+<span class="nc" id="L125">            }</span>
+<span class="nc" id="L126">        }</span>
+
+        /**
+         * Creates an object by calling the clone method.
+         *
+         * @return the new object
+         */
+        @Override
+        @SuppressWarnings(&quot;unchecked&quot;)
+        public T create() {
+            // needed for post-serialization
+<span class="pc bpc" id="L137" title="1 of 2 branches missed.">            if (iCloneMethod == null) {</span>
+<span class="nc" id="L138">                findCloneMethod();</span>
+            }
+
+            try {
+<span class="fc" id="L142">                return (T) iCloneMethod.invoke(iPrototype, (Object[]) null);</span>
+<span class="nc" id="L143">            } catch (final IllegalAccessException ex) {</span>
+<span class="nc" id="L144">                throw new FunctorException(&quot;PrototypeCloneFactory: Clone method must be public&quot;, ex);</span>
+<span class="nc" id="L145">            } catch (final InvocationTargetException ex) {</span>
+<span class="nc" id="L146">                throw new FunctorException(&quot;PrototypeCloneFactory: Clone method threw an exception&quot;, ex);</span>
+            }
+        }
+    }
+
+    // PrototypeSerializationFactory
+    //-----------------------------------------------------------------------
+    /**
+     * PrototypeSerializationFactory creates objects by cloning a prototype using serialization.
+     */
+    static class PrototypeSerializationFactory&lt;T extends Serializable&gt; implements Factory&lt;T&gt; {
+
+        /** The object to clone via serialization each time */
+        private final T iPrototype;
+
+        /**
+         * Constructor to store prototype
+         */
+        private PrototypeSerializationFactory(final T prototype) {
+<span class="fc" id="L165">            super();</span>
+<span class="fc" id="L166">            iPrototype = prototype;</span>
+<span class="fc" id="L167">        }</span>
+
+        /**
+         * Creates an object using serialization.
+         *
+         * @return the new object
+         */
+        @Override
+        @SuppressWarnings(&quot;unchecked&quot;)
+        public T create() {
+<span class="fc" id="L177">            final ByteArrayOutputStream baos = new ByteArrayOutputStream(512);</span>
+<span class="fc" id="L178">            ByteArrayInputStream bais = null;</span>
+            try {
+<span class="fc" id="L180">                final ObjectOutputStream out = new ObjectOutputStream(baos);</span>
+<span class="fc" id="L181">                out.writeObject(iPrototype);</span>
+
+<span class="fc" id="L183">                bais = new ByteArrayInputStream(baos.toByteArray());</span>
+<span class="fc" id="L184">                final ObjectInputStream in = new ObjectInputStream(bais);</span>
+<span class="fc" id="L185">                return (T) in.readObject();</span>
+
+<span class="nc" id="L187">            } catch (final ClassNotFoundException ex) {</span>
+<span class="nc" id="L188">                throw new FunctorException(ex);</span>
+<span class="fc" id="L189">            } catch (final IOException ex) {</span>
+<span class="fc" id="L190">                throw new FunctorException(ex);</span>
+            } finally {
+                try {
+<span class="fc bfc" id="L193" title="All 2 branches covered.">                    if (bais != null) {</span>
+<span class="fc" id="L194">                        bais.close();</span>
+                    }
+<span class="nc" id="L196">                } catch (final IOException ex) { //NOPMD</span>
+                    // ignore
+<span class="fc" id="L198">                }</span>
+                try {
+<span class="fc" id="L200">                    baos.close();</span>
+<span class="nc" id="L201">                } catch (final IOException ex) { //NOPMD</span>
+                    // ignore
+<span class="fc" id="L203">                }</span>
+            }
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

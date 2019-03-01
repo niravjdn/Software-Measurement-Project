@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ChunkedOutputStream.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons IO</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.io.output</a> &gt; <span class="el_source">ChunkedOutputStream.java</span></div><h1>ChunkedOutputStream.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.io.output;
+
+import java.io.FilterOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+
+/**
+ * OutputStream which breaks larger output blocks into chunks.
+ * Native code may need to copy the input array; if the write buffer
+ * is very large this can cause OOME.
+ *
+ * @since 2.5
+ */
+public class ChunkedOutputStream extends FilterOutputStream {
+
+    /**
+     * The default chunk size to use, i.e. {@value} bytes.
+     */
+    private static final int DEFAULT_CHUNK_SIZE = 1024 * 4;
+
+    /**
+     * The maximum chunk size to us when writing data arrays
+     */
+    private final int chunkSize;
+
+    /**
+     * Creates a new stream that uses the specified chunk size.
+     *
+     * @param stream the stream to wrap
+     * @param chunkSize the chunk size to use; must be a positive number.
+     * @throws IllegalArgumentException if the chunk size is &amp;lt;= 0
+     */
+    public ChunkedOutputStream(final OutputStream stream, final int chunkSize) {
+<span class="fc" id="L50">       super(stream);</span>
+<span class="fc bfc" id="L51" title="All 2 branches covered.">       if (chunkSize &lt;= 0) {</span>
+<span class="fc" id="L52">           throw new IllegalArgumentException();</span>
+       }
+<span class="fc" id="L54">       this.chunkSize = chunkSize;</span>
+<span class="fc" id="L55">    }</span>
+
+    /**
+     * Creates a new stream that uses a chunk size of {@link #DEFAULT_CHUNK_SIZE}.
+     *
+     * @param stream the stream to wrap
+     */
+    public ChunkedOutputStream(final OutputStream stream) {
+<span class="fc" id="L63">        this(stream, DEFAULT_CHUNK_SIZE);</span>
+<span class="fc" id="L64">    }</span>
+
+    /**
+     * Writes the data buffer in chunks to the underlying stream
+     *
+     * @param data the data to write
+     * @param srcOffset the offset
+     * @param length the length of data to write
+     *
+     * @throws IOException if an I/O error occurs.
+     */
+    @Override
+    public void write(final byte[] data, final int srcOffset, final int length) throws IOException {
+<span class="fc" id="L77">        int bytes = length;</span>
+<span class="fc" id="L78">        int dstOffset = srcOffset;</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        while(bytes &gt; 0) {</span>
+<span class="fc" id="L80">            final int chunk = Math.min(bytes, chunkSize);</span>
+<span class="fc" id="L81">            out.write(data, dstOffset, chunk);</span>
+<span class="fc" id="L82">            bytes -= chunk;</span>
+<span class="fc" id="L83">            dstOffset += chunk;</span>
+        }
+<span class="fc" id="L85">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

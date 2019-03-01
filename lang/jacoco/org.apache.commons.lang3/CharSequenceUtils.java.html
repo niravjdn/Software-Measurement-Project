@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CharSequenceUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Lang</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.lang3</a> &gt; <span class="el_source">CharSequenceUtils.java</span></div><h1>CharSequenceUtils.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.lang3;
+
+/**
+ * &lt;p&gt;Operations on {@link CharSequence} that are
+ * {@code null} safe.&lt;/p&gt;
+ *
+ * @see CharSequence
+ * @since 3.0
+ */
+public class CharSequenceUtils {
+
+    private static final int NOT_FOUND = -1;
+
+    /**
+     * &lt;p&gt;{@code CharSequenceUtils} instances should NOT be constructed in
+     * standard programming. &lt;/p&gt;
+     *
+     * &lt;p&gt;This constructor is public to permit tools that require a JavaBean
+     * instance to operate.&lt;/p&gt;
+     */
+    public CharSequenceUtils() {
+<span class="fc" id="L38">        super();</span>
+<span class="fc" id="L39">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Returns a new {@code CharSequence} that is a subsequence of this
+     * sequence starting with the {@code char} value at the specified index.&lt;/p&gt;
+     *
+     * &lt;p&gt;This provides the {@code CharSequence} equivalent to {@link String#substring(int)}.
+     * The length (in {@code char}) of the returned sequence is {@code length() - start},
+     * so if {@code start == end} then an empty sequence is returned.&lt;/p&gt;
+     *
+     * @param cs  the specified subsequence, null returns null
+     * @param start  the start index, inclusive, valid
+     * @return a new subsequence, may be null
+     * @throws IndexOutOfBoundsException if {@code start} is negative or if
+     *  {@code start} is greater than {@code length()}
+     */
+    public static CharSequence subSequence(final CharSequence cs, final int start) {
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        return cs == null ? null : cs.subSequence(start, cs.length());</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Returns the index within &lt;code&gt;cs&lt;/code&gt; of the first occurrence of the
+     * specified character, starting the search at the specified index.
+     * &lt;p&gt;
+     * If a character with value &lt;code&gt;searchChar&lt;/code&gt; occurs in the
+     * character sequence represented by the &lt;code&gt;cs&lt;/code&gt;
+     * object at an index no smaller than &lt;code&gt;start&lt;/code&gt;, then
+     * the index of the first such occurrence is returned. For values
+     * of &lt;code&gt;searchChar&lt;/code&gt; in the range from 0 to 0xFFFF (inclusive),
+     * this is the smallest value &lt;i&gt;k&lt;/i&gt; such that:
+     * &lt;blockquote&gt;&lt;pre&gt;
+     * (this.charAt(&lt;i&gt;k&lt;/i&gt;) == searchChar) &amp;amp;&amp;amp; (&lt;i&gt;k&lt;/i&gt; &amp;gt;= start)
+     * &lt;/pre&gt;&lt;/blockquote&gt;
+     * is true. For other values of &lt;code&gt;searchChar&lt;/code&gt;, it is the
+     * smallest value &lt;i&gt;k&lt;/i&gt; such that:
+     * &lt;blockquote&gt;&lt;pre&gt;
+     * (this.codePointAt(&lt;i&gt;k&lt;/i&gt;) == searchChar) &amp;amp;&amp;amp; (&lt;i&gt;k&lt;/i&gt; &amp;gt;= start)
+     * &lt;/pre&gt;&lt;/blockquote&gt;
+     * is true. In either case, if no such character occurs inm &lt;code&gt;cs&lt;/code&gt;
+     * at or after position &lt;code&gt;start&lt;/code&gt;, then
+     * &lt;code&gt;-1&lt;/code&gt; is returned.
+     *
+     * &lt;p&gt;
+     * There is no restriction on the value of &lt;code&gt;start&lt;/code&gt;. If it
+     * is negative, it has the same effect as if it were zero: the entire
+     * &lt;code&gt;CharSequence&lt;/code&gt; may be searched. If it is greater than
+     * the length of &lt;code&gt;cs&lt;/code&gt;, it has the same effect as if it were
+     * equal to the length of &lt;code&gt;cs&lt;/code&gt;: &lt;code&gt;-1&lt;/code&gt; is returned.
+     *
+     * &lt;p&gt;All indices are specified in &lt;code&gt;char&lt;/code&gt; values
+     * (Unicode code units).
+     *
+     * @param cs  the {@code CharSequence} to be processed, not null
+     * @param searchChar  the char to be searched for
+     * @param start  the start index, negative starts at the string start
+     * @return the index where the search char was found, -1 if not found
+     * @since 3.6 updated to behave more like &lt;code&gt;String&lt;/code&gt;
+     */
+    static int indexOf(final CharSequence cs, final int searchChar, int start) {
+<span class="fc bfc" id="L100" title="All 2 branches covered.">        if (cs instanceof String) {</span>
+<span class="fc" id="L101">            return ((String) cs).indexOf(searchChar, start);</span>
+        }
+<span class="fc" id="L103">        final int sz = cs.length();</span>
+<span class="pc bpc" id="L104" title="1 of 2 branches missed.">        if (start &lt; 0) {</span>
+<span class="nc" id="L105">            start = 0;</span>
+        }
+<span class="fc bfc" id="L107" title="All 2 branches covered.">        if (searchChar &lt; Character.MIN_SUPPLEMENTARY_CODE_POINT) {</span>
+<span class="pc bpc" id="L108" title="1 of 2 branches missed.">            for (int i = start; i &lt; sz; i++) {</span>
+<span class="fc bfc" id="L109" title="All 2 branches covered.">                if (cs.charAt(i) == searchChar) {</span>
+<span class="fc" id="L110">                    return i;</span>
+                }
+            }
+        }
+        //supplementary characters (LANG1300)
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">        if (searchChar &lt;= Character.MAX_CODE_POINT) {</span>
+<span class="fc" id="L116">            final char[] chars = Character.toChars(searchChar);</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">            for (int i = start; i &lt; sz - 1; i++) {</span>
+<span class="fc" id="L118">                final char high = cs.charAt(i);</span>
+<span class="fc" id="L119">                final char low = cs.charAt(i + 1);</span>
+<span class="fc bfc" id="L120" title="All 4 branches covered.">                if (high == chars[0] &amp;&amp; low == chars[1]) {</span>
+<span class="fc" id="L121">                    return i;</span>
+                }
+            }
+        }
+<span class="fc" id="L125">        return NOT_FOUND;</span>
+    }
+
+    /**
+     * Used by the indexOf(CharSequence methods) as a green implementation of indexOf.
+     *
+     * @param cs the {@code CharSequence} to be processed
+     * @param searchChar the {@code CharSequence} to be searched for
+     * @param start the start index
+     * @return the index where the search sequence was found
+     */
+    static int indexOf(final CharSequence cs, final CharSequence searchChar, final int start) {
+<span class="fc" id="L137">        return cs.toString().indexOf(searchChar.toString(), start);</span>
+//        if (cs instanceof String &amp;&amp; searchChar instanceof String) {
+//            // TODO: Do we assume searchChar is usually relatively small;
+//            //       If so then calling toString() on it is better than reverting to
+//            //       the green implementation in the else block
+//            return ((String) cs).indexOf((String) searchChar, start);
+//        } else {
+//            // TODO: Implement rather than convert to String
+//            return cs.toString().indexOf(searchChar.toString(), start);
+//        }
+    }
+
+    /**
+     * Returns the index within &lt;code&gt;cs&lt;/code&gt; of the last occurrence of
+     * the specified character, searching backward starting at the
+     * specified index. For values of &lt;code&gt;searchChar&lt;/code&gt; in the range
+     * from 0 to 0xFFFF (inclusive), the index returned is the largest
+     * value &lt;i&gt;k&lt;/i&gt; such that:
+     * &lt;blockquote&gt;&lt;pre&gt;
+     * (this.charAt(&lt;i&gt;k&lt;/i&gt;) == searchChar) &amp;amp;&amp;amp; (&lt;i&gt;k&lt;/i&gt; &amp;lt;= start)
+     * &lt;/pre&gt;&lt;/blockquote&gt;
+     * is true. For other values of &lt;code&gt;searchChar&lt;/code&gt;, it is the
+     * largest value &lt;i&gt;k&lt;/i&gt; such that:
+     * &lt;blockquote&gt;&lt;pre&gt;
+     * (this.codePointAt(&lt;i&gt;k&lt;/i&gt;) == searchChar) &amp;amp;&amp;amp; (&lt;i&gt;k&lt;/i&gt; &amp;lt;= start)
+     * &lt;/pre&gt;&lt;/blockquote&gt;
+     * is true. In either case, if no such character occurs in &lt;code&gt;cs&lt;/code&gt;
+     * at or before position &lt;code&gt;start&lt;/code&gt;, then &lt;code&gt;-1&lt;/code&gt; is returned.
+     *
+     * &lt;p&gt;All indices are specified in &lt;code&gt;char&lt;/code&gt; values
+     * (Unicode code units).
+     *
+     * @param cs  the {@code CharSequence} to be processed
+     * @param searchChar  the char to be searched for
+     * @param start  the start index, negative returns -1, beyond length starts at end
+     * @return the index where the search char was found, -1 if not found
+     * @since 3.6 updated to behave more like &lt;code&gt;String&lt;/code&gt;
+     */
+    static int lastIndexOf(final CharSequence cs, final int searchChar, int start) {
+<span class="fc bfc" id="L176" title="All 2 branches covered.">        if (cs instanceof String) {</span>
+<span class="fc" id="L177">            return ((String) cs).lastIndexOf(searchChar, start);</span>
+        }
+<span class="fc" id="L179">        final int sz = cs.length();</span>
+<span class="pc bpc" id="L180" title="1 of 2 branches missed.">        if (start &lt; 0) {</span>
+<span class="nc" id="L181">            return NOT_FOUND;</span>
+        }
+<span class="fc bfc" id="L183" title="All 2 branches covered.">        if (start &gt;= sz) {</span>
+<span class="fc" id="L184">            start = sz - 1;</span>
+        }
+<span class="fc bfc" id="L186" title="All 2 branches covered.">        if (searchChar &lt; Character.MIN_SUPPLEMENTARY_CODE_POINT) {</span>
+<span class="pc bpc" id="L187" title="1 of 2 branches missed.">            for (int i = start; i &gt;= 0; --i) {</span>
+<span class="fc bfc" id="L188" title="All 2 branches covered.">                if (cs.charAt(i) == searchChar) {</span>
+<span class="fc" id="L189">                    return i;</span>
+                }
+            }
+        }
+        //supplementary characters (LANG1300)
+        //NOTE - we must do a forward traversal for this to avoid duplicating code points
+<span class="pc bpc" id="L195" title="1 of 2 branches missed.">        if (searchChar &lt;= Character.MAX_CODE_POINT) {</span>
+<span class="fc" id="L196">            final char[] chars = Character.toChars(searchChar);</span>
+            //make sure it's not the last index
+<span class="fc bfc" id="L198" title="All 2 branches covered.">            if (start == sz - 1) {</span>
+<span class="fc" id="L199">                return NOT_FOUND;</span>
+            }
+<span class="fc bfc" id="L201" title="All 2 branches covered.">            for (int i = start; i &gt;= 0; i--) {</span>
+<span class="fc" id="L202">                final char high = cs.charAt(i);</span>
+<span class="fc" id="L203">                final char low = cs.charAt(i + 1);</span>
+<span class="fc bfc" id="L204" title="All 4 branches covered.">                if (chars[0] == high &amp;&amp; chars[1] == low) {</span>
+<span class="fc" id="L205">                    return i;</span>
+                }
+            }
+        }
+<span class="fc" id="L209">        return NOT_FOUND;</span>
+    }
+
+    /**
+     * Used by the lastIndexOf(CharSequence methods) as a green implementation of lastIndexOf
+     *
+     * @param cs the {@code CharSequence} to be processed
+     * @param searchChar the {@code CharSequence} to be searched for
+     * @param start the start index
+     * @return the index where the search sequence was found
+     */
+    static int lastIndexOf(final CharSequence cs, final CharSequence searchChar, final int start) {
+<span class="fc" id="L221">        return cs.toString().lastIndexOf(searchChar.toString(), start);</span>
+//        if (cs instanceof String &amp;&amp; searchChar instanceof String) {
+//            // TODO: Do we assume searchChar is usually relatively small;
+//            //       If so then calling toString() on it is better than reverting to
+//            //       the green implementation in the else block
+//            return ((String) cs).lastIndexOf((String) searchChar, start);
+//        } else {
+//            // TODO: Implement rather than convert to String
+//            return cs.toString().lastIndexOf(searchChar.toString(), start);
+//        }
+    }
+
+    /**
+     * Green implementation of toCharArray.
+     *
+     * @param cs the {@code CharSequence} to be processed
+     * @return the resulting char array
+     */
+    static char[] toCharArray(final CharSequence cs) {
+<span class="fc bfc" id="L240" title="All 2 branches covered.">        if (cs instanceof String) {</span>
+<span class="fc" id="L241">            return ((String) cs).toCharArray();</span>
+        }
+<span class="fc" id="L243">        final int sz = cs.length();</span>
+<span class="fc" id="L244">        final char[] array = new char[cs.length()];</span>
+<span class="fc bfc" id="L245" title="All 2 branches covered.">        for (int i = 0; i &lt; sz; i++) {</span>
+<span class="fc" id="L246">            array[i] = cs.charAt(i);</span>
+        }
+<span class="fc" id="L248">        return array;</span>
+    }
+
+    /**
+     * Green implementation of regionMatches.
+     *
+     * @param cs the {@code CharSequence} to be processed
+     * @param ignoreCase whether or not to be case insensitive
+     * @param thisStart the index to start on the {@code cs} CharSequence
+     * @param substring the {@code CharSequence} to be looked for
+     * @param start the index to start on the {@code substring} CharSequence
+     * @param length character length of the region
+     * @return whether the region matched
+     */
+    static boolean regionMatches(final CharSequence cs, final boolean ignoreCase, final int thisStart,
+            final CharSequence substring, final int start, final int length)    {
+<span class="fc bfc" id="L264" title="All 4 branches covered.">        if (cs instanceof String &amp;&amp; substring instanceof String) {</span>
+<span class="fc" id="L265">            return ((String) cs).regionMatches(ignoreCase, thisStart, (String) substring, start, length);</span>
+        }
+<span class="fc" id="L267">        int index1 = thisStart;</span>
+<span class="fc" id="L268">        int index2 = start;</span>
+<span class="fc" id="L269">        int tmpLen = length;</span>
+
+        // Extract these first so we detect NPEs the same as the java.lang.String version
+<span class="fc" id="L272">        final int srcLen = cs.length() - thisStart;</span>
+<span class="fc" id="L273">        final int otherLen = substring.length() - start;</span>
+
+        // Check for invalid parameters
+<span class="pc bpc" id="L276" title="2 of 6 branches missed.">        if (thisStart &lt; 0 || start &lt; 0 || length &lt; 0) {</span>
+<span class="fc" id="L277">            return false;</span>
+        }
+
+        // Check that the regions are long enough
+<span class="pc bpc" id="L281" title="1 of 4 branches missed.">        if (srcLen &lt; length || otherLen &lt; length) {</span>
+<span class="fc" id="L282">            return false;</span>
+        }
+
+<span class="fc bfc" id="L285" title="All 2 branches covered.">        while (tmpLen-- &gt; 0) {</span>
+<span class="fc" id="L286">            final char c1 = cs.charAt(index1++);</span>
+<span class="fc" id="L287">            final char c2 = substring.charAt(index2++);</span>
+
+<span class="fc bfc" id="L289" title="All 2 branches covered.">            if (c1 == c2) {</span>
+<span class="fc" id="L290">                continue;</span>
+            }
+
+<span class="fc bfc" id="L293" title="All 2 branches covered.">            if (!ignoreCase) {</span>
+<span class="fc" id="L294">                return false;</span>
+            }
+
+            // The same check as in String.regionMatches():
+<span class="pc bpc" id="L298" title="1 of 2 branches missed.">            if (Character.toUpperCase(c1) != Character.toUpperCase(c2)</span>
+<span class="nc bnc" id="L299" title="All 2 branches missed.">                    &amp;&amp; Character.toLowerCase(c1) != Character.toLowerCase(c2)) {</span>
+<span class="nc" id="L300">                return false;</span>
+            }
+        }
+
+<span class="fc" id="L304">        return true;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UnixLineEndingInputStream.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons IO</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.io.input</a> &gt; <span class="el_source">UnixLineEndingInputStream.java</span></div><h1>UnixLineEndingInputStream.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.io.input;
+
+
+import java.io.IOException;
+import java.io.InputStream;
+
+/**
+ * A filtering input stream that ensures the content will have unix-style line endings, LF.
+ *
+ * @since 2.5
+ */
+public class UnixLineEndingInputStream extends InputStream {
+
+<span class="fc" id="L30">    private boolean slashNSeen = false;</span>
+
+<span class="fc" id="L32">    private boolean slashRSeen = false;</span>
+
+<span class="fc" id="L34">    private boolean eofSeen = false;</span>
+
+    private final InputStream target;
+
+    private final boolean ensureLineFeedAtEndOfFile;
+
+    /**
+     * Create an input stream that filters another stream
+     *
+     * @param in                        The input stream to wrap
+     * @param ensureLineFeedAtEndOfFile true to ensure that the file ends with LF
+     */
+<span class="fc" id="L46">    public UnixLineEndingInputStream( final InputStream in, final boolean ensureLineFeedAtEndOfFile ) {</span>
+<span class="fc" id="L47">        this.target = in;</span>
+<span class="fc" id="L48">        this.ensureLineFeedAtEndOfFile = ensureLineFeedAtEndOfFile;</span>
+<span class="fc" id="L49">    }</span>
+
+    /**
+     * Reads the next item from the target, updating internal flags in the process
+     * @return the next int read from the target stream
+     * @throws IOException upon error
+     */
+    private int readWithUpdate() throws IOException {
+<span class="fc" id="L57">        final int target = this.target.read();</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">        eofSeen = target == -1;</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">        if ( eofSeen ) {</span>
+<span class="fc" id="L60">            return target;</span>
+        }
+<span class="fc bfc" id="L62" title="All 2 branches covered.">        slashNSeen = target == '\n';</span>
+<span class="fc bfc" id="L63" title="All 2 branches covered.">        slashRSeen = target == '\r';</span>
+<span class="fc" id="L64">        return target;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int read() throws IOException {
+<span class="fc" id="L72">        final boolean previousWasSlashR = slashRSeen;</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        if ( eofSeen ) {</span>
+<span class="fc" id="L74">            return eofGame(previousWasSlashR);</span>
+        }
+        else {
+<span class="fc" id="L77">            final int target = readWithUpdate();</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">            if ( eofSeen ) {</span>
+<span class="fc" id="L79">                return eofGame(previousWasSlashR);</span>
+            }
+<span class="fc bfc" id="L81" title="All 2 branches covered.">            if (slashRSeen)</span>
+            {
+<span class="fc" id="L83">                return '\n';</span>
+            }
+
+<span class="fc bfc" id="L86" title="All 4 branches covered.">            if ( previousWasSlashR &amp;&amp; slashNSeen){</span>
+<span class="fc" id="L87">                return read();</span>
+            }
+
+<span class="fc" id="L90">            return target;</span>
+        }
+    }
+
+    /**
+     * Handles the eof-handling at the end of the stream
+     * @param previousWasSlashR Indicates if the last seen was a \r
+     * @return The next char to output to the stream
+     */
+    private int eofGame(final boolean previousWasSlashR) {
+<span class="fc bfc" id="L100" title="All 4 branches covered.">        if ( previousWasSlashR || !ensureLineFeedAtEndOfFile ) {</span>
+<span class="fc" id="L101">            return -1;</span>
+        }
+<span class="fc bfc" id="L103" title="All 2 branches covered.">        if ( !slashNSeen ) {</span>
+<span class="fc" id="L104">            slashNSeen = true;</span>
+<span class="fc" id="L105">            return '\n';</span>
+        } else {
+<span class="fc" id="L107">            return -1;</span>
+        }
+    }
+
+    /**
+     * Closes the stream. Also closes the underlying stream.
+     * @throws IOException upon error
+     */
+    @Override
+    public void close() throws IOException {
+<span class="fc" id="L117">        super.close();</span>
+<span class="fc" id="L118">        target.close();</span>
+<span class="fc" id="L119">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public synchronized void mark( final int readlimit ) {
+<span class="nc" id="L126">        throw new UnsupportedOperationException( &quot;Mark notsupported&quot; );</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

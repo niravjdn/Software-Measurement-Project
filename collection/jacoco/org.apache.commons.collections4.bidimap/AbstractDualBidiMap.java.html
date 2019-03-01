@@ -1,0 +1,808 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractDualBidiMap.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.bidimap</a> &gt; <span class="el_source">AbstractDualBidiMap.java</span></div><h1>AbstractDualBidiMap.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.bidimap;
+
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.commons.collections4.BidiMap;
+import org.apache.commons.collections4.MapIterator;
+import org.apache.commons.collections4.ResettableIterator;
+import org.apache.commons.collections4.collection.AbstractCollectionDecorator;
+import org.apache.commons.collections4.iterators.AbstractIteratorDecorator;
+import org.apache.commons.collections4.keyvalue.AbstractMapEntryDecorator;
+
+/**
+ * Abstract {@link BidiMap} implemented using two maps.
+ * &lt;p&gt;
+ * An implementation can be written simply by implementing the
+ * {@link #createBidiMap(Map, Map, BidiMap)} method.
+ *
+ * @param &lt;K&gt; the type of the keys in the map
+ * @param &lt;V&gt; the type of the values in the map
+ *
+ * @see DualHashBidiMap
+ * @see DualTreeBidiMap
+ * @since 3.0
+ */
+public abstract class AbstractDualBidiMap&lt;K, V&gt; implements BidiMap&lt;K, V&gt; {
+
+    /**
+     * Normal delegate map.
+     */
+    transient Map&lt;K, V&gt; normalMap;
+
+    /**
+     * Reverse delegate map.
+     */
+    transient Map&lt;V, K&gt; reverseMap;
+
+    /**
+     * Inverse view of this map.
+     */
+<span class="fc" id="L59">    transient BidiMap&lt;V, K&gt; inverseBidiMap = null;</span>
+
+    /**
+     * View of the keys.
+     */
+<span class="fc" id="L64">    transient Set&lt;K&gt; keySet = null;</span>
+
+    /**
+     * View of the values.
+     */
+<span class="fc" id="L69">    transient Set&lt;V&gt; values = null;</span>
+
+    /**
+     * View of the entries.
+     */
+<span class="fc" id="L74">    transient Set&lt;Map.Entry&lt;K, V&gt;&gt; entrySet = null;</span>
+
+    /**
+     * Creates an empty map, initialised by &lt;code&gt;createMap&lt;/code&gt;.
+     * &lt;p&gt;
+     * This constructor remains in place for deserialization.
+     * All other usage is deprecated in favour of
+     * {@link #AbstractDualBidiMap(Map, Map)}.
+     */
+    protected AbstractDualBidiMap() {
+<span class="fc" id="L84">        super();</span>
+<span class="fc" id="L85">    }</span>
+
+    /**
+     * Creates an empty map using the two maps specified as storage.
+     * &lt;p&gt;
+     * The two maps must be a matching pair, normal and reverse.
+     * They will typically both be empty.
+     * &lt;p&gt;
+     * Neither map is validated, so nulls may be passed in.
+     * If you choose to do this then the subclass constructor must populate
+     * the &lt;code&gt;maps[]&lt;/code&gt; instance variable itself.
+     *
+     * @param normalMap  the normal direction map
+     * @param reverseMap  the reverse direction map
+     * @since 3.1
+     */
+    protected AbstractDualBidiMap(final Map&lt;K, V&gt; normalMap, final Map&lt;V, K&gt; reverseMap) {
+<span class="fc" id="L102">        super();</span>
+<span class="fc" id="L103">        this.normalMap = normalMap;</span>
+<span class="fc" id="L104">        this.reverseMap = reverseMap;</span>
+<span class="fc" id="L105">    }</span>
+
+    /**
+     * Constructs a map that decorates the specified maps,
+     * used by the subclass &lt;code&gt;createBidiMap&lt;/code&gt; implementation.
+     *
+     * @param normalMap  the normal direction map
+     * @param reverseMap  the reverse direction map
+     * @param inverseBidiMap  the inverse BidiMap
+     */
+    protected AbstractDualBidiMap(final Map&lt;K, V&gt; normalMap, final Map&lt;V, K&gt; reverseMap,
+                                  final BidiMap&lt;V, K&gt; inverseBidiMap) {
+<span class="fc" id="L117">        super();</span>
+<span class="fc" id="L118">        this.normalMap = normalMap;</span>
+<span class="fc" id="L119">        this.reverseMap = reverseMap;</span>
+<span class="fc" id="L120">        this.inverseBidiMap = inverseBidiMap;</span>
+<span class="fc" id="L121">    }</span>
+
+    /**
+     * Creates a new instance of the subclass.
+     *
+     * @param normalMap  the normal direction map
+     * @param reverseMap  the reverse direction map
+     * @param inverseMap  this map, which is the inverse in the new map
+     * @return the inverse map
+     */
+    protected abstract BidiMap&lt;V, K&gt; createBidiMap(Map&lt;V, K&gt; normalMap, Map&lt;K, V&gt; reverseMap, BidiMap&lt;K, V&gt; inverseMap);
+
+    // Map delegation
+    //-----------------------------------------------------------------------
+
+    @Override
+    public V get(final Object key) {
+<span class="fc" id="L138">        return normalMap.get(key);</span>
+    }
+
+    @Override
+    public int size() {
+<span class="fc" id="L143">        return normalMap.size();</span>
+    }
+
+    @Override
+    public boolean isEmpty() {
+<span class="fc" id="L148">        return normalMap.isEmpty();</span>
+    }
+
+    @Override
+    public boolean containsKey(final Object key) {
+<span class="fc" id="L153">        return normalMap.containsKey(key);</span>
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+<span class="fc" id="L158">        return normalMap.equals(obj);</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="fc" id="L163">        return normalMap.hashCode();</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="fc" id="L168">        return normalMap.toString();</span>
+    }
+
+    // BidiMap changes
+    //-----------------------------------------------------------------------
+
+    @Override
+    public V put(final K key, final V value) {
+<span class="fc bfc" id="L176" title="All 2 branches covered.">        if (normalMap.containsKey(key)) {</span>
+<span class="fc" id="L177">            reverseMap.remove(normalMap.get(key));</span>
+        }
+<span class="fc bfc" id="L179" title="All 2 branches covered.">        if (reverseMap.containsKey(value)) {</span>
+<span class="fc" id="L180">            normalMap.remove(reverseMap.get(value));</span>
+        }
+<span class="fc" id="L182">        final V obj = normalMap.put(key, value);</span>
+<span class="fc" id="L183">        reverseMap.put(value, key);</span>
+<span class="fc" id="L184">        return obj;</span>
+    }
+
+    @Override
+    public void putAll(final Map&lt;? extends K, ? extends V&gt; map) {
+<span class="fc bfc" id="L189" title="All 2 branches covered.">        for (final Map.Entry&lt;? extends K, ? extends V&gt; entry : map.entrySet()) {</span>
+<span class="fc" id="L190">            put(entry.getKey(), entry.getValue());</span>
+<span class="fc" id="L191">        }</span>
+<span class="fc" id="L192">    }</span>
+
+    @Override
+    public V remove(final Object key) {
+<span class="fc" id="L196">        V value = null;</span>
+<span class="fc bfc" id="L197" title="All 2 branches covered.">        if (normalMap.containsKey(key)) {</span>
+<span class="fc" id="L198">            value = normalMap.remove(key);</span>
+<span class="fc" id="L199">            reverseMap.remove(value);</span>
+        }
+<span class="fc" id="L201">        return value;</span>
+    }
+
+    @Override
+    public void clear() {
+<span class="fc" id="L206">        normalMap.clear();</span>
+<span class="fc" id="L207">        reverseMap.clear();</span>
+<span class="fc" id="L208">    }</span>
+
+    @Override
+    public boolean containsValue(final Object value) {
+<span class="fc" id="L212">        return reverseMap.containsKey(value);</span>
+    }
+
+    // BidiMap
+    //-----------------------------------------------------------------------
+    /**
+     * Obtains a &lt;code&gt;MapIterator&lt;/code&gt; over the map.
+     * The iterator implements &lt;code&gt;ResetableMapIterator&lt;/code&gt;.
+     * This implementation relies on the entrySet iterator.
+     * &lt;p&gt;
+     * The setValue() methods only allow a new value to be set.
+     * If the value being set is already in the map, an IllegalArgumentException
+     * is thrown (as setValue cannot change the size of the map).
+     *
+     * @return a map iterator
+     */
+    @Override
+    public MapIterator&lt;K, V&gt; mapIterator() {
+<span class="fc" id="L230">        return new BidiMapIterator&lt;&gt;(this);</span>
+    }
+
+    @Override
+    public K getKey(final Object value) {
+<span class="fc" id="L235">        return reverseMap.get(value);</span>
+    }
+
+    @Override
+    public K removeValue(final Object value) {
+<span class="fc" id="L240">        K key = null;</span>
+<span class="fc bfc" id="L241" title="All 2 branches covered.">        if (reverseMap.containsKey(value)) {</span>
+<span class="fc" id="L242">            key = reverseMap.remove(value);</span>
+<span class="fc" id="L243">            normalMap.remove(key);</span>
+        }
+<span class="fc" id="L245">        return key;</span>
+    }
+
+    @Override
+    public BidiMap&lt;V, K&gt; inverseBidiMap() {
+<span class="fc bfc" id="L250" title="All 2 branches covered.">        if (inverseBidiMap == null) {</span>
+<span class="fc" id="L251">            inverseBidiMap = createBidiMap(reverseMap, normalMap, this);</span>
+        }
+<span class="fc" id="L253">        return inverseBidiMap;</span>
+    }
+
+    // Map views
+    //-----------------------------------------------------------------------
+    /**
+     * Gets a keySet view of the map.
+     * Changes made on the view are reflected in the map.
+     * The set supports remove and clear but not add.
+     *
+     * @return the keySet view
+     */
+    @Override
+    public Set&lt;K&gt; keySet() {
+<span class="fc bfc" id="L267" title="All 2 branches covered.">        if (keySet == null) {</span>
+<span class="fc" id="L268">            keySet = new KeySet&lt;&gt;(this);</span>
+        }
+<span class="fc" id="L270">        return keySet;</span>
+    }
+
+    /**
+     * Creates a key set iterator.
+     * Subclasses can override this to return iterators with different properties.
+     *
+     * @param iterator  the iterator to decorate
+     * @return the keySet iterator
+     */
+    protected Iterator&lt;K&gt; createKeySetIterator(final Iterator&lt;K&gt; iterator) {
+<span class="fc" id="L281">        return new KeySetIterator&lt;&gt;(iterator, this);</span>
+    }
+
+    /**
+     * Gets a values view of the map.
+     * Changes made on the view are reflected in the map.
+     * The set supports remove and clear but not add.
+     *
+     * @return the values view
+     */
+    @Override
+    public Set&lt;V&gt; values() {
+<span class="fc bfc" id="L293" title="All 2 branches covered.">        if (values == null) {</span>
+<span class="fc" id="L294">            values = new Values&lt;&gt;(this);</span>
+        }
+<span class="fc" id="L296">        return values;</span>
+    }
+
+    /**
+     * Creates a values iterator.
+     * Subclasses can override this to return iterators with different properties.
+     *
+     * @param iterator  the iterator to decorate
+     * @return the values iterator
+     */
+    protected Iterator&lt;V&gt; createValuesIterator(final Iterator&lt;V&gt; iterator) {
+<span class="fc" id="L307">        return new ValuesIterator&lt;&gt;(iterator, this);</span>
+    }
+
+    /**
+     * Gets an entrySet view of the map.
+     * Changes made on the set are reflected in the map.
+     * The set supports remove and clear but not add.
+     * &lt;p&gt;
+     * The Map Entry setValue() method only allow a new value to be set.
+     * If the value being set is already in the map, an IllegalArgumentException
+     * is thrown (as setValue cannot change the size of the map).
+     *
+     * @return the entrySet view
+     */
+    @Override
+    public Set&lt;Map.Entry&lt;K, V&gt;&gt; entrySet() {
+<span class="fc bfc" id="L323" title="All 2 branches covered.">        if (entrySet == null) {</span>
+<span class="fc" id="L324">            entrySet = new EntrySet&lt;&gt;(this);</span>
+        }
+<span class="fc" id="L326">        return entrySet;</span>
+    }
+
+    /**
+     * Creates an entry set iterator.
+     * Subclasses can override this to return iterators with different properties.
+     *
+     * @param iterator  the iterator to decorate
+     * @return the entrySet iterator
+     */
+    protected Iterator&lt;Map.Entry&lt;K, V&gt;&gt; createEntrySetIterator(final Iterator&lt;Map.Entry&lt;K, V&gt;&gt; iterator) {
+<span class="fc" id="L337">        return new EntrySetIterator&lt;&gt;(iterator, this);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Inner class View.
+     */
+    protected static abstract class View&lt;K, V, E&gt; extends AbstractCollectionDecorator&lt;E&gt; {
+
+        /** Generated serial version ID. */
+        private static final long serialVersionUID = 4621510560119690639L;
+
+        /** The parent map */
+        protected final AbstractDualBidiMap&lt;K, V&gt; parent;
+
+        /**
+         * Constructs a new view of the BidiMap.
+         *
+         * @param coll  the collection view being decorated
+         * @param parent  the parent BidiMap
+         */
+        protected View(final Collection&lt;E&gt; coll, final AbstractDualBidiMap&lt;K, V&gt; parent) {
+<span class="fc" id="L359">            super(coll);</span>
+<span class="fc" id="L360">            this.parent = parent;</span>
+<span class="fc" id="L361">        }</span>
+
+        @Override
+        public boolean equals(final Object object) {
+<span class="fc bfc" id="L365" title="All 4 branches covered.">            return object == this || decorated().equals(object);</span>
+        }
+
+        @Override
+        public int hashCode() {
+<span class="fc" id="L370">            return decorated().hashCode();</span>
+        }
+
+        @Override
+        public boolean removeAll(final Collection&lt;?&gt; coll) {
+<span class="fc bfc" id="L375" title="All 4 branches covered.">            if (parent.isEmpty() || coll.isEmpty()) {</span>
+<span class="fc" id="L376">                return false;</span>
+            }
+<span class="fc" id="L378">            boolean modified = false;</span>
+<span class="fc" id="L379">            final Iterator&lt;?&gt; it = coll.iterator();</span>
+<span class="fc bfc" id="L380" title="All 2 branches covered.">            while (it.hasNext()) {</span>
+<span class="fc" id="L381">                modified |= remove(it.next());</span>
+            }
+<span class="fc" id="L383">            return modified;</span>
+        }
+
+        /**
+         * {@inheritDoc}
+         * &lt;p&gt;
+         * This implementation iterates over the elements of this bidi map, checking each element in
+         * turn to see if it's contained in &lt;code&gt;coll&lt;/code&gt;. If it's not contained, it's removed
+         * from this bidi map. As a consequence, it is advised to use a collection type for
+         * &lt;code&gt;coll&lt;/code&gt; that provides a fast (e.g. O(1)) implementation of
+         * {@link Collection#contains(Object)}.
+         */
+        @Override
+        public boolean retainAll(final Collection&lt;?&gt; coll) {
+<span class="fc bfc" id="L397" title="All 2 branches covered.">            if (parent.isEmpty()) {</span>
+<span class="fc" id="L398">                return false;</span>
+            }
+<span class="fc bfc" id="L400" title="All 2 branches covered.">            if (coll.isEmpty()) {</span>
+<span class="fc" id="L401">                parent.clear();</span>
+<span class="fc" id="L402">                return true;</span>
+            }
+<span class="fc" id="L404">            boolean modified = false;</span>
+<span class="fc" id="L405">            final Iterator&lt;E&gt; it = iterator();</span>
+<span class="fc bfc" id="L406" title="All 2 branches covered.">            while (it.hasNext()) {</span>
+<span class="fc bfc" id="L407" title="All 2 branches covered.">                if (coll.contains(it.next()) == false) {</span>
+<span class="fc" id="L408">                    it.remove();</span>
+<span class="fc" id="L409">                    modified = true;</span>
+                }
+            }
+<span class="fc" id="L412">            return modified;</span>
+        }
+
+        @Override
+        public void clear() {
+<span class="fc" id="L417">            parent.clear();</span>
+<span class="fc" id="L418">        }</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Inner class KeySet.
+     */
+    protected static class KeySet&lt;K&gt; extends View&lt;K, Object, K&gt; implements Set&lt;K&gt; {
+
+        /** Serialization version */
+        private static final long serialVersionUID = -7107935777385040694L;
+
+        /**
+         * Constructs a new view of the BidiMap.
+         *
+         * @param parent  the parent BidiMap
+         */
+        @SuppressWarnings(&quot;unchecked&quot;)
+        protected KeySet(final AbstractDualBidiMap&lt;K, ?&gt; parent) {
+<span class="fc" id="L437">            super(parent.normalMap.keySet(), (AbstractDualBidiMap&lt;K, Object&gt;) parent);</span>
+<span class="fc" id="L438">        }</span>
+
+        @Override
+        public Iterator&lt;K&gt; iterator() {
+<span class="fc" id="L442">            return parent.createKeySetIterator(super.iterator());</span>
+        }
+
+        @Override
+        public boolean contains(final Object key) {
+<span class="fc" id="L447">            return parent.normalMap.containsKey(key);</span>
+        }
+
+        @Override
+        public boolean remove(final Object key) {
+<span class="fc bfc" id="L452" title="All 2 branches covered.">            if (parent.normalMap.containsKey(key)) {</span>
+<span class="fc" id="L453">                final Object value = parent.normalMap.remove(key);</span>
+<span class="fc" id="L454">                parent.reverseMap.remove(value);</span>
+<span class="fc" id="L455">                return true;</span>
+            }
+<span class="fc" id="L457">            return false;</span>
+        }
+    }
+
+    /**
+     * Inner class KeySetIterator.
+     */
+    protected static class KeySetIterator&lt;K&gt; extends AbstractIteratorDecorator&lt;K&gt; {
+
+        /** The parent map */
+        protected final AbstractDualBidiMap&lt;K, ?&gt; parent;
+
+        /** The last returned key */
+<span class="fc" id="L470">        protected K lastKey = null;</span>
+
+        /** Whether remove is allowed at present */
+<span class="fc" id="L473">        protected boolean canRemove = false;</span>
+
+        /**
+         * Constructor.
+         * @param iterator  the iterator to decorate
+         * @param parent  the parent map
+         */
+        protected KeySetIterator(final Iterator&lt;K&gt; iterator, final AbstractDualBidiMap&lt;K, ?&gt; parent) {
+<span class="fc" id="L481">            super(iterator);</span>
+<span class="fc" id="L482">            this.parent = parent;</span>
+<span class="fc" id="L483">        }</span>
+
+        @Override
+        public K next() {
+<span class="fc" id="L487">            lastKey = super.next();</span>
+<span class="fc" id="L488">            canRemove = true;</span>
+<span class="fc" id="L489">            return lastKey;</span>
+        }
+
+        @Override
+        public void remove() {
+<span class="fc bfc" id="L494" title="All 2 branches covered.">            if (canRemove == false) {</span>
+<span class="fc" id="L495">                throw new IllegalStateException(&quot;Iterator remove() can only be called once after next()&quot;);</span>
+            }
+<span class="fc" id="L497">            final Object value = parent.normalMap.get(lastKey);</span>
+<span class="fc" id="L498">            super.remove();</span>
+<span class="fc" id="L499">            parent.reverseMap.remove(value);</span>
+<span class="fc" id="L500">            lastKey = null;</span>
+<span class="fc" id="L501">            canRemove = false;</span>
+<span class="fc" id="L502">        }</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Inner class Values.
+     */
+    protected static class Values&lt;V&gt; extends View&lt;Object, V, V&gt; implements Set&lt;V&gt; {
+
+        /** Serialization version */
+        private static final long serialVersionUID = 4023777119829639864L;
+
+        /**
+         * Constructs a new view of the BidiMap.
+         *
+         * @param parent  the parent BidiMap
+         */
+        @SuppressWarnings(&quot;unchecked&quot;)
+        protected Values(final AbstractDualBidiMap&lt;?, V&gt; parent) {
+<span class="fc" id="L521">            super(parent.normalMap.values(), (AbstractDualBidiMap&lt;Object, V&gt;) parent);</span>
+<span class="fc" id="L522">        }</span>
+
+        @Override
+        public Iterator&lt;V&gt; iterator() {
+<span class="fc" id="L526">            return parent.createValuesIterator(super.iterator());</span>
+        }
+
+        @Override
+        public boolean contains(final Object value) {
+<span class="fc" id="L531">            return parent.reverseMap.containsKey(value);</span>
+        }
+
+        @Override
+        public boolean remove(final Object value) {
+<span class="fc bfc" id="L536" title="All 2 branches covered.">            if (parent.reverseMap.containsKey(value)) {</span>
+<span class="fc" id="L537">                final Object key = parent.reverseMap.remove(value);</span>
+<span class="fc" id="L538">                parent.normalMap.remove(key);</span>
+<span class="fc" id="L539">                return true;</span>
+            }
+<span class="fc" id="L541">            return false;</span>
+        }
+    }
+
+    /**
+     * Inner class ValuesIterator.
+     */
+    protected static class ValuesIterator&lt;V&gt; extends AbstractIteratorDecorator&lt;V&gt; {
+
+        /** The parent map */
+        protected final AbstractDualBidiMap&lt;Object, V&gt; parent;
+
+        /** The last returned value */
+<span class="fc" id="L554">        protected V lastValue = null;</span>
+
+        /** Whether remove is allowed at present */
+<span class="fc" id="L557">        protected boolean canRemove = false;</span>
+
+        /**
+         * Constructor.
+         * @param iterator  the iterator to decorate
+         * @param parent  the parent map
+         */
+        @SuppressWarnings(&quot;unchecked&quot;)
+        protected ValuesIterator(final Iterator&lt;V&gt; iterator, final AbstractDualBidiMap&lt;?, V&gt; parent) {
+<span class="fc" id="L566">            super(iterator);</span>
+<span class="fc" id="L567">            this.parent = (AbstractDualBidiMap&lt;Object, V&gt;) parent;</span>
+<span class="fc" id="L568">        }</span>
+
+        @Override
+        public V next() {
+<span class="fc" id="L572">            lastValue = super.next();</span>
+<span class="fc" id="L573">            canRemove = true;</span>
+<span class="fc" id="L574">            return lastValue;</span>
+        }
+
+        @Override
+        public void remove() {
+<span class="fc bfc" id="L579" title="All 2 branches covered.">            if (canRemove == false) {</span>
+<span class="fc" id="L580">                throw new IllegalStateException(&quot;Iterator remove() can only be called once after next()&quot;);</span>
+            }
+<span class="fc" id="L582">            super.remove(); // removes from maps[0]</span>
+<span class="fc" id="L583">            parent.reverseMap.remove(lastValue);</span>
+<span class="fc" id="L584">            lastValue = null;</span>
+<span class="fc" id="L585">            canRemove = false;</span>
+<span class="fc" id="L586">        }</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Inner class EntrySet.
+     */
+    protected static class EntrySet&lt;K, V&gt; extends View&lt;K, V, Map.Entry&lt;K, V&gt;&gt; implements Set&lt;Map.Entry&lt;K, V&gt;&gt; {
+
+        /** Serialization version */
+        private static final long serialVersionUID = 4040410962603292348L;
+
+        /**
+         * Constructs a new view of the BidiMap.
+         *
+         * @param parent  the parent BidiMap
+         */
+        protected EntrySet(final AbstractDualBidiMap&lt;K, V&gt; parent) {
+<span class="fc" id="L604">            super(parent.normalMap.entrySet(), parent);</span>
+<span class="fc" id="L605">        }</span>
+
+        @Override
+        public Iterator&lt;Map.Entry&lt;K, V&gt;&gt; iterator() {
+<span class="fc" id="L609">            return parent.createEntrySetIterator(super.iterator());</span>
+        }
+
+        @Override
+        public boolean remove(final Object obj) {
+<span class="fc bfc" id="L614" title="All 2 branches covered.">            if (obj instanceof Map.Entry == false) {</span>
+<span class="fc" id="L615">                return false;</span>
+            }
+<span class="fc" id="L617">            final Map.Entry&lt;?, ?&gt; entry = (Map.Entry&lt;?, ?&gt;) obj;</span>
+<span class="fc" id="L618">            final Object key = entry.getKey();</span>
+<span class="fc bfc" id="L619" title="All 2 branches covered.">            if (parent.containsKey(key)) {</span>
+<span class="fc" id="L620">                final V value = parent.normalMap.get(key);</span>
+<span class="pc bpc" id="L621" title="1 of 6 branches missed.">                if (value == null ? entry.getValue() == null : value.equals(entry.getValue())) {</span>
+<span class="fc" id="L622">                    parent.normalMap.remove(key);</span>
+<span class="fc" id="L623">                    parent.reverseMap.remove(value);</span>
+<span class="fc" id="L624">                    return true;</span>
+                }
+            }
+<span class="fc" id="L627">            return false;</span>
+        }
+    }
+
+    /**
+     * Inner class EntrySetIterator.
+     */
+    protected static class EntrySetIterator&lt;K, V&gt; extends AbstractIteratorDecorator&lt;Map.Entry&lt;K, V&gt;&gt; {
+
+        /** The parent map */
+        protected final AbstractDualBidiMap&lt;K, V&gt; parent;
+
+        /** The last returned entry */
+<span class="fc" id="L640">        protected Map.Entry&lt;K, V&gt; last = null;</span>
+
+        /** Whether remove is allowed at present */
+<span class="fc" id="L643">        protected boolean canRemove = false;</span>
+
+        /**
+         * Constructor.
+         * @param iterator  the iterator to decorate
+         * @param parent  the parent map
+         */
+        protected EntrySetIterator(final Iterator&lt;Map.Entry&lt;K, V&gt;&gt; iterator, final AbstractDualBidiMap&lt;K, V&gt; parent) {
+<span class="fc" id="L651">            super(iterator);</span>
+<span class="fc" id="L652">            this.parent = parent;</span>
+<span class="fc" id="L653">        }</span>
+
+        @Override
+        public Map.Entry&lt;K, V&gt; next() {
+<span class="fc" id="L657">            last = new MapEntry&lt;&gt;(super.next(), parent);</span>
+<span class="fc" id="L658">            canRemove = true;</span>
+<span class="fc" id="L659">            return last;</span>
+        }
+
+        @Override
+        public void remove() {
+<span class="fc bfc" id="L664" title="All 2 branches covered.">            if (canRemove == false) {</span>
+<span class="fc" id="L665">                throw new IllegalStateException(&quot;Iterator remove() can only be called once after next()&quot;);</span>
+            }
+            // store value as remove may change the entry in the decorator (eg.TreeMap)
+<span class="fc" id="L668">            final Object value = last.getValue();</span>
+<span class="fc" id="L669">            super.remove();</span>
+<span class="fc" id="L670">            parent.reverseMap.remove(value);</span>
+<span class="fc" id="L671">            last = null;</span>
+<span class="fc" id="L672">            canRemove = false;</span>
+<span class="fc" id="L673">        }</span>
+    }
+
+    /**
+     * Inner class MapEntry.
+     */
+    protected static class MapEntry&lt;K, V&gt; extends AbstractMapEntryDecorator&lt;K, V&gt; {
+
+        /** The parent map */
+        protected final AbstractDualBidiMap&lt;K, V&gt; parent;
+
+        /**
+         * Constructor.
+         * @param entry  the entry to decorate
+         * @param parent  the parent map
+         */
+        protected MapEntry(final Map.Entry&lt;K, V&gt; entry, final AbstractDualBidiMap&lt;K, V&gt; parent) {
+<span class="fc" id="L690">            super(entry);</span>
+<span class="fc" id="L691">            this.parent = parent;</span>
+<span class="fc" id="L692">        }</span>
+
+        @Override
+        public V setValue(final V value) {
+<span class="fc" id="L696">            final K key = MapEntry.this.getKey();</span>
+<span class="fc bfc" id="L697" title="All 2 branches covered.">            if (parent.reverseMap.containsKey(value) &amp;&amp;</span>
+<span class="fc bfc" id="L698" title="All 2 branches covered.">                parent.reverseMap.get(value) != key) {</span>
+<span class="fc" id="L699">                throw new IllegalArgumentException(</span>
+                        &quot;Cannot use setValue() when the object being set is already in the map&quot;);
+            }
+<span class="fc" id="L702">            parent.put(key, value);</span>
+<span class="fc" id="L703">            return super.setValue(value);</span>
+        }
+    }
+
+    /**
+     * Inner class MapIterator.
+     */
+    protected static class BidiMapIterator&lt;K, V&gt; implements MapIterator&lt;K, V&gt;, ResettableIterator&lt;K&gt; {
+
+        /** The parent map */
+        protected final AbstractDualBidiMap&lt;K, V&gt; parent;
+
+        /** The iterator being wrapped */
+        protected Iterator&lt;Map.Entry&lt;K, V&gt;&gt; iterator;
+
+        /** The last returned entry */
+<span class="fc" id="L719">        protected Map.Entry&lt;K, V&gt; last = null;</span>
+
+        /** Whether remove is allowed at present */
+<span class="fc" id="L722">        protected boolean canRemove = false;</span>
+
+        /**
+         * Constructor.
+         * @param parent  the parent map
+         */
+        protected BidiMapIterator(final AbstractDualBidiMap&lt;K, V&gt; parent) {
+<span class="fc" id="L729">            super();</span>
+<span class="fc" id="L730">            this.parent = parent;</span>
+<span class="fc" id="L731">            this.iterator = parent.normalMap.entrySet().iterator();</span>
+<span class="fc" id="L732">        }</span>
+
+        @Override
+        public boolean hasNext() {
+<span class="fc" id="L736">            return iterator.hasNext();</span>
+        }
+
+        @Override
+        public K next() {
+<span class="fc" id="L741">            last = iterator.next();</span>
+<span class="fc" id="L742">            canRemove = true;</span>
+<span class="fc" id="L743">            return last.getKey();</span>
+        }
+
+        @Override
+        public void remove() {
+<span class="fc bfc" id="L748" title="All 2 branches covered.">            if (canRemove == false) {</span>
+<span class="fc" id="L749">                throw new IllegalStateException(&quot;Iterator remove() can only be called once after next()&quot;);</span>
+            }
+            // store value as remove may change the entry in the decorator (eg.TreeMap)
+<span class="fc" id="L752">            final V value = last.getValue();</span>
+<span class="fc" id="L753">            iterator.remove();</span>
+<span class="fc" id="L754">            parent.reverseMap.remove(value);</span>
+<span class="fc" id="L755">            last = null;</span>
+<span class="fc" id="L756">            canRemove = false;</span>
+<span class="fc" id="L757">        }</span>
+
+        @Override
+        public K getKey() {
+<span class="fc bfc" id="L761" title="All 2 branches covered.">            if (last == null) {</span>
+<span class="fc" id="L762">                throw new IllegalStateException(</span>
+                        &quot;Iterator getKey() can only be called after next() and before remove()&quot;);
+            }
+<span class="fc" id="L765">            return last.getKey();</span>
+        }
+
+        @Override
+        public V getValue() {
+<span class="fc bfc" id="L770" title="All 2 branches covered.">            if (last == null) {</span>
+<span class="fc" id="L771">                throw new IllegalStateException(</span>
+                        &quot;Iterator getValue() can only be called after next() and before remove()&quot;);
+            }
+<span class="fc" id="L774">            return last.getValue();</span>
+        }
+
+        @Override
+        public V setValue(final V value) {
+<span class="fc bfc" id="L779" title="All 2 branches covered.">            if (last == null) {</span>
+<span class="fc" id="L780">                throw new IllegalStateException(</span>
+                        &quot;Iterator setValue() can only be called after next() and before remove()&quot;);
+            }
+<span class="fc bfc" id="L783" title="All 2 branches covered.">            if (parent.reverseMap.containsKey(value) &amp;&amp;</span>
+<span class="fc bfc" id="L784" title="All 2 branches covered.">                parent.reverseMap.get(value) != last.getKey()) {</span>
+<span class="fc" id="L785">                throw new IllegalArgumentException(</span>
+                        &quot;Cannot use setValue() when the object being set is already in the map&quot;);
+            }
+<span class="fc" id="L788">            return parent.put(last.getKey(), value);</span>
+        }
+
+        @Override
+        public void reset() {
+<span class="nc" id="L793">            iterator = parent.normalMap.entrySet().iterator();</span>
+<span class="nc" id="L794">            last = null;</span>
+<span class="nc" id="L795">            canRemove = false;</span>
+<span class="nc" id="L796">        }</span>
+
+        @Override
+        public String toString() {
+<span class="fc bfc" id="L800" title="All 2 branches covered.">            if (last != null) {</span>
+<span class="fc" id="L801">                return &quot;MapIterator[&quot; + getKey() + &quot;=&quot; + getValue() + &quot;]&quot;;</span>
+            }
+<span class="fc" id="L803">            return &quot;MapIterator[]&quot;;</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

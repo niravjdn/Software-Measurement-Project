@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CharSetUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Lang</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.lang3</a> &gt; <span class="el_source">CharSetUtils.java</span></div><h1>CharSetUtils.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.lang3;
+
+/**
+ * &lt;p&gt;Operations on {@code CharSet} instances.&lt;/p&gt;
+ *
+ * &lt;p&gt;This class handles {@code null} input gracefully.
+ * An exception will not be thrown for a {@code null} input.
+ * Each method documents its behaviour in more detail.&lt;/p&gt;
+ *
+ * &lt;p&gt;#ThreadSafe#&lt;/p&gt;
+ * @see CharSet
+ * @since 1.0
+ */
+public class CharSetUtils {
+
+    /**
+     * &lt;p&gt;CharSetUtils instances should NOT be constructed in standard programming.
+     * Instead, the class should be used as {@code CharSetUtils.evaluateSet(null);}.&lt;/p&gt;
+     *
+     * &lt;p&gt;This constructor is public to permit tools that require a JavaBean instance
+     * to operate.&lt;/p&gt;
+     */
+    public CharSetUtils() {
+<span class="fc" id="L40">      super();</span>
+<span class="fc" id="L41">    }</span>
+
+    // Squeeze
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Squeezes any repetitions of a character that is mentioned in the
+     * supplied set.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * CharSetUtils.squeeze(null, *)        = null
+     * CharSetUtils.squeeze(&quot;&quot;, *)          = &quot;&quot;
+     * CharSetUtils.squeeze(*, null)        = *
+     * CharSetUtils.squeeze(*, &quot;&quot;)          = *
+     * CharSetUtils.squeeze(&quot;hello&quot;, &quot;k-p&quot;) = &quot;helo&quot;
+     * CharSetUtils.squeeze(&quot;hello&quot;, &quot;a-e&quot;) = &quot;hello&quot;
+     * &lt;/pre&gt;
+     *
+     * @see CharSet#getInstance(java.lang.String...) for set-syntax.
+     * @param str  the string to squeeze, may be null
+     * @param set  the character set to use for manipulation, may be null
+     * @return the modified String, {@code null} if null string input
+     */
+    public static String squeeze(final String str, final String... set) {
+<span class="fc bfc" id="L64" title="All 4 branches covered.">        if (StringUtils.isEmpty(str) || deepEmpty(set)) {</span>
+<span class="fc" id="L65">            return str;</span>
+        }
+<span class="fc" id="L67">        final CharSet chars = CharSet.getInstance(set);</span>
+<span class="fc" id="L68">        final StringBuilder buffer = new StringBuilder(str.length());</span>
+<span class="fc" id="L69">        final char[] chrs = str.toCharArray();</span>
+<span class="fc" id="L70">        final int sz = chrs.length;</span>
+<span class="fc" id="L71">        char lastChar = chrs[0];</span>
+<span class="fc" id="L72">        char ch = ' ';</span>
+<span class="fc" id="L73">        Character inChars = null;</span>
+<span class="fc" id="L74">        Character notInChars = null;</span>
+<span class="fc" id="L75">        buffer.append(lastChar);</span>
+<span class="fc bfc" id="L76" title="All 2 branches covered.">        for (int i = 1; i &lt; sz; i++) {</span>
+<span class="fc" id="L77">            ch = chrs[i];</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">            if (ch == lastChar) {</span>
+<span class="fc bfc" id="L79" title="All 4 branches covered.">                if (inChars != null &amp;&amp; ch == inChars) {</span>
+<span class="fc" id="L80">                    continue;</span>
+                }
+<span class="pc bpc" id="L82" title="1 of 4 branches missed.">                if (notInChars == null || ch != notInChars) {</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">                    if (chars.contains(ch)) {</span>
+<span class="fc" id="L84">                        inChars = ch;</span>
+<span class="fc" id="L85">                        continue;</span>
+                    }
+<span class="fc" id="L87">                    notInChars = ch;</span>
+                }
+            }
+<span class="fc" id="L90">            buffer.append(ch);</span>
+<span class="fc" id="L91">            lastChar = ch;</span>
+        }
+<span class="fc" id="L93">        return buffer.toString();</span>
+    }
+
+    // ContainsAny
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Takes an argument in set-syntax, see evaluateSet,
+     * and identifies whether any of the characters are present in the specified string.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * CharSetUtils.containsAny(null, *)        = false
+     * CharSetUtils.containsAny(&quot;&quot;, *)          = false
+     * CharSetUtils.containsAny(*, null)        = false
+     * CharSetUtils.containsAny(*, &quot;&quot;)          = false
+     * CharSetUtils.containsAny(&quot;hello&quot;, &quot;k-p&quot;) = true
+     * CharSetUtils.containsAny(&quot;hello&quot;, &quot;a-d&quot;) = false
+     * &lt;/pre&gt;
+     *
+     * @see CharSet#getInstance(java.lang.String...) for set-syntax.
+     * @param str  String to look for characters in, may be null
+     * @param set  String[] set of characters to identify, may be null
+     * @return whether or not the characters in the set are in the primary string
+     * @since 3.2
+     */
+    public static boolean containsAny(final String str, final String... set) {
+<span class="fc bfc" id="L118" title="All 4 branches covered.">        if (StringUtils.isEmpty(str) || deepEmpty(set)) {</span>
+<span class="fc" id="L119">            return false;</span>
+        }
+<span class="fc" id="L121">        final CharSet chars = CharSet.getInstance(set);</span>
+<span class="fc bfc" id="L122" title="All 2 branches covered.">        for (final char c : str.toCharArray()) {</span>
+<span class="fc bfc" id="L123" title="All 2 branches covered.">            if (chars.contains(c)) {</span>
+<span class="fc" id="L124">                return true;</span>
+            }
+        }
+<span class="fc" id="L127">        return false;</span>
+    }
+
+    // Count
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Takes an argument in set-syntax, see evaluateSet,
+     * and returns the number of characters present in the specified string.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * CharSetUtils.count(null, *)        = 0
+     * CharSetUtils.count(&quot;&quot;, *)          = 0
+     * CharSetUtils.count(*, null)        = 0
+     * CharSetUtils.count(*, &quot;&quot;)          = 0
+     * CharSetUtils.count(&quot;hello&quot;, &quot;k-p&quot;) = 3
+     * CharSetUtils.count(&quot;hello&quot;, &quot;a-e&quot;) = 1
+     * &lt;/pre&gt;
+     *
+     * @see CharSet#getInstance(java.lang.String...) for set-syntax.
+     * @param str  String to count characters in, may be null
+     * @param set  String[] set of characters to count, may be null
+     * @return the character count, zero if null string input
+     */
+    public static int count(final String str, final String... set) {
+<span class="fc bfc" id="L151" title="All 4 branches covered.">        if (StringUtils.isEmpty(str) || deepEmpty(set)) {</span>
+<span class="fc" id="L152">            return 0;</span>
+        }
+<span class="fc" id="L154">        final CharSet chars = CharSet.getInstance(set);</span>
+<span class="fc" id="L155">        int count = 0;</span>
+<span class="fc bfc" id="L156" title="All 2 branches covered.">        for (final char c : str.toCharArray()) {</span>
+<span class="fc bfc" id="L157" title="All 2 branches covered.">            if (chars.contains(c)) {</span>
+<span class="fc" id="L158">                count++;</span>
+            }
+        }
+<span class="fc" id="L161">        return count;</span>
+    }
+
+    // Keep
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Takes an argument in set-syntax, see evaluateSet,
+     * and keeps any of characters present in the specified string.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * CharSetUtils.keep(null, *)        = null
+     * CharSetUtils.keep(&quot;&quot;, *)          = &quot;&quot;
+     * CharSetUtils.keep(*, null)        = &quot;&quot;
+     * CharSetUtils.keep(*, &quot;&quot;)          = &quot;&quot;
+     * CharSetUtils.keep(&quot;hello&quot;, &quot;hl&quot;)  = &quot;hll&quot;
+     * CharSetUtils.keep(&quot;hello&quot;, &quot;le&quot;)  = &quot;ell&quot;
+     * &lt;/pre&gt;
+     *
+     * @see CharSet#getInstance(java.lang.String...) for set-syntax.
+     * @param str  String to keep characters from, may be null
+     * @param set  String[] set of characters to keep, may be null
+     * @return the modified String, {@code null} if null string input
+     * @since 2.0
+     */
+    public static String keep(final String str, final String... set) {
+<span class="fc bfc" id="L186" title="All 2 branches covered.">        if (str == null) {</span>
+<span class="fc" id="L187">            return null;</span>
+        }
+<span class="fc bfc" id="L189" title="All 4 branches covered.">        if (str.isEmpty() || deepEmpty(set)) {</span>
+<span class="fc" id="L190">            return StringUtils.EMPTY;</span>
+        }
+<span class="fc" id="L192">        return modify(str, set, true);</span>
+    }
+
+    // Delete
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Takes an argument in set-syntax, see evaluateSet,
+     * and deletes any of characters present in the specified string.&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     * CharSetUtils.delete(null, *)        = null
+     * CharSetUtils.delete(&quot;&quot;, *)          = &quot;&quot;
+     * CharSetUtils.delete(*, null)        = *
+     * CharSetUtils.delete(*, &quot;&quot;)          = *
+     * CharSetUtils.delete(&quot;hello&quot;, &quot;hl&quot;)  = &quot;eo&quot;
+     * CharSetUtils.delete(&quot;hello&quot;, &quot;le&quot;)  = &quot;ho&quot;
+     * &lt;/pre&gt;
+     *
+     * @see CharSet#getInstance(java.lang.String...) for set-syntax.
+     * @param str  String to delete characters from, may be null
+     * @param set  String[] set of characters to delete, may be null
+     * @return the modified String, {@code null} if null string input
+     */
+    public static String delete(final String str, final String... set) {
+<span class="fc bfc" id="L216" title="All 4 branches covered.">        if (StringUtils.isEmpty(str) || deepEmpty(set)) {</span>
+<span class="fc" id="L217">            return str;</span>
+        }
+<span class="fc" id="L219">        return modify(str, set, false);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Implementation of delete and keep
+     *
+     * @param str String to modify characters within
+     * @param set String[] set of characters to modify
+     * @param expect whether to evaluate on match, or non-match
+     * @return the modified String, not null
+     */
+    private static String modify(final String str, final String[] set, final boolean expect) {
+<span class="fc" id="L232">        final CharSet chars = CharSet.getInstance(set);</span>
+<span class="fc" id="L233">        final StringBuilder buffer = new StringBuilder(str.length());</span>
+<span class="fc" id="L234">        final char[] chrs = str.toCharArray();</span>
+<span class="fc bfc" id="L235" title="All 2 branches covered.">        for (final char chr : chrs) {</span>
+<span class="fc bfc" id="L236" title="All 2 branches covered.">            if (chars.contains(chr) == expect) {</span>
+<span class="fc" id="L237">                buffer.append(chr);</span>
+            }
+        }
+<span class="fc" id="L240">        return buffer.toString();</span>
+    }
+
+    /**
+     * Determines whether or not all the Strings in an array are
+     * empty or not.
+     *
+     * @param strings String[] whose elements are being checked for emptiness
+     * @return whether or not the String is empty
+     */
+    private static boolean deepEmpty(final String[] strings) {
+<span class="fc bfc" id="L251" title="All 2 branches covered.">        if (strings != null) {</span>
+<span class="fc bfc" id="L252" title="All 2 branches covered.">            for (final String s : strings) {</span>
+<span class="fc bfc" id="L253" title="All 2 branches covered.">                if (StringUtils.isNotEmpty(s)) {</span>
+<span class="fc" id="L254">                    return false;</span>
+                }
+            }
+        }
+<span class="fc" id="L258">        return true;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

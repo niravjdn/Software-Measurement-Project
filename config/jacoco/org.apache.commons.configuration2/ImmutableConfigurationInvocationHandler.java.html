@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ImmutableConfigurationInvocationHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2</a> &gt; <span class="el_source">ImmutableConfigurationInvocationHandler.java</span></div><h1>ImmutableConfigurationInvocationHandler.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.configuration2;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Iterator;
+
+/**
+ * &lt;p&gt;
+ * A specialized {@code InvocationHandler} implementation for supporting
+ * immutable configurations.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * An instance of this class is constructed with a reference to a
+ * {@code Configuration} object. All method invocations (which stem from the
+ * {@code ImmutableConfiguration} interface) are delegated to this object. That
+ * way all functionality is actually backed by the underlying
+ * {@code Configuration} implementation, but because the associated proxy only
+ * implements the {@code ImmutableConfiguration} interface manipulations are not
+ * possible.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * There is one caveat however: Some methods of the
+ * {@code ImmutableConfiguration} interface return an {@code Iterator} object.
+ * Using the iterator's {@code remove()} method it may be possible to remove
+ * keys from the underlying {@code Configuration} object. Therefore, in these
+ * cases a specialized {@code Iterator} is returned which does not support the
+ * remove operation.
+ * &lt;/p&gt;
+ *
+ * @version $Id$
+ * @since 2.0
+ */
+class ImmutableConfigurationInvocationHandler implements InvocationHandler
+{
+    /** The underlying configuration object. */
+    private final Configuration wrappedConfiguration;
+
+    /**
+     * Creates a new instance of {@code ImmutableConfigurationInvocationHandler}
+     * and initializes it with the wrapped configuration object.
+     *
+     * @param conf the wrapped {@code Configuration} (must not be &lt;b&gt;null&lt;/b&gt;)
+     * @throws NullPointerException if the {@code Configuration} is &lt;b&gt;null&lt;/b&gt;
+     */
+    public ImmutableConfigurationInvocationHandler(final Configuration conf)
+<span class="fc" id="L63">    {</span>
+<span class="fc bfc" id="L64" title="All 2 branches covered.">        if (conf == null)</span>
+        {
+<span class="fc" id="L66">            throw new NullPointerException(</span>
+                    &quot;Wrapped configuration must not be null!&quot;);
+        }
+<span class="fc" id="L69">        wrappedConfiguration = conf;</span>
+<span class="fc" id="L70">    }</span>
+
+    /**
+     * {@inheritDoc} This implementation delegates to the wrapped configuration
+     * object. Result objects are wrapped if necessary.
+     */
+    @Override
+    public Object invoke(final Object proxy, final Method method, final Object[] args)
+            throws Throwable
+    {
+        try
+        {
+<span class="fc" id="L82">            return handleResult(method.invoke(wrappedConfiguration, args));</span>
+        }
+<span class="fc" id="L84">        catch (final InvocationTargetException e)</span>
+        {
+            // unwrap
+<span class="fc" id="L87">            throw e.getCause();</span>
+        }
+    }
+
+    /**
+     * Handles the result from the method invocation on the wrapped
+     * configuration. This implementation wraps result objects if necessary so
+     * that the underlying configuration cannot be manipulated.
+     *
+     * @param result the result object
+     * @return the processed result object
+     */
+    private static Object handleResult(final Object result)
+    {
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        if (result instanceof Iterator)</span>
+        {
+<span class="fc" id="L103">            return new ImmutableIterator((Iterator&lt;?&gt;) result);</span>
+        }
+<span class="fc" id="L105">        return result;</span>
+    }
+
+    /**
+     * A specialized {@code Iterator} implementation which delegates to an
+     * underlying iterator, but does not support the {@code remove()} method.
+     */
+    private static class ImmutableIterator implements Iterator&lt;Object&gt;
+    {
+        /** The underlying iterator. */
+        private final Iterator&lt;?&gt; wrappedIterator;
+
+        /**
+         * Creates a new instance of {@code ImmutableIterator} and sets the
+         * underlying iterator.
+         *
+         * @param it the underlying iterator
+         */
+        public ImmutableIterator(final Iterator&lt;?&gt; it)
+<span class="fc" id="L124">        {</span>
+<span class="fc" id="L125">            wrappedIterator = it;</span>
+<span class="fc" id="L126">        }</span>
+
+        /**
+         * {@inheritDoc} This implementation just delegates to the underlying
+         * iterator.
+         */
+        @Override
+        public boolean hasNext()
+        {
+<span class="fc" id="L135">            return wrappedIterator.hasNext();</span>
+        }
+
+        /**
+         * {@inheritDoc} This implementation just delegates to the underlying
+         * iterator.
+         */
+        @Override
+        public Object next()
+        {
+<span class="fc" id="L145">            return wrappedIterator.next();</span>
+        }
+
+        /**
+         * {@inheritDoc} This implementation just throws an exception: removing
+         * objects is not supported.
+         */
+        @Override
+        public void remove()
+        {
+<span class="fc" id="L155">            throw new UnsupportedOperationException(</span>
+                    &quot;remove() operation not supported!&quot;);
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

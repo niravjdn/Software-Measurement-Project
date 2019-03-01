@@ -1,0 +1,1101 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractReferenceMap.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.map</a> &gt; <span class="el_source">AbstractReferenceMap.java</span></div><h1>AbstractReferenceMap.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.map;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.SoftReference;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
+
+import org.apache.commons.collections4.MapIterator;
+import org.apache.commons.collections4.keyvalue.DefaultMapEntry;
+
+/**
+ * An abstract implementation of a hash-based map that allows the entries to
+ * be removed by the garbage collector.
+ * &lt;p&gt;
+ * This class implements all the features necessary for a subclass reference
+ * hash-based map. Key-value entries are stored in instances of the
+ * &lt;code&gt;ReferenceEntry&lt;/code&gt; class which can be overridden and replaced.
+ * The iterators can similarly be replaced, without the need to replace the KeySet,
+ * EntrySet and Values view classes.
+ * &lt;p&gt;
+ * Overridable methods are provided to change the default hashing behaviour, and
+ * to change how entries are added to and removed from the map. Hopefully, all you
+ * need for unusual subclasses is here.
+ * &lt;p&gt;
+ * When you construct an &lt;code&gt;AbstractReferenceMap&lt;/code&gt;, you can specify what
+ * kind of references are used to store the map's keys and values.
+ * If non-hard references are used, then the garbage collector can remove
+ * mappings if a key or value becomes unreachable, or if the JVM's memory is
+ * running low. For information on how the different reference types behave,
+ * see {@link Reference}.
+ * &lt;p&gt;
+ * Different types of references can be specified for keys and values.
+ * The keys can be configured to be weak but the values hard,
+ * in which case this class will behave like a
+ * &lt;a href=&quot;http://java.sun.com/j2se/1.4/docs/api/java/util/WeakHashMap.html&quot;&gt;
+ * &lt;code&gt;WeakHashMap&lt;/code&gt;&lt;/a&gt;. However, you can also specify hard keys and
+ * weak values, or any other combination. The default constructor uses
+ * hard keys and soft values, providing a memory-sensitive cache.
+ * &lt;p&gt;
+ * This {@link Map} implementation does &lt;i&gt;not&lt;/i&gt; allow null elements.
+ * Attempting to add a null key or value to the map will raise a
+ * &lt;code&gt;NullPointerException&lt;/code&gt;.
+ * &lt;p&gt;
+ * All the available iterators can be reset back to the start by casting to
+ * &lt;code&gt;ResettableIterator&lt;/code&gt; and calling &lt;code&gt;reset()&lt;/code&gt;.
+ * &lt;p&gt;
+ * This implementation is not synchronized.
+ * You can use {@link java.util.Collections#synchronizedMap} to
+ * provide synchronized access to a &lt;code&gt;ReferenceMap&lt;/code&gt;.
+ *
+ * @param &lt;K&gt; the type of the keys in this map
+ * @param &lt;V&gt; the type of the values in this map
+ *
+ * @see java.lang.ref.Reference
+ * @since 3.1 (extracted from ReferenceMap in 3.0)
+ */
+public abstract class AbstractReferenceMap&lt;K, V&gt; extends AbstractHashedMap&lt;K, V&gt; {
+
+    /**
+     * Reference type enum.
+     */
+<span class="fc" id="L89">    public enum ReferenceStrength {</span>
+<span class="fc" id="L90">        HARD(0), SOFT(1), WEAK(2);</span>
+
+        /** value */
+        public final int value;
+
+        /**
+         * Resolve enum from int.
+         * @param value  the int value
+         * @return ReferenceType
+         * @throws IllegalArgumentException if the specified value is invalid.
+         */
+        public static ReferenceStrength resolve(final int value) {
+<span class="pc bpc" id="L102" title="3 of 4 branches missed.">            switch (value) {</span>
+            case 0:
+<span class="nc" id="L104">                return HARD;</span>
+            case 1:
+<span class="nc" id="L106">                return SOFT;</span>
+            case 2:
+<span class="fc" id="L108">                return WEAK;</span>
+            default:
+<span class="nc" id="L110">                throw new IllegalArgumentException();</span>
+            }
+        }
+
+<span class="fc" id="L114">        private ReferenceStrength(final int value) {</span>
+<span class="fc" id="L115">            this.value = value;</span>
+<span class="fc" id="L116">        }</span>
+
+    }
+
+    /**
+     * The reference type for keys.
+     */
+    private ReferenceStrength keyType;
+
+    /**
+     * The reference type for values.
+     */
+    private ReferenceStrength valueType;
+
+    /**
+     * Should the value be automatically purged when the associated key has been collected?
+     */
+    private boolean purgeValues;
+
+    /**
+     * ReferenceQueue used to eliminate stale mappings.
+     * See purge.
+     */
+    private transient ReferenceQueue&lt;Object&gt; queue;
+
+    //-----------------------------------------------------------------------
+    /**
+     * Constructor used during deserialization.
+     */
+    protected AbstractReferenceMap() {
+<span class="fc" id="L146">        super();</span>
+<span class="fc" id="L147">    }</span>
+
+    /**
+     * Constructs a new empty map with the specified reference types,
+     * load factor and initial capacity.
+     *
+     * @param keyType  the type of reference to use for keys;
+     *   must be {@link ReferenceStrength#HARD HARD},
+     *   {@link ReferenceStrength#SOFT SOFT},
+     *   {@link ReferenceStrength#WEAK WEAK}
+     * @param valueType  the type of reference to use for values;
+     *   must be {@link ReferenceStrength#HARD},
+     *   {@link ReferenceStrength#SOFT SOFT},
+     *   {@link ReferenceStrength#WEAK WEAK}
+     * @param capacity  the initial capacity for the map
+     * @param loadFactor  the load factor for the map
+     * @param purgeValues  should the value be automatically purged when the
+     *   key is garbage collected
+     */
+    protected AbstractReferenceMap(
+            final ReferenceStrength keyType, final ReferenceStrength valueType, final int capacity,
+            final float loadFactor, final boolean purgeValues) {
+<span class="fc" id="L169">        super(capacity, loadFactor);</span>
+<span class="fc" id="L170">        this.keyType = keyType;</span>
+<span class="fc" id="L171">        this.valueType = valueType;</span>
+<span class="fc" id="L172">        this.purgeValues = purgeValues;</span>
+<span class="fc" id="L173">    }</span>
+
+    /**
+     * Initialise this subclass during construction, cloning or deserialization.
+     */
+    @Override
+    protected void init() {
+<span class="fc" id="L180">        queue = new ReferenceQueue&lt;&gt;();</span>
+<span class="fc" id="L181">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets the size of the map.
+     *
+     * @return the size
+     */
+    @Override
+    public int size() {
+<span class="fc" id="L191">        purgeBeforeRead();</span>
+<span class="fc" id="L192">        return super.size();</span>
+    }
+
+    /**
+     * Checks whether the map is currently empty.
+     *
+     * @return true if the map is currently size zero
+     */
+    @Override
+    public boolean isEmpty() {
+<span class="fc" id="L202">        purgeBeforeRead();</span>
+<span class="fc" id="L203">        return super.isEmpty();</span>
+    }
+
+    /**
+     * Checks whether the map contains the specified key.
+     *
+     * @param key  the key to search for
+     * @return true if the map contains the key
+     */
+    @Override
+    public boolean containsKey(final Object key) {
+<span class="fc" id="L214">        purgeBeforeRead();</span>
+<span class="fc" id="L215">        final Entry&lt;K, V&gt; entry = getEntry(key);</span>
+<span class="fc bfc" id="L216" title="All 2 branches covered.">        if (entry == null) {</span>
+<span class="fc" id="L217">            return false;</span>
+        }
+<span class="pc bpc" id="L219" title="1 of 2 branches missed.">        return entry.getValue() != null;</span>
+    }
+
+    /**
+     * Checks whether the map contains the specified value.
+     *
+     * @param value  the value to search for
+     * @return true if the map contains the value
+     */
+    @Override
+    public boolean containsValue(final Object value) {
+<span class="fc" id="L230">        purgeBeforeRead();</span>
+<span class="fc bfc" id="L231" title="All 2 branches covered.">        if (value == null) {</span>
+<span class="fc" id="L232">            return false;</span>
+        }
+<span class="fc" id="L234">        return super.containsValue(value);</span>
+    }
+
+    /**
+     * Gets the value mapped to the key specified.
+     *
+     * @param key  the key
+     * @return the mapped value, null if no match
+     */
+    @Override
+    public V get(final Object key) {
+<span class="fc" id="L245">        purgeBeforeRead();</span>
+<span class="fc" id="L246">        final Entry&lt;K, V&gt; entry = getEntry(key);</span>
+<span class="fc bfc" id="L247" title="All 2 branches covered.">        if (entry == null) {</span>
+<span class="fc" id="L248">            return null;</span>
+        }
+<span class="fc" id="L250">        return entry.getValue();</span>
+    }
+
+
+    /**
+     * Puts a key-value mapping into this map.
+     * Neither the key nor the value may be null.
+     *
+     * @param key  the key to add, must not be null
+     * @param value  the value to add, must not be null
+     * @return the value previously mapped to this key, null if none
+     * @throws NullPointerException if either the key or value is null
+     */
+    @Override
+    public V put(final K key, final V value) {
+<span class="fc bfc" id="L265" title="All 2 branches covered.">        if (key == null) {</span>
+<span class="fc" id="L266">            throw new NullPointerException(&quot;null keys not allowed&quot;);</span>
+        }
+<span class="fc bfc" id="L268" title="All 2 branches covered.">        if (value == null) {</span>
+<span class="fc" id="L269">            throw new NullPointerException(&quot;null values not allowed&quot;);</span>
+        }
+
+<span class="fc" id="L272">        purgeBeforeWrite();</span>
+<span class="fc" id="L273">        return super.put(key, value);</span>
+    }
+
+    /**
+     * Removes the specified mapping from this map.
+     *
+     * @param key  the mapping to remove
+     * @return the value mapped to the removed key, null if key not in map
+     */
+    @Override
+    public V remove(final Object key) {
+<span class="fc bfc" id="L284" title="All 2 branches covered.">        if (key == null) {</span>
+<span class="fc" id="L285">            return null;</span>
+        }
+<span class="fc" id="L287">        purgeBeforeWrite();</span>
+<span class="fc" id="L288">        return super.remove(key);</span>
+    }
+
+    /**
+     * Clears this map.
+     */
+    @Override
+    public void clear() {
+<span class="fc" id="L296">        super.clear();</span>
+        // drain the queue
+<span class="pc bpc" id="L298" title="1 of 2 branches missed.">        while (queue.poll() != null) {} // NOPMD</span>
+<span class="fc" id="L299">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets a MapIterator over the reference map.
+     * The iterator only returns valid key/value pairs.
+     *
+     * @return a map iterator
+     */
+    @Override
+    public MapIterator&lt;K, V&gt; mapIterator() {
+<span class="fc" id="L310">        return new ReferenceMapIterator&lt;&gt;(this);</span>
+    }
+
+    /**
+     * Returns a set view of this map's entries.
+     * An iterator returned entry is valid until &lt;code&gt;next()&lt;/code&gt; is called again.
+     * The &lt;code&gt;setValue()&lt;/code&gt; method on the &lt;code&gt;toArray&lt;/code&gt; entries has no effect.
+     *
+     * @return a set view of this map's entries
+     */
+    @Override
+    public Set&lt;Map.Entry&lt;K, V&gt;&gt; entrySet() {
+<span class="fc bfc" id="L322" title="All 2 branches covered.">        if (entrySet == null) {</span>
+<span class="fc" id="L323">            entrySet = new ReferenceEntrySet&lt;&gt;(this);</span>
+        }
+<span class="fc" id="L325">        return entrySet;</span>
+    }
+
+    /**
+     * Returns a set view of this map's keys.
+     *
+     * @return a set view of this map's keys
+     */
+    @Override
+    public Set&lt;K&gt; keySet() {
+<span class="fc bfc" id="L335" title="All 2 branches covered.">        if (keySet == null) {</span>
+<span class="fc" id="L336">            keySet = new ReferenceKeySet&lt;&gt;(this);</span>
+        }
+<span class="fc" id="L338">        return keySet;</span>
+    }
+
+    /**
+     * Returns a collection view of this map's values.
+     *
+     * @return a set view of this map's values
+     */
+    @Override
+    public Collection&lt;V&gt; values() {
+<span class="fc bfc" id="L348" title="All 2 branches covered.">        if (values == null) {</span>
+<span class="fc" id="L349">            values = new ReferenceValues&lt;&gt;(this);</span>
+        }
+<span class="fc" id="L351">        return values;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Purges stale mappings from this map before read operations.
+     * &lt;p&gt;
+     * This implementation calls {@link #purge()} to maintain a consistent state.
+     */
+    protected void purgeBeforeRead() {
+<span class="fc" id="L361">        purge();</span>
+<span class="fc" id="L362">    }</span>
+
+    /**
+     * Purges stale mappings from this map before write operations.
+     * &lt;p&gt;
+     * This implementation calls {@link #purge()} to maintain a consistent state.
+     */
+    protected void purgeBeforeWrite() {
+<span class="fc" id="L370">        purge();</span>
+<span class="fc" id="L371">    }</span>
+
+    /**
+     * Purges stale mappings from this map.
+     * &lt;p&gt;
+     * Note that this method is not synchronized!  Special
+     * care must be taken if, for instance, you want stale
+     * mappings to be removed on a periodic basis by some
+     * background thread.
+     */
+    protected void purge() {
+<span class="fc" id="L382">        Reference&lt;?&gt; ref = queue.poll();</span>
+<span class="fc bfc" id="L383" title="All 2 branches covered.">        while (ref != null) {</span>
+<span class="fc" id="L384">            purge(ref);</span>
+<span class="fc" id="L385">            ref = queue.poll();</span>
+        }
+<span class="fc" id="L387">    }</span>
+
+    /**
+     * Purges the specified reference.
+     *
+     * @param ref  the reference to purge
+     */
+    protected void purge(final Reference&lt;?&gt; ref) {
+        // The hashCode of the reference is the hashCode of the
+        // mapping key, even if the reference refers to the
+        // mapping value...
+<span class="fc" id="L398">        final int hash = ref.hashCode();</span>
+<span class="fc" id="L399">        final int index = hashIndex(hash, data.length);</span>
+<span class="fc" id="L400">        HashEntry&lt;K, V&gt; previous = null;</span>
+<span class="fc" id="L401">        HashEntry&lt;K, V&gt; entry = data[index];</span>
+<span class="pc bpc" id="L402" title="1 of 2 branches missed.">        while (entry != null) {</span>
+<span class="fc" id="L403">            ReferenceEntry&lt;K, V&gt; refEntry = (ReferenceEntry&lt;K, V&gt;) entry;</span>
+<span class="fc bfc" id="L404" title="All 2 branches covered.">            if (refEntry.purge(ref)) {</span>
+<span class="fc bfc" id="L405" title="All 2 branches covered.">                if (previous == null) {</span>
+<span class="fc" id="L406">                    data[index] = entry.next;</span>
+                } else {
+<span class="fc" id="L408">                    previous.next = entry.next;</span>
+                }
+<span class="fc" id="L410">                this.size--;</span>
+<span class="fc" id="L411">                refEntry.onPurge();</span>
+<span class="fc" id="L412">                return;</span>
+            }
+<span class="fc" id="L414">            previous = entry;</span>
+<span class="fc" id="L415">            entry = entry.next;</span>
+<span class="fc" id="L416">        }</span>
+
+<span class="nc" id="L418">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets the entry mapped to the key specified.
+     *
+     * @param key  the key
+     * @return the entry, null if no match
+     */
+    @Override
+    protected HashEntry&lt;K, V&gt; getEntry(final Object key) {
+<span class="fc bfc" id="L429" title="All 2 branches covered.">        if (key == null) {</span>
+<span class="fc" id="L430">            return null;</span>
+        }
+<span class="fc" id="L432">        return super.getEntry(key);</span>
+    }
+
+    /**
+     * Gets the hash code for a MapEntry.
+     * Subclasses can override this, for example to use the identityHashCode.
+     *
+     * @param key  the key to get a hash code for, may be null
+     * @param value  the value to get a hash code for, may be null
+     * @return the hash code, as per the MapEntry specification
+     */
+    protected int hashEntry(final Object key, final Object value) {
+<span class="pc bpc" id="L444" title="2 of 4 branches missed.">        return (key == null ? 0 : key.hashCode()) ^</span>
+<span class="fc" id="L445">               (value == null ? 0 : value.hashCode());</span>
+    }
+
+    /**
+     * Compares two keys, in internal converted form, to see if they are equal.
+     * &lt;p&gt;
+     * This implementation converts the key from the entry to a real reference
+     * before comparison.
+     *
+     * @param key1  the first key to compare passed in from outside
+     * @param key2  the second key extracted from the entry via &lt;code&gt;entry.key&lt;/code&gt;
+     * @return true if equal
+     */
+    @Override
+    @SuppressWarnings(&quot;unchecked&quot;)
+    protected boolean isEqualKey(final Object key1, Object key2) {
+<span class="pc bpc" id="L461" title="1 of 2 branches missed.">        key2 = keyType == ReferenceStrength.HARD ? key2 : ((Reference&lt;K&gt;) key2).get();</span>
+<span class="pc bpc" id="L462" title="1 of 4 branches missed.">        return key1 == key2 || key1.equals(key2);</span>
+    }
+
+    /**
+     * Creates a ReferenceEntry instead of a HashEntry.
+     *
+     * @param next  the next entry in sequence
+     * @param hashCode  the hash code to use
+     * @param key  the key to store
+     * @param value  the value to store
+     * @return the newly created entry
+     */
+    @Override
+    protected ReferenceEntry&lt;K, V&gt; createEntry(final HashEntry&lt;K, V&gt; next, final int hashCode,
+                                               final K key, final V value) {
+<span class="fc" id="L477">        return new ReferenceEntry&lt;&gt;(this, next, hashCode, key, value);</span>
+    }
+
+    /**
+     * Creates an entry set iterator.
+     *
+     * @return the entrySet iterator
+     */
+    @Override
+    protected Iterator&lt;Map.Entry&lt;K, V&gt;&gt; createEntrySetIterator() {
+<span class="fc" id="L487">        return new ReferenceEntrySetIterator&lt;&gt;(this);</span>
+    }
+
+    /**
+     * Creates an key set iterator.
+     *
+     * @return the keySet iterator
+     */
+    @Override
+    protected Iterator&lt;K&gt; createKeySetIterator() {
+<span class="fc" id="L497">        return new ReferenceKeySetIterator&lt;&gt;(this);</span>
+    }
+
+    /**
+     * Creates an values iterator.
+     *
+     * @return the values iterator
+     */
+    @Override
+    protected Iterator&lt;V&gt; createValuesIterator() {
+<span class="fc" id="L507">        return new ReferenceValuesIterator&lt;&gt;(this);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * EntrySet implementation.
+     */
+    static class ReferenceEntrySet&lt;K, V&gt; extends EntrySet&lt;K, V&gt; {
+
+        protected ReferenceEntrySet(final AbstractHashedMap&lt;K, V&gt; parent) {
+<span class="fc" id="L517">            super(parent);</span>
+<span class="fc" id="L518">        }</span>
+
+        @Override
+        public Object[] toArray() {
+<span class="fc" id="L522">            return toArray(new Object[size()]);</span>
+        }
+
+        @Override
+        public &lt;T&gt; T[] toArray(final T[] arr) {
+            // special implementation to handle disappearing entries
+<span class="fc" id="L528">            final ArrayList&lt;Map.Entry&lt;K, V&gt;&gt; list = new ArrayList&lt;&gt;(size());</span>
+<span class="fc bfc" id="L529" title="All 2 branches covered.">            for (final Map.Entry&lt;K, V&gt; entry : this) {</span>
+<span class="fc" id="L530">                list.add(new DefaultMapEntry&lt;&gt;(entry));</span>
+<span class="fc" id="L531">            }</span>
+<span class="fc" id="L532">            return list.toArray(arr);</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * KeySet implementation.
+     */
+    static class ReferenceKeySet&lt;K&gt; extends KeySet&lt;K&gt; {
+
+        protected ReferenceKeySet(final AbstractHashedMap&lt;K, ?&gt; parent) {
+<span class="fc" id="L543">            super(parent);</span>
+<span class="fc" id="L544">        }</span>
+
+        @Override
+        public Object[] toArray() {
+<span class="fc" id="L548">            return toArray(new Object[size()]);</span>
+        }
+
+        @Override
+        public &lt;T&gt; T[] toArray(final T[] arr) {
+            // special implementation to handle disappearing keys
+<span class="fc" id="L554">            final List&lt;K&gt; list = new ArrayList&lt;&gt;(size());</span>
+<span class="fc bfc" id="L555" title="All 2 branches covered.">            for (final K key : this) {</span>
+<span class="fc" id="L556">                list.add(key);</span>
+<span class="fc" id="L557">            }</span>
+<span class="fc" id="L558">            return list.toArray(arr);</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Values implementation.
+     */
+    static class ReferenceValues&lt;V&gt; extends Values&lt;V&gt; {
+
+        protected ReferenceValues(final AbstractHashedMap&lt;?, V&gt; parent) {
+<span class="fc" id="L569">            super(parent);</span>
+<span class="fc" id="L570">        }</span>
+
+        @Override
+        public Object[] toArray() {
+<span class="fc" id="L574">            return toArray(new Object[size()]);</span>
+        }
+
+        @Override
+        public &lt;T&gt; T[] toArray(final T[] arr) {
+            // special implementation to handle disappearing values
+<span class="fc" id="L580">            final List&lt;V&gt; list = new ArrayList&lt;&gt;(size());</span>
+<span class="fc bfc" id="L581" title="All 2 branches covered.">            for (final V value : this) {</span>
+<span class="fc" id="L582">                list.add(value);</span>
+<span class="fc" id="L583">            }</span>
+<span class="fc" id="L584">            return list.toArray(arr);</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * A MapEntry implementation for the map.
+     * &lt;p&gt;
+     * If getKey() or getValue() returns null, it means
+     * the mapping is stale and should be removed.
+     *
+     * @since 3.1
+     */
+    protected static class ReferenceEntry&lt;K, V&gt; extends HashEntry&lt;K, V&gt; {
+        /** The parent map */
+        private final AbstractReferenceMap&lt;K, V&gt; parent;
+
+        /**
+         * Creates a new entry object for the ReferenceMap.
+         *
+         * @param parent  the parent map
+         * @param next  the next entry in the hash bucket
+         * @param hashCode  the hash code of the key
+         * @param key  the key
+         * @param value  the value
+         */
+        public ReferenceEntry(final AbstractReferenceMap&lt;K, V&gt; parent, final HashEntry&lt;K, V&gt; next,
+                              final int hashCode, final K key, final V value) {
+<span class="fc" id="L612">            super(next, hashCode, null, null);</span>
+<span class="fc" id="L613">            this.parent = parent;</span>
+<span class="fc" id="L614">            this.key = toReference(parent.keyType, key, hashCode);</span>
+<span class="fc" id="L615">            this.value = toReference(parent.valueType, value, hashCode); // the key hashCode is passed in deliberately</span>
+<span class="fc" id="L616">        }</span>
+
+        /**
+         * Gets the key from the entry.
+         * This method dereferences weak and soft keys and thus may return null.
+         *
+         * @return the key, which may be null if it was garbage collected
+         */
+        @Override
+        @SuppressWarnings(&quot;unchecked&quot;)
+        public K getKey() {
+<span class="fc bfc" id="L627" title="All 2 branches covered.">            return (K) (parent.keyType == ReferenceStrength.HARD ? key : ((Reference&lt;K&gt;) key).get());</span>
+        }
+
+        /**
+         * Gets the value from the entry.
+         * This method dereferences weak and soft value and thus may return null.
+         *
+         * @return the value, which may be null if it was garbage collected
+         */
+        @Override
+        @SuppressWarnings(&quot;unchecked&quot;)
+        public V getValue() {
+<span class="fc bfc" id="L639" title="All 2 branches covered.">            return (V) (parent.valueType == ReferenceStrength.HARD ? value : ((Reference&lt;V&gt;) value).get());</span>
+        }
+
+        /**
+         * Sets the value of the entry.
+         *
+         * @param obj  the object to store
+         * @return the previous value
+         */
+        @Override
+        @SuppressWarnings(&quot;unchecked&quot;)
+        public V setValue(final V obj) {
+<span class="fc" id="L651">            final V old = getValue();</span>
+<span class="fc bfc" id="L652" title="All 2 branches covered.">            if (parent.valueType != ReferenceStrength.HARD) {</span>
+<span class="fc" id="L653">                ((Reference&lt;V&gt;) value).clear();</span>
+            }
+<span class="fc" id="L655">            value = toReference(parent.valueType, obj, hashCode);</span>
+<span class="fc" id="L656">            return old;</span>
+        }
+
+        /**
+         * Compares this map entry to another.
+         * &lt;p&gt;
+         * This implementation uses &lt;code&gt;isEqualKey&lt;/code&gt; and
+         * &lt;code&gt;isEqualValue&lt;/code&gt; on the main map for comparison.
+         *
+         * @param obj  the other map entry to compare to
+         * @return true if equal, false if not
+         */
+        @Override
+        public boolean equals(final Object obj) {
+<span class="fc bfc" id="L670" title="All 2 branches covered.">            if (obj == this) {</span>
+<span class="fc" id="L671">                return true;</span>
+            }
+<span class="pc bpc" id="L673" title="1 of 2 branches missed.">            if (obj instanceof Map.Entry == false) {</span>
+<span class="nc" id="L674">                return false;</span>
+            }
+
+<span class="fc" id="L677">            final Map.Entry&lt;?, ?&gt; entry = (Map.Entry&lt;?, ?&gt;)obj;</span>
+<span class="fc" id="L678">            final Object entryKey = entry.getKey();  // convert to hard reference</span>
+<span class="fc" id="L679">            final Object entryValue = entry.getValue();  // convert to hard reference</span>
+<span class="pc bpc" id="L680" title="2 of 4 branches missed.">            if (entryKey == null || entryValue == null) {</span>
+<span class="nc" id="L681">                return false;</span>
+            }
+            // compare using map methods, aiding identity subclass
+            // note that key is direct access and value is via method
+<span class="fc bfc" id="L685" title="All 2 branches covered.">            return parent.isEqualKey(entryKey, key) &amp;&amp;</span>
+<span class="fc bfc" id="L686" title="All 2 branches covered.">                   parent.isEqualValue(entryValue, getValue());</span>
+        }
+
+        /**
+         * Gets the hashcode of the entry using temporary hard references.
+         * &lt;p&gt;
+         * This implementation uses &lt;code&gt;hashEntry&lt;/code&gt; on the main map.
+         *
+         * @return the hashcode of the entry
+         */
+        @Override
+        public int hashCode() {
+<span class="fc" id="L698">            return parent.hashEntry(getKey(), getValue());</span>
+        }
+
+        /**
+         * Constructs a reference of the given type to the given referent.
+         * The reference is registered with the queue for later purging.
+         *
+         * @param &lt;T&gt; the type of the referenced object
+         * @param type  HARD, SOFT or WEAK
+         * @param referent  the object to refer to
+         * @param hash  the hash code of the &lt;i&gt;key&lt;/i&gt; of the mapping;
+         *    this number might be different from referent.hashCode() if
+         *    the referent represents a value and not a key
+         * @return the reference to the object
+         */
+        protected &lt;T&gt; Object toReference(final ReferenceStrength type, final T referent, final int hash) {
+<span class="fc bfc" id="L714" title="All 2 branches covered.">            if (type == ReferenceStrength.HARD) {</span>
+<span class="fc" id="L715">                return referent;</span>
+            }
+<span class="pc bpc" id="L717" title="1 of 2 branches missed.">            if (type == ReferenceStrength.SOFT) {</span>
+<span class="nc" id="L718">                return new SoftRef&lt;&gt;(hash, referent, parent.queue);</span>
+            }
+<span class="pc bpc" id="L720" title="1 of 2 branches missed.">            if (type == ReferenceStrength.WEAK) {</span>
+<span class="fc" id="L721">                return new WeakRef&lt;&gt;(hash, referent, parent.queue);</span>
+            }
+<span class="nc" id="L723">            throw new Error();</span>
+        }
+
+        /**
+         * This is the callback for custom &quot;after purge&quot; logic
+         */
+        protected void onPurge() {
+<span class="fc" id="L730">        }</span>
+
+        /**
+         * Purges the specified reference
+         * @param ref  the reference to purge
+         * @return true or false
+         */
+        protected boolean purge(final Reference&lt;?&gt; ref) {
+<span class="pc bpc" id="L738" title="1 of 4 branches missed.">            boolean r = parent.keyType != ReferenceStrength.HARD &amp;&amp; key == ref;</span>
+<span class="pc bpc" id="L739" title="3 of 6 branches missed.">            r = r || parent.valueType != ReferenceStrength.HARD &amp;&amp; value == ref;</span>
+<span class="fc bfc" id="L740" title="All 2 branches covered.">            if (r) {</span>
+<span class="pc bpc" id="L741" title="1 of 2 branches missed.">                if (parent.keyType != ReferenceStrength.HARD) {</span>
+<span class="fc" id="L742">                    ((Reference&lt;?&gt;) key).clear();</span>
+                }
+<span class="pc bpc" id="L744" title="1 of 2 branches missed.">                if (parent.valueType != ReferenceStrength.HARD) {</span>
+<span class="nc" id="L745">                    ((Reference&lt;?&gt;) value).clear();</span>
+<span class="fc bfc" id="L746" title="All 2 branches covered.">                } else if (parent.purgeValues) {</span>
+<span class="fc" id="L747">                    nullValue();</span>
+                }
+            }
+<span class="fc" id="L750">            return r;</span>
+        }
+
+        /**
+         * Gets the next entry in the bucket.
+         *
+         * @return the next entry in the bucket
+         */
+        protected ReferenceEntry&lt;K, V&gt; next() {
+<span class="fc" id="L759">            return (ReferenceEntry&lt;K, V&gt;) next;</span>
+        }
+
+        /**
+         * This method can be overriden to provide custom logic to purge value
+         */
+        protected void nullValue() {
+<span class="fc" id="L766">            value = null;</span>
+<span class="fc" id="L767">        }</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Base iterator class.
+     */
+    static class ReferenceBaseIterator&lt;K, V&gt; {
+        /** The parent map */
+        final AbstractReferenceMap&lt;K, V&gt; parent;
+
+        // These fields keep track of where we are in the table.
+        int index;
+        ReferenceEntry&lt;K, V&gt; entry;
+        ReferenceEntry&lt;K, V&gt; previous;
+
+        // These Object fields provide hard references to the
+        // current and next entry; this assures that if hasNext()
+        // returns true, next() will actually return a valid element.
+        K currentKey, nextKey;
+        V currentValue, nextValue;
+
+        int expectedModCount;
+
+        public ReferenceBaseIterator(final AbstractReferenceMap&lt;K, V&gt; parent) {
+<span class="fc" id="L792">            super();</span>
+<span class="fc" id="L793">            this.parent = parent;</span>
+<span class="fc bfc" id="L794" title="All 2 branches covered.">            index = parent.size() != 0 ? parent.data.length : 0;</span>
+            // have to do this here!  size() invocation above
+            // may have altered the modCount.
+<span class="fc" id="L797">            expectedModCount = parent.modCount;</span>
+<span class="fc" id="L798">        }</span>
+
+        public boolean hasNext() {
+<span class="fc" id="L801">            checkMod();</span>
+<span class="fc bfc" id="L802" title="All 2 branches covered.">            while (nextNull()) {</span>
+<span class="fc" id="L803">                ReferenceEntry&lt;K, V&gt; e = entry;</span>
+<span class="fc" id="L804">                int i = index;</span>
+<span class="fc bfc" id="L805" title="All 4 branches covered.">                while (e == null &amp;&amp; i &gt; 0) {</span>
+<span class="fc" id="L806">                    i--;</span>
+<span class="fc" id="L807">                    e = (ReferenceEntry&lt;K, V&gt;) parent.data[i];</span>
+                }
+<span class="fc" id="L809">                entry = e;</span>
+<span class="fc" id="L810">                index = i;</span>
+<span class="fc bfc" id="L811" title="All 2 branches covered.">                if (e == null) {</span>
+<span class="fc" id="L812">                    currentKey = null;</span>
+<span class="fc" id="L813">                    currentValue = null;</span>
+<span class="fc" id="L814">                    return false;</span>
+                }
+<span class="fc" id="L816">                nextKey = e.getKey();</span>
+<span class="fc" id="L817">                nextValue = e.getValue();</span>
+<span class="pc bpc" id="L818" title="1 of 2 branches missed.">                if (nextNull()) {</span>
+<span class="nc" id="L819">                    entry = entry.next();</span>
+                }
+<span class="fc" id="L821">            }</span>
+<span class="fc" id="L822">            return true;</span>
+        }
+
+        private void checkMod() {
+<span class="fc bfc" id="L826" title="All 2 branches covered.">            if (parent.modCount != expectedModCount) {</span>
+<span class="fc" id="L827">                throw new ConcurrentModificationException();</span>
+            }
+<span class="fc" id="L829">        }</span>
+
+        private boolean nextNull() {
+<span class="pc bpc" id="L832" title="1 of 4 branches missed.">            return nextKey == null || nextValue == null;</span>
+        }
+
+        protected ReferenceEntry&lt;K, V&gt; nextEntry() {
+<span class="fc" id="L836">            checkMod();</span>
+<span class="fc bfc" id="L837" title="All 4 branches covered.">            if (nextNull() &amp;&amp; !hasNext()) {</span>
+<span class="fc" id="L838">                throw new NoSuchElementException();</span>
+            }
+<span class="fc" id="L840">            previous = entry;</span>
+<span class="fc" id="L841">            entry = entry.next();</span>
+<span class="fc" id="L842">            currentKey = nextKey;</span>
+<span class="fc" id="L843">            currentValue = nextValue;</span>
+<span class="fc" id="L844">            nextKey = null;</span>
+<span class="fc" id="L845">            nextValue = null;</span>
+<span class="fc" id="L846">            return previous;</span>
+        }
+
+        protected ReferenceEntry&lt;K, V&gt; currentEntry() {
+<span class="fc" id="L850">            checkMod();</span>
+<span class="fc" id="L851">            return previous;</span>
+        }
+
+        public void remove() {
+<span class="fc" id="L855">            checkMod();</span>
+<span class="fc bfc" id="L856" title="All 2 branches covered.">            if (previous == null) {</span>
+<span class="fc" id="L857">                throw new IllegalStateException();</span>
+            }
+<span class="fc" id="L859">            parent.remove(currentKey);</span>
+<span class="fc" id="L860">            previous = null;</span>
+<span class="fc" id="L861">            currentKey = null;</span>
+<span class="fc" id="L862">            currentValue = null;</span>
+<span class="fc" id="L863">            expectedModCount = parent.modCount;</span>
+<span class="fc" id="L864">        }</span>
+    }
+
+    /**
+     * The EntrySet iterator.
+     */
+    static class ReferenceEntrySetIterator&lt;K, V&gt;
+            extends ReferenceBaseIterator&lt;K, V&gt; implements Iterator&lt;Map.Entry&lt;K, V&gt;&gt; {
+
+        public ReferenceEntrySetIterator(final AbstractReferenceMap&lt;K, V&gt; parent) {
+<span class="fc" id="L874">            super(parent);</span>
+<span class="fc" id="L875">        }</span>
+
+        @Override
+        public Map.Entry&lt;K, V&gt; next() {
+<span class="fc" id="L879">            return nextEntry();</span>
+        }
+
+    }
+
+    /**
+     * The keySet iterator.
+     */
+    static class ReferenceKeySetIterator&lt;K&gt; extends ReferenceBaseIterator&lt;K, Object&gt; implements Iterator&lt;K&gt; {
+
+        @SuppressWarnings(&quot;unchecked&quot;)
+        ReferenceKeySetIterator(final AbstractReferenceMap&lt;K, ?&gt; parent) {
+<span class="fc" id="L891">            super((AbstractReferenceMap&lt;K, Object&gt;) parent);</span>
+<span class="fc" id="L892">        }</span>
+
+        @Override
+        public K next() {
+<span class="fc" id="L896">            return nextEntry().getKey();</span>
+        }
+    }
+
+    /**
+     * The values iterator.
+     */
+    static class ReferenceValuesIterator&lt;V&gt; extends ReferenceBaseIterator&lt;Object, V&gt; implements Iterator&lt;V&gt; {
+
+        @SuppressWarnings(&quot;unchecked&quot;)
+        ReferenceValuesIterator(final AbstractReferenceMap&lt;?, V&gt; parent) {
+<span class="fc" id="L907">            super((AbstractReferenceMap&lt;Object, V&gt;) parent);</span>
+<span class="fc" id="L908">        }</span>
+
+        @Override
+        public V next() {
+<span class="fc" id="L912">            return nextEntry().getValue();</span>
+        }
+    }
+
+    /**
+     * The MapIterator implementation.
+     */
+    static class ReferenceMapIterator&lt;K, V&gt; extends ReferenceBaseIterator&lt;K, V&gt; implements MapIterator&lt;K, V&gt; {
+
+        protected ReferenceMapIterator(final AbstractReferenceMap&lt;K, V&gt; parent) {
+<span class="fc" id="L922">            super(parent);</span>
+<span class="fc" id="L923">        }</span>
+
+        @Override
+        public K next() {
+<span class="fc" id="L927">            return nextEntry().getKey();</span>
+        }
+
+        @Override
+        public K getKey() {
+<span class="fc" id="L932">            final HashEntry&lt;K, V&gt; current = currentEntry();</span>
+<span class="fc bfc" id="L933" title="All 2 branches covered.">            if (current == null) {</span>
+<span class="fc" id="L934">                throw new IllegalStateException(AbstractHashedMap.GETKEY_INVALID);</span>
+            }
+<span class="fc" id="L936">            return current.getKey();</span>
+        }
+
+        @Override
+        public V getValue() {
+<span class="fc" id="L941">            final HashEntry&lt;K, V&gt; current = currentEntry();</span>
+<span class="fc bfc" id="L942" title="All 2 branches covered.">            if (current == null) {</span>
+<span class="fc" id="L943">                throw new IllegalStateException(AbstractHashedMap.GETVALUE_INVALID);</span>
+            }
+<span class="fc" id="L945">            return current.getValue();</span>
+        }
+
+        @Override
+        public V setValue(final V value) {
+<span class="fc" id="L950">            final HashEntry&lt;K, V&gt; current = currentEntry();</span>
+<span class="fc bfc" id="L951" title="All 2 branches covered.">            if (current == null) {</span>
+<span class="fc" id="L952">                throw new IllegalStateException(AbstractHashedMap.SETVALUE_INVALID);</span>
+            }
+<span class="fc" id="L954">            return current.setValue(value);</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    // These two classes store the hashCode of the key of
+    // of the mapping, so that after they're dequeued a quick
+    // lookup of the bucket in the table can occur.
+
+    /**
+     * A soft reference holder.
+     */
+    static class SoftRef&lt;T&gt; extends SoftReference&lt;T&gt; {
+        /** the hashCode of the key (even if the reference points to a value) */
+        private final int hash;
+
+        public SoftRef(final int hash, final T r, final ReferenceQueue&lt;? super T&gt; q) {
+<span class="nc" id="L971">            super(r, q);</span>
+<span class="nc" id="L972">            this.hash = hash;</span>
+<span class="nc" id="L973">        }</span>
+
+        @Override
+        public int hashCode() {
+<span class="nc" id="L977">            return hash;</span>
+        }
+    }
+
+    /**
+     * A weak reference holder.
+     */
+    static class WeakRef&lt;T&gt; extends WeakReference&lt;T&gt; {
+        /** the hashCode of the key (even if the reference points to a value) */
+        private final int hash;
+
+        public WeakRef(final int hash, final T r, final ReferenceQueue&lt;? super T&gt; q) {
+<span class="fc" id="L989">            super(r, q);</span>
+<span class="fc" id="L990">            this.hash = hash;</span>
+<span class="fc" id="L991">        }</span>
+
+        @Override
+        public int hashCode() {
+<span class="fc" id="L995">            return hash;</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Replaces the superclass method to store the state of this class.
+     * &lt;p&gt;
+     * Serialization is not one of the JDK's nicest topics. Normal serialization will
+     * initialise the superclass before the subclass. Sometimes however, this isn't
+     * what you want, as in this case the &lt;code&gt;put()&lt;/code&gt; method on read can be
+     * affected by subclass state.
+     * &lt;p&gt;
+     * The solution adopted here is to serialize the state data of this class in
+     * this protected method. This method must be called by the
+     * &lt;code&gt;writeObject()&lt;/code&gt; of the first serializable subclass.
+     * &lt;p&gt;
+     * Subclasses may override if they have a specific field that must be present
+     * on read before this implementation will work. Generally, the read determines
+     * what must be serialized here, if anything.
+     *
+     * @param out  the output stream
+     * @throws IOException if an error occurs while writing to the stream
+     */
+    @Override
+    protected void doWriteObject(final ObjectOutputStream out) throws IOException {
+<span class="fc" id="L1021">        out.writeInt(keyType.value);</span>
+<span class="fc" id="L1022">        out.writeInt(valueType.value);</span>
+<span class="fc" id="L1023">        out.writeBoolean(purgeValues);</span>
+<span class="fc" id="L1024">        out.writeFloat(loadFactor);</span>
+<span class="fc" id="L1025">        out.writeInt(data.length);</span>
+<span class="fc bfc" id="L1026" title="All 2 branches covered.">        for (final MapIterator&lt;K, V&gt; it = mapIterator(); it.hasNext();) {</span>
+<span class="fc" id="L1027">            out.writeObject(it.next());</span>
+<span class="fc" id="L1028">            out.writeObject(it.getValue());</span>
+        }
+<span class="fc" id="L1030">        out.writeObject(null);  // null terminate map</span>
+        // do not call super.doWriteObject() as code there doesn't work for reference map
+<span class="fc" id="L1032">    }</span>
+
+    /**
+     * Replaces the superclass method to read the state of this class.
+     * &lt;p&gt;
+     * Serialization is not one of the JDK's nicest topics. Normal serialization will
+     * initialise the superclass before the subclass. Sometimes however, this isn't
+     * what you want, as in this case the &lt;code&gt;put()&lt;/code&gt; method on read can be
+     * affected by subclass state.
+     * &lt;p&gt;
+     * The solution adopted here is to deserialize the state data of this class in
+     * this protected method. This method must be called by the
+     * &lt;code&gt;readObject()&lt;/code&gt; of the first serializable subclass.
+     * &lt;p&gt;
+     * Subclasses may override if the subclass has a specific field that must be present
+     * before &lt;code&gt;put()&lt;/code&gt; or &lt;code&gt;calculateThreshold()&lt;/code&gt; will work correctly.
+     *
+     * @param in  the input stream
+     * @throws IOException if an error occurs while reading from the stream
+     * @throws ClassNotFoundException if an object read from the stream can not be loaded
+     */
+    @Override
+    @SuppressWarnings(&quot;unchecked&quot;)
+    protected void doReadObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
+<span class="fc" id="L1056">        this.keyType = ReferenceStrength.resolve(in.readInt());</span>
+<span class="fc" id="L1057">        this.valueType = ReferenceStrength.resolve(in.readInt());</span>
+<span class="fc" id="L1058">        this.purgeValues = in.readBoolean();</span>
+<span class="fc" id="L1059">        this.loadFactor = in.readFloat();</span>
+<span class="fc" id="L1060">        final int capacity = in.readInt();</span>
+<span class="fc" id="L1061">        init();</span>
+<span class="fc" id="L1062">        data = new HashEntry[capacity];</span>
+
+        // COLLECTIONS-599: Calculate threshold before populating, otherwise it will be 0
+        // when it hits AbstractHashedMap.checkCapacity() and so will unnecessarily
+        // double up the size of the &quot;data&quot; array during population.
+        //
+        // NB: AbstractHashedMap.doReadObject() DOES calculate the threshold before populating.
+        //
+<span class="fc" id="L1070">        threshold = calculateThreshold(data.length, loadFactor);</span>
+
+        while (true) {
+<span class="fc" id="L1073">            final K key = (K) in.readObject();</span>
+<span class="fc bfc" id="L1074" title="All 2 branches covered.">            if (key == null) {</span>
+<span class="fc" id="L1075">                break;</span>
+            }
+<span class="fc" id="L1077">            final V value = (V) in.readObject();</span>
+<span class="fc" id="L1078">            put(key, value);</span>
+<span class="fc" id="L1079">        }</span>
+        // do not call super.doReadObject() as code there doesn't work for reference map
+<span class="fc" id="L1081">    }</span>
+
+    /**
+     * Provided protected read-only access to the key type.
+     * @param type the type to check against.
+     * @return true if keyType has the specified type
+     */
+    protected boolean isKeyType(final ReferenceStrength type) {
+<span class="fc bfc" id="L1089" title="All 2 branches covered.">        return this.keyType == type;</span>
+    }
+
+    /**
+     * Provided protected read-only access to the value type.
+     * @param type the type to check against.
+     * @return true if valueType has the specified type
+     */
+    protected boolean isValueType(final ReferenceStrength type) {
+<span class="pc bpc" id="L1098" title="1 of 2 branches missed.">        return this.valueType == type;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

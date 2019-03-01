@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GmtTimeZone.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Lang</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.lang3.time</a> &gt; <span class="el_source">GmtTimeZone.java</span></div><h1>GmtTimeZone.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.lang3.time;
+
+import java.util.Date;
+import java.util.TimeZone;
+
+/**
+ * Custom timezone that contains offset from GMT.
+ *
+ * @since 3.7
+ */
+class GmtTimeZone extends TimeZone {
+
+    private static final int MILLISECONDS_PER_MINUTE = 60 * 1000;
+    private static final int MINUTES_PER_HOUR = 60;
+    private static final int HOURS_PER_DAY = 24;
+
+    // Serializable!
+    static final long serialVersionUID = 1L;
+
+    private final int offset;
+    private final String zoneId;
+
+<span class="fc" id="L39">    GmtTimeZone(final boolean negate, final int hours, final int minutes) {</span>
+<span class="fc bfc" id="L40" title="All 2 branches covered.">        if (hours &gt;= HOURS_PER_DAY) {</span>
+<span class="fc" id="L41">            throw new IllegalArgumentException(hours + &quot; hours out of range&quot;);</span>
+        }
+<span class="fc bfc" id="L43" title="All 2 branches covered.">        if (minutes &gt;= MINUTES_PER_HOUR) {</span>
+<span class="fc" id="L44">            throw new IllegalArgumentException(minutes + &quot; minutes out of range&quot;);</span>
+        }
+<span class="fc" id="L46">        final int milliseconds = (minutes + (hours * MINUTES_PER_HOUR)) * MILLISECONDS_PER_MINUTE;</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">        offset = negate ? -milliseconds : milliseconds;</span>
+<span class="fc" id="L48">        zoneId = twoDigits(</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">            twoDigits(new StringBuilder(9).append(&quot;GMT&quot;).append(negate ? '-' : '+'), hours)</span>
+<span class="fc" id="L50">                .append(':'), minutes).toString();</span>
+
+<span class="fc" id="L52">    }</span>
+
+    private static StringBuilder twoDigits(final StringBuilder sb, final int n) {
+<span class="fc" id="L55">        return sb.append((char) ('0' + (n / 10))).append((char) ('0' + (n % 10)));</span>
+    }
+
+    @Override
+    public int getOffset(final int era, final int year, final int month, final int day, final int dayOfWeek, final int milliseconds) {
+<span class="fc" id="L60">        return offset;</span>
+    }
+
+    @Override
+    public void setRawOffset(final int offsetMillis) {
+<span class="fc" id="L65">        throw new UnsupportedOperationException();</span>
+    }
+
+    @Override
+    public int getRawOffset() {
+<span class="fc" id="L70">        return offset;</span>
+    }
+
+    @Override
+    public String getID() {
+<span class="fc" id="L75">        return zoneId;</span>
+    }
+
+    @Override
+    public boolean useDaylightTime() {
+<span class="fc" id="L80">        return false;</span>
+    }
+
+    @Override
+    public boolean inDaylightTime(final Date date) {
+<span class="fc" id="L85">        return false;</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="fc" id="L90">        return &quot;[GmtTimeZone id=\&quot;&quot; + zoneId + &quot;\&quot;,offset=&quot; + offset + ']';</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="fc" id="L95">        return offset;</span>
+    }
+
+    @Override
+    public boolean equals(final Object other) {
+<span class="fc bfc" id="L100" title="All 2 branches covered.">        if (!(other instanceof GmtTimeZone)) {</span>
+<span class="fc" id="L101">            return false;</span>
+        }
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">        return zoneId == ((GmtTimeZone) other).zoneId;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

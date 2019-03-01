@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SingletonIterator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.iterators</a> &gt; <span class="el_source">SingletonIterator.java</span></div><h1>SingletonIterator.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.iterators;
+
+import java.util.NoSuchElementException;
+
+import org.apache.commons.collections4.ResettableIterator;
+
+/**
+ * &lt;code&gt;SingletonIterator&lt;/code&gt; is an {@link java.util.Iterator} over a single
+ * object instance.
+ *
+ * @since 2.0
+ */
+public class SingletonIterator&lt;E&gt;
+        implements ResettableIterator&lt;E&gt; {
+
+    /** Whether remove is allowed */
+    private final boolean removeAllowed;
+    /** Is the cursor before the first element */
+<span class="fc" id="L35">    private boolean beforeFirst = true;</span>
+    /** Has the element been removed */
+<span class="fc" id="L37">    private boolean removed = false;</span>
+    /** The object */
+    private E object;
+
+    /**
+     * Constructs a new &lt;code&gt;SingletonIterator&lt;/code&gt; where &lt;code&gt;remove&lt;/code&gt;
+     * is a permitted operation.
+     *
+     * @param object  the single object to return from the iterator
+     */
+    public SingletonIterator(final E object) {
+<span class="fc" id="L48">        this(object, true);</span>
+<span class="fc" id="L49">    }</span>
+
+    /**
+     * Constructs a new &lt;code&gt;SingletonIterator&lt;/code&gt; optionally choosing if
+     * &lt;code&gt;remove&lt;/code&gt; is a permitted operation.
+     *
+     * @param object  the single object to return from the iterator
+     * @param removeAllowed  true if remove is allowed
+     * @since 3.1
+     */
+    public SingletonIterator(final E object, final boolean removeAllowed) {
+<span class="fc" id="L60">        super();</span>
+<span class="fc" id="L61">        this.object = object;</span>
+<span class="fc" id="L62">        this.removeAllowed = removeAllowed;</span>
+<span class="fc" id="L63">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Is another object available from the iterator?
+     * &lt;p&gt;
+     * This returns true if the single object hasn't been returned yet.
+     *
+     * @return true if the single object hasn't been returned yet
+     */
+    @Override
+    public boolean hasNext() {
+<span class="fc bfc" id="L75" title="All 4 branches covered.">        return beforeFirst &amp;&amp; !removed;</span>
+    }
+
+    /**
+     * Get the next object from the iterator.
+     * &lt;p&gt;
+     * This returns the single object if it hasn't been returned yet.
+     *
+     * @return the single object
+     * @throws NoSuchElementException if the single object has already
+     *    been returned
+     */
+    @Override
+    public E next() {
+<span class="fc bfc" id="L89" title="All 4 branches covered.">        if (!beforeFirst || removed) {</span>
+<span class="fc" id="L90">            throw new NoSuchElementException();</span>
+        }
+<span class="fc" id="L92">        beforeFirst = false;</span>
+<span class="fc" id="L93">        return object;</span>
+    }
+
+    /**
+     * Remove the object from this iterator.
+     *
+     * @throws IllegalStateException if the {@code next} method has not
+     *        yet been called, or the {@code remove} method has already
+     *        been called after the last call to the {@code next}
+     *        method.
+     * @throws UnsupportedOperationException if remove is not supported
+     */
+    @Override
+    public void remove() {
+<span class="fc bfc" id="L107" title="All 2 branches covered.">        if (removeAllowed) {</span>
+<span class="fc bfc" id="L108" title="All 4 branches covered.">            if (removed || beforeFirst) {</span>
+<span class="fc" id="L109">                throw new IllegalStateException();</span>
+            }
+<span class="fc" id="L111">            object = null;</span>
+<span class="fc" id="L112">            removed = true;</span>
+        } else {
+<span class="fc" id="L114">            throw new UnsupportedOperationException();</span>
+        }
+<span class="fc" id="L116">    }</span>
+
+    /**
+     * Reset the iterator to the start.
+     */
+    @Override
+    public void reset() {
+<span class="fc" id="L123">        beforeFirst = true;</span>
+<span class="fc" id="L124">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

@@ -1,0 +1,963 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultConfigurationKey.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2.tree</a> &gt; <span class="el_source">DefaultConfigurationKey.java</span></div><h1>DefaultConfigurationKey.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.configuration2.tree;
+
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
+import org.apache.commons.lang3.StringUtils;
+
+/**
+ * &lt;p&gt;
+ * A simple class that supports creation of and iteration on configuration keys
+ * supported by a {@link DefaultExpressionEngine} object.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * For key creation the class works similar to a StringBuffer: There are several
+ * {@code appendXXXX()} methods with which single parts of a key can be
+ * constructed. All these methods return a reference to the actual object so
+ * they can be written in a chain. When using this methods the exact syntax for
+ * keys need not be known.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * This class also defines a specialized iterator for configuration keys. With
+ * such an iterator a key can be tokenized into its single parts. For each part
+ * it can be checked whether it has an associated index.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * Instances of this class are always associated with an instance of
+ * {@link DefaultExpressionEngine}, from which the current
+ * delimiters are obtained. So key creation and parsing is specific to this
+ * associated expression engine.
+ * &lt;/p&gt;
+ *
+ * @since 1.3
+ * @author &lt;a
+ * href=&quot;http://commons.apache.org/configuration/team-list.html&quot;&gt;Commons
+ * Configuration team&lt;/a&gt;
+ * @version $Id$
+ */
+public class DefaultConfigurationKey
+{
+    /** Constant for the initial StringBuffer size. */
+    private static final int INITIAL_SIZE = 32;
+
+    /** Stores a reference to the associated expression engine. */
+    private final DefaultExpressionEngine expressionEngine;
+
+    /** Holds a buffer with the so far created key. */
+    private final StringBuilder keyBuffer;
+
+    /**
+     * Creates a new instance of {@code DefaultConfigurationKey} and sets
+     * the associated expression engine.
+     *
+     * @param engine the expression engine (must not be &lt;b&gt;null&lt;/b&gt;)
+     * @throws IllegalArgumentException if the expression engine is &lt;b&gt;null&lt;/b&gt;
+     */
+    public DefaultConfigurationKey(final DefaultExpressionEngine engine)
+    {
+<span class="fc" id="L74">        this(engine, null);</span>
+<span class="fc" id="L75">    }</span>
+
+    /**
+     * Creates a new instance of {@code DefaultConfigurationKey} and sets the
+     * associated expression engine and an initial key.
+     *
+     * @param engine the expression engine (must not be &lt;b&gt;null&lt;/b&gt;)
+     * @param key the key to be wrapped
+     * @throws IllegalArgumentException if the expression engine is &lt;b&gt;null&lt;/b&gt;
+     */
+    public DefaultConfigurationKey(final DefaultExpressionEngine engine, final String key)
+<span class="fc" id="L86">    {</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        if (engine == null)</span>
+        {
+<span class="fc" id="L89">            throw new IllegalArgumentException(</span>
+                    &quot;Expression engine must not be null!&quot;);
+        }
+<span class="fc" id="L92">        expressionEngine = engine;</span>
+<span class="fc bfc" id="L93" title="All 2 branches covered.">        if (key != null)</span>
+        {
+<span class="fc" id="L95">            keyBuffer = new StringBuilder(trim(key));</span>
+        }
+        else
+        {
+<span class="fc" id="L99">            keyBuffer = new StringBuilder(INITIAL_SIZE);</span>
+        }
+<span class="fc" id="L101">    }</span>
+
+    /**
+     * Returns the associated default expression engine.
+     *
+     * @return the associated expression engine
+     */
+    public DefaultExpressionEngine getExpressionEngine()
+    {
+<span class="fc" id="L110">        return expressionEngine;</span>
+    }
+
+    /**
+     * Appends the name of a property to this key. If necessary, a property
+     * delimiter will be added. If the boolean argument is set to &lt;b&gt;true&lt;/b&gt;,
+     * property delimiters contained in the property name will be escaped.
+     *
+     * @param property the name of the property to be added
+     * @param escape a flag if property delimiters in the passed in property name
+     * should be escaped
+     * @return a reference to this object
+     */
+    public DefaultConfigurationKey append(final String property, final boolean escape)
+    {
+        String key;
+<span class="fc bfc" id="L126" title="All 4 branches covered.">        if (escape &amp;&amp; property != null)</span>
+        {
+<span class="fc" id="L128">            key = escapeDelimiters(property);</span>
+        }
+        else
+        {
+<span class="fc" id="L132">            key = property;</span>
+        }
+<span class="fc" id="L134">        key = trim(key);</span>
+
+<span class="fc bfc" id="L136" title="All 4 branches covered.">        if (keyBuffer.length() &gt; 0 &amp;&amp; !isAttributeKey(property)</span>
+<span class="fc bfc" id="L137" title="All 2 branches covered.">                &amp;&amp; key.length() &gt; 0)</span>
+        {
+<span class="fc" id="L139">            keyBuffer.append(getSymbols().getPropertyDelimiter());</span>
+        }
+
+<span class="fc" id="L142">        keyBuffer.append(key);</span>
+<span class="fc" id="L143">        return this;</span>
+    }
+
+    /**
+     * Appends the name of a property to this key. If necessary, a property
+     * delimiter will be added. Property delimiters in the given string will not
+     * be escaped.
+     *
+     * @param property the name of the property to be added
+     * @return a reference to this object
+     */
+    public DefaultConfigurationKey append(final String property)
+    {
+<span class="fc" id="L156">        return append(property, false);</span>
+    }
+
+    /**
+     * Appends an index to this configuration key.
+     *
+     * @param index the index to be appended
+     * @return a reference to this object
+     */
+    public DefaultConfigurationKey appendIndex(final int index)
+    {
+<span class="fc" id="L167">        keyBuffer.append(getSymbols().getIndexStart());</span>
+<span class="fc" id="L168">        keyBuffer.append(index);</span>
+<span class="fc" id="L169">        keyBuffer.append(getSymbols().getIndexEnd());</span>
+<span class="fc" id="L170">        return this;</span>
+    }
+
+    /**
+     * Appends an attribute to this configuration key.
+     *
+     * @param attr the name of the attribute to be appended
+     * @return a reference to this object
+     */
+    public DefaultConfigurationKey appendAttribute(final String attr)
+    {
+<span class="fc" id="L181">        keyBuffer.append(constructAttributeKey(attr));</span>
+<span class="fc" id="L182">        return this;</span>
+    }
+
+    /**
+     * Returns the actual length of this configuration key.
+     *
+     * @return the length of this key
+     */
+    public int length()
+    {
+<span class="fc" id="L192">        return keyBuffer.length();</span>
+    }
+
+    /**
+     * Sets the new length of this configuration key. With this method it is
+     * possible to truncate the key, e.g. to return to a state prior calling
+     * some {@code append()} methods. The semantic is the same as the
+     * {@code setLength()} method of {@code StringBuilder}.
+     *
+     * @param len the new length of the key
+     */
+    public void setLength(final int len)
+    {
+<span class="fc" id="L205">        keyBuffer.setLength(len);</span>
+<span class="fc" id="L206">    }</span>
+    /**
+     * Returns a configuration key object that is initialized with the part
+     * of the key that is common to this key and the passed in key.
+     *
+     * @param other the other key
+     * @return a key object with the common key part
+     */
+    public DefaultConfigurationKey commonKey(final DefaultConfigurationKey other)
+    {
+<span class="fc bfc" id="L216" title="All 2 branches covered.">        if (other == null)</span>
+        {
+<span class="fc" id="L218">            throw new IllegalArgumentException(&quot;Other key must no be null!&quot;);</span>
+        }
+
+<span class="fc" id="L221">        final DefaultConfigurationKey result = new DefaultConfigurationKey(getExpressionEngine());</span>
+<span class="fc" id="L222">        final KeyIterator it1 = iterator();</span>
+<span class="fc" id="L223">        final KeyIterator it2 = other.iterator();</span>
+
+<span class="fc bfc" id="L225" title="All 6 branches covered.">        while (it1.hasNext() &amp;&amp; it2.hasNext() &amp;&amp; partsEqual(it1, it2))</span>
+        {
+<span class="fc bfc" id="L227" title="All 2 branches covered.">            if (it1.isAttribute())</span>
+            {
+<span class="fc" id="L229">                result.appendAttribute(it1.currentKey());</span>
+            }
+            else
+            {
+<span class="fc" id="L233">                result.append(it1.currentKey());</span>
+<span class="fc bfc" id="L234" title="All 2 branches covered.">                if (it1.hasIndex)</span>
+                {
+<span class="fc" id="L236">                    result.appendIndex(it1.getIndex());</span>
+                }
+            }
+        }
+
+<span class="fc" id="L241">        return result;</span>
+    }
+
+    /**
+     * Returns the &amp;quot;difference key&amp;quot; to a given key. This value
+     * is the part of the passed in key that differs from this key. There is
+     * the following relation:
+     * {@code other = key.commonKey(other) + key.differenceKey(other)}
+     * for an arbitrary configuration key {@code key}.
+     *
+     * @param other the key for which the difference is to be calculated
+     * @return the difference key
+     */
+    public DefaultConfigurationKey differenceKey(final DefaultConfigurationKey other)
+    {
+<span class="fc" id="L256">        final DefaultConfigurationKey common = commonKey(other);</span>
+<span class="fc" id="L257">        final DefaultConfigurationKey result = new DefaultConfigurationKey(getExpressionEngine());</span>
+
+<span class="fc bfc" id="L259" title="All 2 branches covered.">        if (common.length() &lt; other.length())</span>
+        {
+<span class="fc" id="L261">            final String k = other.toString().substring(common.length());</span>
+            // skip trailing delimiters
+<span class="fc" id="L263">            int i = 0;</span>
+<span class="pc bpc" id="L264" title="1 of 2 branches missed.">            while (i &lt; k.length()</span>
+<span class="fc bfc" id="L265" title="All 2 branches covered.">                    &amp;&amp; String.valueOf(k.charAt(i)).equals(</span>
+<span class="fc" id="L266">                            getSymbols().getPropertyDelimiter()))</span>
+            {
+<span class="fc" id="L268">                i++;</span>
+            }
+
+<span class="pc bpc" id="L271" title="1 of 2 branches missed.">            if (i &lt; k.length())</span>
+            {
+<span class="fc" id="L273">                result.append(k.substring(i));</span>
+            }
+        }
+
+<span class="fc" id="L277">        return result;</span>
+    }
+
+    /**
+     * Checks if two {@code ConfigurationKey} objects are equal. Two instances
+     * of this class are considered equal if they have the same content (i.e.
+     * their internal string representation is equal). The expression engine
+     * property is not taken into account.
+     *
+     * @param obj the object to compare
+     * @return a flag if both objects are equal
+     */
+    @Override
+    public boolean equals(final Object obj)
+    {
+<span class="fc bfc" id="L292" title="All 2 branches covered.">        if (this == obj)</span>
+        {
+<span class="fc" id="L294">            return true;</span>
+        }
+<span class="fc bfc" id="L296" title="All 2 branches covered.">        if (!(obj instanceof DefaultConfigurationKey))</span>
+        {
+<span class="fc" id="L298">            return false;</span>
+        }
+
+<span class="fc" id="L301">        final DefaultConfigurationKey c = (DefaultConfigurationKey) obj;</span>
+<span class="fc" id="L302">        return keyBuffer.toString().equals(c.toString());</span>
+    }
+
+    /**
+     * Returns the hash code for this object.
+     *
+     * @return the hash code
+     */
+    @Override
+    public int hashCode()
+    {
+<span class="fc" id="L313">        return String.valueOf(keyBuffer).hashCode();</span>
+    }
+
+    /**
+     * Returns a string representation of this object. This is the configuration
+     * key as a plain string.
+     *
+     * @return a string for this object
+     */
+    @Override
+    public String toString()
+    {
+<span class="fc" id="L325">        return keyBuffer.toString();</span>
+    }
+
+    /**
+     * Tests if the specified key represents an attribute according to the
+     * current expression engine.
+     *
+     * @param key the key to be checked
+     * @return &lt;b&gt;true&lt;/b&gt; if this is an attribute key, &lt;b&gt;false&lt;/b&gt; otherwise
+     */
+    public boolean isAttributeKey(final String key)
+    {
+<span class="fc bfc" id="L337" title="All 2 branches covered.">        if (key == null)</span>
+        {
+<span class="fc" id="L339">            return false;</span>
+        }
+
+<span class="fc bfc" id="L342" title="All 2 branches covered.">        return key.startsWith(getSymbols().getAttributeStart())</span>
+<span class="fc bfc" id="L343" title="All 2 branches covered.">                &amp;&amp; (getSymbols().getAttributeEnd() == null || key</span>
+<span class="pc bpc" id="L344" title="1 of 2 branches missed.">                        .endsWith(getSymbols().getAttributeEnd()));</span>
+    }
+
+    /**
+     * Decorates the given key so that it represents an attribute. Adds special
+     * start and end markers. The passed in string will be modified only if does
+     * not already represent an attribute.
+     *
+     * @param key the key to be decorated
+     * @return the decorated attribute key
+     */
+    public String constructAttributeKey(final String key)
+    {
+<span class="fc bfc" id="L357" title="All 2 branches covered.">        if (key == null)</span>
+        {
+<span class="fc" id="L359">            return StringUtils.EMPTY;</span>
+        }
+<span class="fc bfc" id="L361" title="All 2 branches covered.">        if (isAttributeKey(key))</span>
+        {
+<span class="fc" id="L363">            return key;</span>
+        }
+<span class="fc" id="L365">        final StringBuilder buf = new StringBuilder();</span>
+<span class="fc" id="L366">        buf.append(getSymbols().getAttributeStart()).append(key);</span>
+<span class="fc bfc" id="L367" title="All 2 branches covered.">        if (getSymbols().getAttributeEnd() != null)</span>
+        {
+<span class="fc" id="L369">            buf.append(getSymbols().getAttributeEnd());</span>
+        }
+<span class="fc" id="L371">        return buf.toString();</span>
+    }
+
+    /**
+     * Extracts the name of the attribute from the given attribute key. This
+     * method removes the attribute markers - if any - from the specified key.
+     *
+     * @param key the attribute key
+     * @return the name of the corresponding attribute
+     */
+    public String attributeName(final String key)
+    {
+<span class="fc bfc" id="L383" title="All 2 branches covered.">        return isAttributeKey(key) ? removeAttributeMarkers(key) : key;</span>
+    }
+
+    /**
+     * Removes leading property delimiters from the specified key.
+     *
+     * @param key the key
+     * @return the key with removed leading property delimiters
+     */
+    public String trimLeft(final String key)
+    {
+<span class="fc bfc" id="L394" title="All 2 branches covered.">        if (key == null)</span>
+        {
+<span class="fc" id="L396">            return StringUtils.EMPTY;</span>
+        }
+<span class="fc" id="L398">        String result = key;</span>
+<span class="fc bfc" id="L399" title="All 2 branches covered.">        while (hasLeadingDelimiter(result))</span>
+        {
+<span class="fc" id="L401">            result = result.substring(getSymbols()</span>
+<span class="fc" id="L402">                    .getPropertyDelimiter().length());</span>
+        }
+<span class="fc" id="L404">        return result;</span>
+    }
+
+    /**
+     * Removes trailing property delimiters from the specified key.
+     *
+     * @param key the key
+     * @return the key with removed trailing property delimiters
+     */
+    public String trimRight(final String key)
+    {
+<span class="pc bpc" id="L415" title="1 of 2 branches missed.">        if (key == null)</span>
+        {
+<span class="nc" id="L417">            return StringUtils.EMPTY;</span>
+        }
+<span class="fc" id="L419">        String result = key;</span>
+<span class="fc bfc" id="L420" title="All 2 branches covered.">        while (hasTrailingDelimiter(result))</span>
+        {
+<span class="fc" id="L422">            result = result</span>
+<span class="fc" id="L423">                    .substring(0, result.length()</span>
+<span class="fc" id="L424">                            - getSymbols().getPropertyDelimiter()</span>
+<span class="fc" id="L425">                                    .length());</span>
+        }
+<span class="fc" id="L427">        return result;</span>
+    }
+
+    /**
+     * Removes delimiters at the beginning and the end of the specified key.
+     *
+     * @param key the key
+     * @return the key with removed property delimiters
+     */
+    public String trim(final String key)
+    {
+<span class="fc" id="L438">        return trimRight(trimLeft(key));</span>
+    }
+
+    /**
+     * Returns an iterator for iterating over the single components of this
+     * configuration key.
+     *
+     * @return an iterator for this key
+     */
+    public KeyIterator iterator()
+    {
+<span class="fc" id="L449">        return new KeyIterator();</span>
+    }
+
+    /**
+     * Helper method that checks if the specified key ends with a property
+     * delimiter.
+     *
+     * @param key the key to check
+     * @return a flag if there is a trailing delimiter
+     */
+    private boolean hasTrailingDelimiter(final String key)
+    {
+<span class="fc bfc" id="L461" title="All 2 branches covered.">        return key.endsWith(getSymbols().getPropertyDelimiter())</span>
+<span class="fc bfc" id="L462" title="All 2 branches covered.">                &amp;&amp; (getSymbols().getEscapedDelimiter() == null || !key</span>
+<span class="fc bfc" id="L463" title="All 2 branches covered.">                        .endsWith(getSymbols().getEscapedDelimiter()));</span>
+    }
+
+    /**
+     * Helper method that checks if the specified key starts with a property
+     * delimiter.
+     *
+     * @param key the key to check
+     * @return a flag if there is a leading delimiter
+     */
+    private boolean hasLeadingDelimiter(final String key)
+    {
+<span class="fc bfc" id="L475" title="All 2 branches covered.">        return key.startsWith(getSymbols().getPropertyDelimiter())</span>
+<span class="fc bfc" id="L476" title="All 2 branches covered.">                &amp;&amp; (getSymbols().getEscapedDelimiter() == null || !key</span>
+<span class="fc bfc" id="L477" title="All 2 branches covered.">                        .startsWith(getSymbols().getEscapedDelimiter()));</span>
+    }
+
+    /**
+     * Helper method for removing attribute markers from a key.
+     *
+     * @param key the key
+     * @return the key with removed attribute markers
+     */
+    private String removeAttributeMarkers(final String key)
+    {
+<span class="fc" id="L488">        return key</span>
+<span class="fc" id="L489">                .substring(</span>
+<span class="fc" id="L490">                        getSymbols().getAttributeStart().length(),</span>
+<span class="fc" id="L491">                        key.length()</span>
+<span class="fc bfc" id="L492" title="All 2 branches covered.">                                - ((getSymbols().getAttributeEnd() != null) ? getSymbols()</span>
+<span class="fc" id="L493">                                        .getAttributeEnd().length()</span>
+                                        : 0));
+    }
+
+    /**
+     * Unescapes the delimiters in the specified string.
+     *
+     * @param key the key to be unescaped
+     * @return the unescaped key
+     */
+    private String unescapeDelimiters(final String key)
+    {
+<span class="fc bfc" id="L505" title="All 2 branches covered.">        return (getSymbols().getEscapedDelimiter() == null) ? key</span>
+<span class="fc" id="L506">                : StringUtils.replace(key, getSymbols()</span>
+<span class="fc" id="L507">                        .getEscapedDelimiter(), getSymbols()</span>
+<span class="fc" id="L508">                        .getPropertyDelimiter());</span>
+    }
+
+    /**
+     * Returns the symbols object from the associated expression engine.
+     *
+     * @return the {@code DefaultExpressionEngineSymbols}
+     */
+    private DefaultExpressionEngineSymbols getSymbols()
+    {
+<span class="fc" id="L518">        return getExpressionEngine().getSymbols();</span>
+    }
+
+    /**
+     * Escapes the delimiters in the specified string.
+     *
+     * @param key the key to be escaped
+     * @return the escaped key
+     */
+    private String escapeDelimiters(final String key)
+    {
+<span class="fc bfc" id="L529" title="All 2 branches covered.">        return (getSymbols().getEscapedDelimiter() == null || key</span>
+<span class="fc bfc" id="L530" title="All 2 branches covered.">                .indexOf(getSymbols().getPropertyDelimiter()) &lt; 0) ? key</span>
+<span class="fc" id="L531">                : StringUtils.replace(key, getSymbols()</span>
+<span class="fc" id="L532">                        .getPropertyDelimiter(), getSymbols()</span>
+<span class="fc" id="L533">                        .getEscapedDelimiter());</span>
+    }
+
+    /**
+     * Helper method for comparing two key parts.
+     *
+     * @param it1 the iterator with the first part
+     * @param it2 the iterator with the second part
+     * @return a flag if both parts are equal
+     */
+    private static boolean partsEqual(final KeyIterator it1, final KeyIterator it2)
+    {
+<span class="fc bfc" id="L545" title="All 2 branches covered.">        return it1.nextKey().equals(it2.nextKey())</span>
+<span class="fc bfc" id="L546" title="All 2 branches covered.">                &amp;&amp; it1.getIndex() == it2.getIndex()</span>
+<span class="pc bpc" id="L547" title="1 of 2 branches missed.">                &amp;&amp; it1.isAttribute() == it2.isAttribute();</span>
+    }
+
+    /**
+     * A specialized iterator class for tokenizing a configuration key. This
+     * class implements the normal iterator interface. In addition it provides
+     * some specific methods for configuration keys.
+     */
+<span class="fc" id="L555">    public class KeyIterator implements Iterator&lt;Object&gt;, Cloneable</span>
+    {
+        /** Stores the current key name. */
+        private String current;
+
+        /** Stores the start index of the actual token. */
+        private int startIndex;
+
+        /** Stores the end index of the actual token. */
+        private int endIndex;
+
+        /** Stores the index of the actual property if there is one. */
+        private int indexValue;
+
+        /** Stores a flag if the actual property has an index. */
+        private boolean hasIndex;
+
+        /** Stores a flag if the actual property is an attribute. */
+        private boolean attribute;
+
+        /**
+         * Returns the next key part of this configuration key. This is a short
+         * form of {@code nextKey(false)}.
+         *
+         * @return the next key part
+         */
+        public String nextKey()
+        {
+<span class="fc" id="L583">            return nextKey(false);</span>
+        }
+
+        /**
+         * Returns the next key part of this configuration key. The boolean
+         * parameter indicates wheter a decorated key should be returned. This
+         * affects only attribute keys: if the parameter is &lt;b&gt;false&lt;/b&gt;, the
+         * attribute markers are stripped from the key; if it is &lt;b&gt;true&lt;/b&gt;,
+         * they remain.
+         *
+         * @param decorated a flag if the decorated key is to be returned
+         * @return the next key part
+         */
+        public String nextKey(final boolean decorated)
+        {
+<span class="fc bfc" id="L598" title="All 2 branches covered.">            if (!hasNext())</span>
+            {
+<span class="fc" id="L600">                throw new NoSuchElementException(&quot;No more key parts!&quot;);</span>
+            }
+
+<span class="fc" id="L603">            hasIndex = false;</span>
+<span class="fc" id="L604">            indexValue = -1;</span>
+<span class="fc" id="L605">            final String key = findNextIndices();</span>
+
+<span class="fc" id="L607">            current = key;</span>
+<span class="fc" id="L608">            hasIndex = checkIndex(key);</span>
+<span class="fc" id="L609">            attribute = checkAttribute(current);</span>
+
+<span class="fc" id="L611">            return currentKey(decorated);</span>
+        }
+
+        /**
+         * Checks if there is a next element.
+         *
+         * @return a flag if there is a next element
+         */
+        @Override
+        public boolean hasNext()
+        {
+<span class="fc bfc" id="L622" title="All 2 branches covered.">            return endIndex &lt; keyBuffer.length();</span>
+        }
+
+        /**
+         * Returns the next object in the iteration.
+         *
+         * @return the next object
+         */
+        @Override
+        public Object next()
+        {
+<span class="fc" id="L633">            return nextKey();</span>
+        }
+
+        /**
+         * Removes the current object in the iteration. This method is not
+         * supported by this iterator type, so an exception is thrown.
+         */
+        @Override
+        public void remove()
+        {
+<span class="fc" id="L643">            throw new UnsupportedOperationException(&quot;Remove not supported!&quot;);</span>
+        }
+
+        /**
+         * Returns the current key of the iteration (without skipping to the
+         * next element). This is the same key the previous {@code next()}
+         * call had returned. (Short form of {@code currentKey(false)}.
+         *
+         * @return the current key
+         */
+        public String currentKey()
+        {
+<span class="fc" id="L655">            return currentKey(false);</span>
+        }
+
+        /**
+         * Returns the current key of the iteration (without skipping to the
+         * next element). The boolean parameter indicates wheter a decorated key
+         * should be returned. This affects only attribute keys: if the
+         * parameter is &lt;b&gt;false&lt;/b&gt;, the attribute markers are stripped from
+         * the key; if it is &lt;b&gt;true&lt;/b&gt;, they remain.
+         *
+         * @param decorated a flag if the decorated key is to be returned
+         * @return the current key
+         */
+        public String currentKey(final boolean decorated)
+        {
+<span class="fc bfc" id="L670" title="All 4 branches covered.">            return (decorated &amp;&amp; !isPropertyKey()) ? constructAttributeKey(current)</span>
+                    : current;
+        }
+
+        /**
+         * Returns a flag if the current key is an attribute. This method can be
+         * called after {@code next()}.
+         *
+         * @return a flag if the current key is an attribute
+         */
+        public boolean isAttribute()
+        {
+            // if attribute emulation mode is active, the last part of a key is
+            // always an attribute key, too
+<span class="fc bfc" id="L684" title="All 6 branches covered.">            return attribute || (isAttributeEmulatingMode() &amp;&amp; !hasNext());</span>
+        }
+
+        /**
+         * Returns a flag whether the current key refers to a property (i.e. is
+         * no special attribute key). Usually this method will return the
+         * opposite of {@code isAttribute()}, but if the delimiters for
+         * normal properties and attributes are set to the same string, it is
+         * possible that both methods return &lt;b&gt;true&lt;/b&gt;.
+         *
+         * @return a flag if the current key is a property key
+         * @see #isAttribute()
+         */
+        public boolean isPropertyKey()
+        {
+<span class="fc bfc" id="L699" title="All 2 branches covered.">            return !attribute;</span>
+        }
+
+        /**
+         * Returns the index value of the current key. If the current key does
+         * not have an index, return value is -1. This method can be called
+         * after {@code next()}.
+         *
+         * @return the index value of the current key
+         */
+        public int getIndex()
+        {
+<span class="fc" id="L711">            return indexValue;</span>
+        }
+
+        /**
+         * Returns a flag if the current key has an associated index. This
+         * method can be called after {@code next()}.
+         *
+         * @return a flag if the current key has an index
+         */
+        public boolean hasIndex()
+        {
+<span class="fc" id="L722">            return hasIndex;</span>
+        }
+
+        /**
+         * Creates a clone of this object.
+         *
+         * @return a clone of this object
+         */
+        @Override
+        public Object clone()
+        {
+            try
+            {
+<span class="fc" id="L735">                return super.clone();</span>
+            }
+<span class="nc" id="L737">            catch (final CloneNotSupportedException cex)</span>
+            {
+                // should not happen
+<span class="nc" id="L740">                return null;</span>
+            }
+        }
+
+        /**
+         * Helper method for determining the next indices.
+         *
+         * @return the next key part
+         */
+        private String findNextIndices()
+        {
+<span class="fc" id="L751">            startIndex = endIndex;</span>
+            // skip empty names
+<span class="pc bpc" id="L753" title="1 of 2 branches missed.">            while (startIndex &lt; length()</span>
+<span class="fc bfc" id="L754" title="All 2 branches covered.">                    &amp;&amp; hasLeadingDelimiter(keyBuffer.substring(startIndex)))</span>
+            {
+<span class="fc" id="L756">                startIndex += getSymbols().getPropertyDelimiter()</span>
+<span class="fc" id="L757">                        .length();</span>
+            }
+
+            // Key ends with a delimiter?
+<span class="pc bpc" id="L761" title="1 of 2 branches missed.">            if (startIndex &gt;= length())</span>
+            {
+<span class="nc" id="L763">                endIndex = length();</span>
+<span class="nc" id="L764">                startIndex = endIndex - 1;</span>
+<span class="nc" id="L765">                return keyBuffer.substring(startIndex, endIndex);</span>
+            }
+<span class="fc" id="L767">            return nextKeyPart();</span>
+        }
+
+        /**
+         * Helper method for extracting the next key part. Takes escaping of
+         * delimiter characters into account.
+         *
+         * @return the next key part
+         */
+        private String nextKeyPart()
+        {
+<span class="fc" id="L778">            int attrIdx = keyBuffer.toString().indexOf(</span>
+<span class="fc" id="L779">                    getSymbols().getAttributeStart(), startIndex);</span>
+<span class="fc bfc" id="L780" title="All 4 branches covered.">            if (attrIdx &lt; 0 || attrIdx == startIndex)</span>
+            {
+<span class="fc" id="L782">                attrIdx = length();</span>
+            }
+
+<span class="fc" id="L785">            int delIdx = nextDelimiterPos(keyBuffer.toString(), startIndex,</span>
+                    attrIdx);
+<span class="fc bfc" id="L787" title="All 2 branches covered.">            if (delIdx &lt; 0)</span>
+            {
+<span class="fc" id="L789">                delIdx = attrIdx;</span>
+            }
+
+<span class="fc" id="L792">            endIndex = Math.min(attrIdx, delIdx);</span>
+<span class="fc" id="L793">            return unescapeDelimiters(keyBuffer.substring(startIndex, endIndex));</span>
+        }
+
+        /**
+         * Searches the next unescaped delimiter from the given position.
+         *
+         * @param key the key
+         * @param pos the start position
+         * @param endPos the end position
+         * @return the position of the next delimiter or -1 if there is none
+         */
+        private int nextDelimiterPos(final String key, final int pos, final int endPos)
+        {
+<span class="fc" id="L806">            int delimiterPos = pos;</span>
+<span class="fc" id="L807">            boolean found = false;</span>
+
+            do
+            {
+<span class="fc" id="L811">                delimiterPos = key.indexOf(getSymbols()</span>
+<span class="fc" id="L812">                        .getPropertyDelimiter(), delimiterPos);</span>
+<span class="fc bfc" id="L813" title="All 4 branches covered.">                if (delimiterPos &lt; 0 || delimiterPos &gt;= endPos)</span>
+                {
+<span class="fc" id="L815">                    return -1;</span>
+                }
+<span class="fc" id="L817">                final int escapePos = escapedPosition(key, delimiterPos);</span>
+<span class="fc bfc" id="L818" title="All 2 branches covered.">                if (escapePos &lt; 0)</span>
+                {
+<span class="fc" id="L820">                    found = true;</span>
+                }
+                else
+                {
+<span class="fc" id="L824">                    delimiterPos = escapePos;</span>
+                }
+            }
+<span class="fc bfc" id="L827" title="All 2 branches covered.">            while (!found);</span>
+
+<span class="fc" id="L829">            return delimiterPos;</span>
+        }
+
+        /**
+         * Checks if a delimiter at the specified position is escaped. If this
+         * is the case, the next valid search position will be returned.
+         * Otherwise the return value is -1.
+         *
+         * @param key the key to check
+         * @param pos the position where a delimiter was found
+         * @return information about escaped delimiters
+         */
+        private int escapedPosition(final String key, final int pos)
+        {
+<span class="fc bfc" id="L843" title="All 2 branches covered.">            if (getSymbols().getEscapedDelimiter() == null)</span>
+            {
+                // nothing to escape
+<span class="fc" id="L846">                return -1;</span>
+            }
+<span class="fc" id="L848">            final int escapeOffset = escapeOffset();</span>
+<span class="pc bpc" id="L849" title="1 of 4 branches missed.">            if (escapeOffset &lt; 0 || escapeOffset &gt; pos)</span>
+            {
+                // No escaping possible at this position
+<span class="fc" id="L852">                return -1;</span>
+            }
+
+<span class="fc" id="L855">            final int escapePos = key.indexOf(getSymbols()</span>
+<span class="fc" id="L856">                    .getEscapedDelimiter(), pos - escapeOffset);</span>
+<span class="fc bfc" id="L857" title="All 4 branches covered.">            if (escapePos &lt;= pos &amp;&amp; escapePos &gt;= 0)</span>
+            {
+                // The found delimiter is escaped. Next valid search position
+                // is behind the escaped delimiter.
+<span class="fc" id="L861">                return escapePos</span>
+<span class="fc" id="L862">                        + getSymbols().getEscapedDelimiter().length();</span>
+            }
+<span class="fc" id="L864">            return -1;</span>
+        }
+
+        /**
+         * Determines the relative offset of an escaped delimiter in relation to
+         * a delimiter. Depending on the used delimiter and escaped delimiter
+         * tokens the position where to search for an escaped delimiter is
+         * different. If, for instance, the dot character (&amp;quot;.&amp;quot;) is
+         * used as delimiter, and a doubled dot (&amp;quot;..&amp;quot;) as escaped
+         * delimiter, the escaped delimiter starts at the same position as the
+         * delimiter. If the token &amp;quot;\.&amp;quot; was used, it would start one
+         * character before the delimiter because the delimiter character
+         * &amp;quot;.&amp;quot; is the second character in the escaped delimiter
+         * string. This relation will be determined by this method. For this to
+         * work the delimiter string must be contained in the escaped delimiter
+         * string.
+         *
+         * @return the relative offset of the escaped delimiter in relation to a
+         * delimiter
+         */
+        private int escapeOffset()
+        {
+<span class="fc" id="L886">            return getSymbols().getEscapedDelimiter().indexOf(</span>
+<span class="fc" id="L887">                    getSymbols().getPropertyDelimiter());</span>
+        }
+
+        /**
+         * Helper method for checking if the passed key is an attribute. If this
+         * is the case, the internal fields will be set.
+         *
+         * @param key the key to be checked
+         * @return a flag if the key is an attribute
+         */
+        private boolean checkAttribute(final String key)
+        {
+<span class="fc bfc" id="L899" title="All 2 branches covered.">            if (isAttributeKey(key))</span>
+            {
+<span class="fc" id="L901">                current = removeAttributeMarkers(key);</span>
+<span class="fc" id="L902">                return true;</span>
+            }
+<span class="fc" id="L904">            return false;</span>
+        }
+
+        /**
+         * Helper method for checking if the passed key contains an index. If
+         * this is the case, internal fields will be set.
+         *
+         * @param key the key to be checked
+         * @return a flag if an index is defined
+         */
+        private boolean checkIndex(final String key)
+        {
+<span class="fc" id="L916">            boolean result = false;</span>
+
+            try
+            {
+<span class="fc" id="L920">                final int idx = key.lastIndexOf(getSymbols().getIndexStart());</span>
+<span class="fc bfc" id="L921" title="All 2 branches covered.">                if (idx &gt; 0)</span>
+                {
+<span class="fc" id="L923">                    final int endidx = key.indexOf(getSymbols().getIndexEnd(),</span>
+                            idx);
+
+<span class="fc bfc" id="L926" title="All 2 branches covered.">                    if (endidx &gt; idx + 1)</span>
+                    {
+<span class="fc" id="L928">                        indexValue = Integer.parseInt(key.substring(idx + 1, endidx));</span>
+<span class="fc" id="L929">                        current = key.substring(0, idx);</span>
+<span class="fc" id="L930">                        result = true;</span>
+                    }
+                }
+            }
+<span class="fc" id="L934">            catch (final NumberFormatException nfe)</span>
+            {
+<span class="fc" id="L936">                result = false;</span>
+<span class="fc" id="L937">            }</span>
+
+<span class="fc" id="L939">            return result;</span>
+        }
+
+        /**
+         * Returns a flag whether attributes are marked the same way as normal
+         * property keys. We call this the &amp;quot;attribute emulating mode&amp;quot;.
+         * When navigating through node hierarchies it might be convenient to
+         * treat attributes the same way than other child nodes, so an
+         * expression engine supports to set the attribute markers to the same
+         * value than the property delimiter. If this is the case, some special
+         * checks have to be performed.
+         *
+         * @return a flag if attributes and normal property keys are treated the
+         * same way
+         */
+        private boolean isAttributeEmulatingMode()
+        {
+<span class="fc bfc" id="L956" title="All 2 branches covered.">            return getSymbols().getAttributeEnd() == null</span>
+<span class="fc bfc" id="L957" title="All 2 branches covered.">                    &amp;&amp; StringUtils.equals(getSymbols()</span>
+<span class="fc" id="L958">                            .getPropertyDelimiter(), getSymbols()</span>
+<span class="fc" id="L959">                            .getAttributeStart());</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

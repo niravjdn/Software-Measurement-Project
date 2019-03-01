@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LazyList.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.list</a> &gt; <span class="el_source">LazyList.java</span></div><h1>LazyList.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.list;
+
+import java.util.List;
+
+import org.apache.commons.collections4.Factory;
+
+/**
+ * Decorates another &lt;code&gt;List&lt;/code&gt; to create objects in the list on demand.
+ * &lt;p&gt;
+ * When the {@link #get(int)} method is called with an index greater than
+ * the size of the list, the list will automatically grow in size and return
+ * a new object from the specified factory. The gaps will be filled by null.
+ * If a get method call encounters a null, it will be replaced with a new
+ * object from the factory. Thus this list is unsuitable for storing null
+ * objects.
+ * &lt;p&gt;
+ * For instance:
+ *
+ * &lt;pre&gt;
+ * Factory&amp;lt;Date&amp;gt; factory = new Factory&amp;lt;Date&amp;gt;() {
+ *     public Date create() {
+ *         return new Date();
+ *     }
+ * }
+ * List&amp;lt;Date&amp;gt; lazy = LazyList.decorate(new ArrayList&amp;lt;Date&amp;gt;(), factory);
+ * Date date = lazy.get(3);
+ * &lt;/pre&gt;
+ *
+ * After the above code is executed, &lt;code&gt;date&lt;/code&gt; will contain
+ * a new &lt;code&gt;Date&lt;/code&gt; instance.  Furthermore, that &lt;code&gt;Date&lt;/code&gt;
+ * instance is the fourth element in the list.  The first, second,
+ * and third element are all set to &lt;code&gt;null&lt;/code&gt;.
+ * &lt;p&gt;
+ * This class differs from {@link GrowthList} because here growth occurs on
+ * get, where &lt;code&gt;GrowthList&lt;/code&gt; grows on set and add. However, they
+ * could easily be used together by decorating twice.
+ * &lt;p&gt;
+ * This class is Serializable from Commons Collections 3.1.
+ *
+ * @see GrowthList
+ * @since 3.0
+ */
+public class LazyList&lt;E&gt; extends AbstractSerializableListDecorator&lt;E&gt; {
+
+    /** Serialization version */
+    private static final long serialVersionUID = -1708388017160694542L;
+
+    /** The factory to use to lazily instantiate the objects */
+    private final Factory&lt;? extends E&gt; factory;
+
+    /**
+     * Factory method to create a lazily instantiating list.
+     *
+     * @param &lt;E&gt; the type of the elements in the list
+     * @param list  the list to decorate, must not be null
+     * @param factory  the factory to use for creation, must not be null
+     * @return a new lazy list
+     * @throws NullPointerException if list or factory is null
+     * @since 4.0
+     */
+    public static &lt;E&gt; LazyList&lt;E&gt; lazyList(final List&lt;E&gt; list, final Factory&lt;? extends E&gt; factory) {
+<span class="fc" id="L78">        return new LazyList&lt;&gt;(list, factory);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Constructor that wraps (not copies).
+     *
+     * @param list  the list to decorate, must not be null
+     * @param factory  the factory to use for creation, must not be null
+     * @throws NullPointerException if list or factory is null
+     */
+    protected LazyList(final List&lt;E&gt; list, final Factory&lt;? extends E&gt; factory) {
+<span class="fc" id="L90">        super(list);</span>
+<span class="pc bpc" id="L91" title="1 of 2 branches missed.">        if (factory == null) {</span>
+<span class="nc" id="L92">            throw new IllegalArgumentException(&quot;Factory must not be null&quot;);</span>
+        }
+<span class="fc" id="L94">        this.factory = factory;</span>
+<span class="fc" id="L95">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Decorate the get method to perform the lazy behaviour.
+     * &lt;p&gt;
+     * If the requested index is greater than the current size, the list will
+     * grow to the new size and a new object will be returned from the factory.
+     * Indexes in-between the old size and the requested size are left with a
+     * placeholder that is replaced with a factory object when requested.
+     *
+     * @param index  the index to retrieve
+     * @return the element at the given index
+     */
+    @Override
+    public E get(final int index) {
+<span class="fc" id="L111">        final int size = decorated().size();</span>
+<span class="fc bfc" id="L112" title="All 2 branches covered.">        if (index &lt; size) {</span>
+            // within bounds, get the object
+<span class="fc" id="L114">            E object = decorated().get(index);</span>
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">            if (object == null) {</span>
+                // item is a place holder, create new one, set and return
+<span class="nc" id="L117">                object = factory.create();</span>
+<span class="nc" id="L118">                decorated().set(index, object);</span>
+<span class="nc" id="L119">                return object;</span>
+            }
+            // good and ready to go
+<span class="fc" id="L122">            return object;</span>
+        }
+        // we have to grow the list
+<span class="fc bfc" id="L125" title="All 2 branches covered.">        for (int i = size; i &lt; index; i++) {</span>
+<span class="fc" id="L126">            decorated().add(null);</span>
+        }
+        // create our last object, set and return
+<span class="fc" id="L129">        final E object = factory.create();</span>
+<span class="fc" id="L130">        decorated().add(object);</span>
+<span class="fc" id="L131">        return object;</span>
+    }
+
+    @Override
+    public List&lt;E&gt; subList(final int fromIndex, final int toIndex) {
+<span class="nc" id="L136">        final List&lt;E&gt; sub = decorated().subList(fromIndex, toIndex);</span>
+<span class="nc" id="L137">        return new LazyList&lt;&gt;(sub, factory);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

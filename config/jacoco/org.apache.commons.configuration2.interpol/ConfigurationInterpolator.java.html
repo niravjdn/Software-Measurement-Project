@@ -1,0 +1,562 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConfigurationInterpolator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2.interpol</a> &gt; <span class="el_source">ConfigurationInterpolator.java</span></div><h1>ConfigurationInterpolator.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.configuration2.interpol;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import org.apache.commons.text.StringSubstitutor;
+import org.apache.commons.text.lookup.StringLookup;
+
+/**
+ * &lt;p&gt;
+ * A class that handles interpolation (variable substitution) for configuration
+ * objects.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * Each instance of {@code AbstractConfiguration} is associated with an object
+ * of this class. All interpolation tasks are delegated to this object.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * {@code ConfigurationInterpolator} internally uses the {@code StringSubstitutor}
+ * class from &lt;a href=&quot;http://commons.apache.org/text&quot;&gt;Commons Text&lt;/a&gt;. Thus it
+ * supports the same syntax of variable expressions.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * The basic idea of this class is that it can maintain a set of primitive
+ * {@link Lookup} objects, each of which is identified by a special prefix. The
+ * variables to be processed have the form &lt;code&gt;${prefix:name}&lt;/code&gt;.
+ * {@code ConfigurationInterpolator} will extract the prefix and determine,
+ * which primitive lookup object is registered for it. Then the name of the
+ * variable is passed to this object to obtain the actual value. It is also
+ * possible to define an arbitrary number of default lookup objects, which are
+ * used for variables that do not have a prefix or that cannot be resolved by
+ * their associated lookup object. When adding default lookup objects their
+ * order matters; they are queried in this order, and the first non-&lt;b&gt;null&lt;/b&gt;
+ * variable value is used.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * After an instance has been created it does not contain any {@code Lookup}
+ * objects. The current set of lookup objects can be modified using the
+ * {@code registerLookup()} and {@code deregisterLookup()} methods. Default
+ * lookup objects (that are invoked for variables without a prefix) can be added
+ * or removed with the {@code addDefaultLookup()} and
+ * {@code removeDefaultLookup()} methods respectively. (When a
+ * {@code ConfigurationInterpolator} instance is created by a configuration
+ * object, a default lookup object is added pointing to the configuration
+ * itself, so that variables are resolved using the configuration's properties.)
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * The default usage scenario is that on a fully initialized instance the
+ * {@code interpolate()} method is called. It is passed an object value which
+ * may contain variables. All these variables are substituted if they can be
+ * resolved. The result is the passed in value with variables replaced.
+ * Alternatively, the {@code resolve()} method can be called to obtain the
+ * values of specific variables without performing interpolation.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * Implementation node: This class is thread-safe. Lookup objects can be added
+ * or removed at any time concurrent to interpolation operations.
+ * &lt;/p&gt;
+ *
+ * @version $Id$
+ * @since 1.4
+ * @author &lt;a
+ *         href=&quot;http://commons.apache.org/configuration/team-list.html&quot;&gt;Commons
+ *         Configuration team&lt;/a&gt;
+ */
+public class ConfigurationInterpolator
+{
+    /** Constant for the prefix separator. */
+    private static final char PREFIX_SEPARATOR = ':';
+
+    /** The variable prefix. */
+    private static final String VAR_START = &quot;${&quot;;
+
+    /** The length of {@link #VAR_START}. */
+<span class="fc" id="L98">    private static final int VAR_START_LENGTH = VAR_START.length();</span>
+
+    /** The variable suffix. */
+    private static final String VAR_END = &quot;}&quot;;
+
+    /** The length of {@link #VAR_END}. */
+<span class="fc" id="L104">    private static final int VAR_END_LENGTH = VAR_END.length();</span>
+
+    /** A map containing the default prefix lookups. */
+    private static final Map&lt;String, Lookup&gt; DEFAULT_PREFIX_LOOKUPS;
+
+    static
+    {
+<span class="fc" id="L111">        final Map&lt;String, Lookup&gt; lookups = new HashMap&lt;&gt;(DefaultLookups.values().length);</span>
+<span class="fc bfc" id="L112" title="All 2 branches covered.">        for (final DefaultLookups l : DefaultLookups.values())</span>
+        {
+<span class="fc" id="L114">            lookups.put(l.getPrefix(), l.getLookup());</span>
+        }
+<span class="fc" id="L116">        DEFAULT_PREFIX_LOOKUPS = Collections.unmodifiableMap(lookups);</span>
+<span class="fc" id="L117">    }</span>
+
+    /**
+     * Creates a new instance based on the properties in the given specification
+     * object.
+     *
+     * @param spec the {@code InterpolatorSpecification}
+     * @return the newly created instance
+     */
+    private static ConfigurationInterpolator createInterpolator(
+            final InterpolatorSpecification spec)
+    {
+<span class="fc" id="L129">        final ConfigurationInterpolator ci = new ConfigurationInterpolator();</span>
+<span class="fc" id="L130">        ci.addDefaultLookups(spec.getDefaultLookups());</span>
+<span class="fc" id="L131">        ci.registerLookups(spec.getPrefixLookups());</span>
+<span class="fc" id="L132">        ci.setParentInterpolator(spec.getParentInterpolator());</span>
+<span class="fc" id="L133">        return ci;</span>
+    }
+
+    /**
+     * Extracts the variable name from a value that consists of a single
+     * variable.
+     *
+     * @param strValue the value
+     * @return the extracted variable name
+     */
+    private static String extractVariableName(final String strValue)
+    {
+<span class="fc" id="L145">        return strValue.substring(VAR_START_LENGTH,</span>
+<span class="fc" id="L146">                strValue.length() - VAR_END_LENGTH);</span>
+    }
+
+    /**
+     * Creates a new {@code ConfigurationInterpolator} instance based on the
+     * passed in specification object. If the {@code InterpolatorSpecification}
+     * already contains a {@code ConfigurationInterpolator} object, it is used
+     * directly. Otherwise, a new instance is created and initialized with the
+     * properties stored in the specification.
+     *
+     * @param spec the {@code InterpolatorSpecification} (must not be
+     *        &lt;b&gt;null&lt;/b&gt;)
+     * @return the {@code ConfigurationInterpolator} obtained or created based
+     *         on the given specification
+     * @throws IllegalArgumentException if the specification is &lt;b&gt;null&lt;/b&gt;
+     * @since 2.0
+     */
+    public static ConfigurationInterpolator fromSpecification(
+            final InterpolatorSpecification spec)
+    {
+<span class="fc bfc" id="L166" title="All 2 branches covered.">        if (spec == null)</span>
+        {
+<span class="fc" id="L168">            throw new IllegalArgumentException(</span>
+                    &quot;InterpolatorSpecification must not be null!&quot;);
+        }
+<span class="fc bfc" id="L171" title="All 2 branches covered.">        return (spec.getInterpolator() != null) ? spec.getInterpolator()</span>
+<span class="fc" id="L172">                : createInterpolator(spec);</span>
+    }
+
+    /**
+     * Returns a map containing the default prefix lookups. Every configuration
+     * object derived from {@code AbstractConfiguration} is by default
+     * initialized with a {@code ConfigurationInterpolator} containing these
+     * {@code Lookup} objects and their prefixes. The map cannot be modified
+     *
+     * @return a map with the default prefix {@code Lookup} objects and their
+     *         prefixes
+     * @since 2.0
+     */
+    public static Map&lt;String, Lookup&gt; getDefaultPrefixLookups()
+    {
+<span class="fc" id="L187">        return DEFAULT_PREFIX_LOOKUPS;</span>
+    }
+
+    /**
+     * Utility method for obtaining a {@code Lookup} object in a safe way. This
+     * method always returns a non-&lt;b&gt;null&lt;/b&gt; {@code Lookup} object. If the
+     * passed in {@code Lookup} is not &lt;b&gt;null&lt;/b&gt;, it is directly returned.
+     * Otherwise, result is a dummy {@code Lookup} which does not provide any
+     * values.
+     *
+     * @param lookup the {@code Lookup} to check
+     * @return a non-&lt;b&gt;null&lt;/b&gt; {@code Lookup} object
+     * @since 2.0
+     */
+    public static Lookup nullSafeLookup(Lookup lookup)
+    {
+<span class="fc bfc" id="L203" title="All 2 branches covered.">        if (lookup == null)</span>
+        {
+<span class="fc" id="L205">            lookup = DummyLookup.INSTANCE;</span>
+        }
+<span class="fc" id="L207">        return lookup;</span>
+    }
+
+    /** A map with the currently registered lookup objects. */
+    private final Map&lt;String, Lookup&gt; prefixLookups;
+
+    /** Stores the default lookup objects. */
+    private final List&lt;Lookup&gt; defaultLookups;
+
+    /** The helper object performing variable substitution. */
+    private final StringSubstitutor substitutor;
+
+    /** Stores a parent interpolator objects if the interpolator is nested hierarchically. */
+    private volatile ConfigurationInterpolator parentInterpolator;
+
+    /**
+     * Creates a new instance of {@code ConfigurationInterpolator}.
+     */
+    public ConfigurationInterpolator()
+<span class="fc" id="L226">    {</span>
+<span class="fc" id="L227">        prefixLookups = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L228">        defaultLookups = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="fc" id="L229">        substitutor = initSubstitutor();</span>
+<span class="fc" id="L230">    }</span>
+
+    /**
+     * Adds a default {@code Lookup} object. Default {@code Lookup} objects are
+     * queried (in the order they were added) for all variables without a
+     * special prefix. If no default {@code Lookup} objects are present, such
+     * variables won't be processed.
+     *
+     * @param defaultLookup the default {@code Lookup} object to be added (must
+     *        not be &lt;b&gt;null&lt;/b&gt;)
+     * @throws IllegalArgumentException if the {@code Lookup} object is
+     *         &lt;b&gt;null&lt;/b&gt;
+     */
+    public void addDefaultLookup(final Lookup defaultLookup)
+    {
+<span class="fc" id="L245">        defaultLookups.add(defaultLookup);</span>
+<span class="fc" id="L246">    }</span>
+
+    /**
+     * Adds all {@code Lookup} objects in the given collection as default
+     * lookups. The collection can be &lt;b&gt;null&lt;/b&gt;, then this method has no
+     * effect. It must not contain &lt;b&gt;null&lt;/b&gt; entries.
+     *
+     * @param lookups the {@code Lookup} objects to be added as default lookups
+     * @throws IllegalArgumentException if the collection contains a &lt;b&gt;null&lt;/b&gt;
+     *         entry
+     */
+    public void addDefaultLookups(final Collection&lt;? extends Lookup&gt; lookups)
+    {
+<span class="fc bfc" id="L259" title="All 2 branches covered.">        if (lookups != null)</span>
+        {
+<span class="fc" id="L261">            defaultLookups.addAll(lookups);</span>
+        }
+<span class="fc" id="L263">    }</span>
+
+    /**
+     * Deregisters the {@code Lookup} object for the specified prefix at this
+     * instance. It will be removed from this instance.
+     *
+     * @param prefix the variable prefix
+     * @return a flag whether for this prefix a lookup object had been
+     *         registered
+     */
+    public boolean deregisterLookup(final String prefix)
+    {
+<span class="fc bfc" id="L275" title="All 2 branches covered.">        return prefixLookups.remove(prefix) != null;</span>
+    }
+
+    /**
+     * Obtains the lookup object for the specified prefix. This method is called
+     * by the {@code lookup()} method. This implementation will check
+     * whether a lookup object is registered for the given prefix. If not, a
+     * &lt;b&gt;null&lt;/b&gt; lookup object will be returned (never &lt;b&gt;null&lt;/b&gt;).
+     *
+     * @param prefix the prefix
+     * @return the lookup object to be used for this prefix
+     */
+    protected Lookup fetchLookupForPrefix(final String prefix)
+    {
+<span class="fc" id="L289">        return nullSafeLookup(prefixLookups.get(prefix));</span>
+    }
+
+    /**
+     * Returns a collection with the default {@code Lookup} objects
+     * added to this {@code ConfigurationInterpolator}. These objects are not
+     * associated with a variable prefix. The returned list is a snapshot copy
+     * of the internal collection of default lookups; so manipulating it does
+     * not affect this instance.
+     *
+     * @return the default lookup objects
+     */
+    public List&lt;Lookup&gt; getDefaultLookups()
+    {
+<span class="fc" id="L303">        return new ArrayList&lt;&gt;(defaultLookups);</span>
+    }
+
+    /**
+     * Returns a map with the currently registered {@code Lookup} objects and
+     * their prefixes. This is a snapshot copy of the internally used map. So
+     * modifications of this map do not effect this instance.
+     *
+     * @return a copy of the map with the currently registered {@code Lookup}
+     *         objects
+     */
+    public Map&lt;String, Lookup&gt; getLookups()
+    {
+<span class="fc" id="L316">        return new HashMap&lt;&gt;(prefixLookups);</span>
+    }
+
+    /**
+     * Returns the parent {@code ConfigurationInterpolator}.
+     *
+     * @return the parent {@code ConfigurationInterpolator} (can be &lt;b&gt;null&lt;/b&gt;)
+     */
+    public ConfigurationInterpolator getParentInterpolator()
+    {
+<span class="fc" id="L326">        return this.parentInterpolator;</span>
+    }
+
+    /**
+     * Creates and initializes a {@code StringSubstitutor} object which is used for
+     * variable substitution. This {@code StringSubstitutor} is assigned a
+     * specialized lookup object implementing the correct variable resolving
+     * algorithm.
+     *
+     * @return the {@code StringSubstitutor} used by this object
+     */
+    private StringSubstitutor initSubstitutor()
+    {
+<span class="fc" id="L339">        return new StringSubstitutor(new StringLookup()</span>
+<span class="fc" id="L340">        {</span>
+            @Override
+            public String lookup(final String key)
+            {
+<span class="fc" id="L344">                final Object result = resolve(key);</span>
+<span class="fc bfc" id="L345" title="All 2 branches covered.">                return result != null ? result.toString() : null;</span>
+            }
+        });
+    }
+
+    /**
+     * Performs interpolation of the passed in value. If the value is of type
+     * String, this method checks whether it contains variables. If so, all
+     * variables are replaced by their current values (if possible). For non
+     * string arguments, the value is returned without changes.
+     *
+     * @param value the value to be interpolated
+     * @return the interpolated value
+     */
+    public Object interpolate(final Object value)
+    {
+<span class="fc bfc" id="L361" title="All 2 branches covered.">        if (value instanceof String)</span>
+        {
+<span class="fc" id="L363">            final String strValue = (String) value;</span>
+<span class="fc bfc" id="L364" title="All 2 branches covered.">            if (looksLikeSingleVariable(strValue))</span>
+            {
+<span class="fc" id="L366">                final Object resolvedValue = resolveSingleVariable(strValue);</span>
+<span class="fc bfc" id="L367" title="All 4 branches covered.">                if (resolvedValue != null &amp;&amp; !(resolvedValue instanceof String))</span>
+                {
+                    // If the value is again a string, it needs no special
+                    // treatment; it may also contain further variables which
+                    // must be resolved; therefore, the default mechanism is
+                    // applied.
+<span class="fc" id="L373">                    return resolvedValue;</span>
+                }
+            }
+<span class="fc" id="L376">            return substitutor.replace(strValue);</span>
+        }
+<span class="fc" id="L378">        return value;</span>
+    }
+
+    /**
+     * Sets a flag that variable names can contain other variables. If enabled,
+     * variable substitution is also done in variable names.
+     *
+     * @return the substitution in variables flag
+     */
+    public boolean isEnableSubstitutionInVariables()
+    {
+<span class="fc" id="L389">        return substitutor.isEnableSubstitutionInVariables();</span>
+    }
+
+    /**
+     * Checks whether a value to be interpolated seems to be a single variable.
+     * In this case, it is resolved directly without using the
+     * {@code StringSubstitutor}. Note that it is okay if this method returns a
+     * false positive: In this case, resolving is going to fail, and standard
+     * mechanism is used.
+     *
+     * @param strValue the value to be interpolated
+     * @return a flag whether this value seems to be a single variable
+     */
+    private boolean looksLikeSingleVariable(final String strValue)
+    {
+<span class="fc bfc" id="L404" title="All 4 branches covered.">        return strValue.startsWith(VAR_START) &amp;&amp; strValue.endsWith(VAR_END);</span>
+    }
+
+    /**
+     * Returns an unmodifiable set with the prefixes, for which {@code Lookup}
+     * objects are registered at this instance. This means that variables with
+     * these prefixes can be processed.
+     *
+     * @return a set with the registered variable prefixes
+     */
+    public Set&lt;String&gt; prefixSet()
+    {
+<span class="fc" id="L416">        return Collections.unmodifiableSet(prefixLookups.keySet());</span>
+    }
+
+    /**
+     * Registers the given {@code Lookup} object for the specified prefix at
+     * this instance. From now on this lookup object will be used for variables
+     * that have the specified prefix.
+     *
+     * @param prefix the variable prefix (must not be &lt;b&gt;null&lt;/b&gt;)
+     * @param lookup the {@code Lookup} object to be used for this prefix (must
+     *        not be &lt;b&gt;null&lt;/b&gt;)
+     * @throws IllegalArgumentException if either the prefix or the
+     *         {@code Lookup} object is &lt;b&gt;null&lt;/b&gt;
+     */
+    public void registerLookup(final String prefix, final Lookup lookup)
+    {
+<span class="fc bfc" id="L432" title="All 2 branches covered.">        if (prefix == null)</span>
+        {
+<span class="fc" id="L434">            throw new IllegalArgumentException(</span>
+                    &quot;Prefix for lookup object must not be null!&quot;);
+        }
+<span class="fc bfc" id="L437" title="All 2 branches covered.">        if (lookup == null)</span>
+        {
+<span class="fc" id="L439">            throw new IllegalArgumentException(</span>
+                    &quot;Lookup object must not be null!&quot;);
+        }
+<span class="fc" id="L442">        prefixLookups.put(prefix, lookup);</span>
+<span class="fc" id="L443">    }</span>
+
+    /**
+     * Registers all {@code Lookup} objects in the given map with their prefixes
+     * at this {@code ConfigurationInterpolator}. Using this method multiple
+     * {@code Lookup} objects can be registered at once. If the passed in map is
+     * &lt;b&gt;null&lt;/b&gt;, this method does not have any effect.
+     *
+     * @param lookups the map with lookups to register (may be &lt;b&gt;null&lt;/b&gt;)
+     * @throws IllegalArgumentException if the map contains &lt;b&gt;entries&lt;/b&gt;
+     */
+    public void registerLookups(final Map&lt;String, ? extends Lookup&gt; lookups)
+    {
+<span class="fc bfc" id="L456" title="All 2 branches covered.">        if (lookups != null)</span>
+        {
+<span class="fc" id="L458">            prefixLookups.putAll(lookups);</span>
+        }
+<span class="fc" id="L460">    }</span>
+
+    /**
+     * Removes the specified {@code Lookup} object from the list of default
+     * {@code Lookup}s.
+     *
+     * @param lookup the {@code Lookup} object to be removed
+     * @return a flag whether this {@code Lookup} object actually existed and
+     *         was removed
+     */
+    public boolean removeDefaultLookup(final Lookup lookup)
+    {
+<span class="fc" id="L472">        return defaultLookups.remove(lookup);</span>
+    }
+
+    /**
+     * Resolves the specified variable. This implementation tries to extract
+     * a variable prefix from the given variable name (the first colon (':') is
+     * used as prefix separator). It then passes the name of the variable with
+     * the prefix stripped to the lookup object registered for this prefix. If
+     * no prefix can be found or if the associated lookup object cannot resolve
+     * this variable, the default lookup objects are used. If this is not
+     * successful either and a parent {@code ConfigurationInterpolator} is
+     * available, this object is asked to resolve the variable.
+     *
+     * @param var the name of the variable whose value is to be looked up which may contain a prefix.
+     * @return the value of this variable or &lt;b&gt;null&lt;/b&gt; if it cannot be
+     * resolved
+     */
+    public Object resolve(final String var)
+    {
+<span class="fc bfc" id="L491" title="All 2 branches covered.">        if (var == null)</span>
+        {
+<span class="fc" id="L493">            return null;</span>
+        }
+
+<span class="fc" id="L496">        final int prefixPos = var.indexOf(PREFIX_SEPARATOR);</span>
+<span class="fc bfc" id="L497" title="All 2 branches covered.">        if (prefixPos &gt;= 0)</span>
+        {
+<span class="fc" id="L499">            final String prefix = var.substring(0, prefixPos);</span>
+<span class="fc" id="L500">            final String name = var.substring(prefixPos + 1);</span>
+<span class="fc" id="L501">            final Object value = fetchLookupForPrefix(prefix).lookup(name);</span>
+<span class="fc bfc" id="L502" title="All 2 branches covered.">            if (value != null)</span>
+            {
+<span class="fc" id="L504">                return value;</span>
+            }
+        }
+
+<span class="fc bfc" id="L508" title="All 2 branches covered.">        for (final Lookup lookup : defaultLookups)</span>
+        {
+<span class="fc" id="L510">            final Object value = lookup.lookup(var);</span>
+<span class="fc bfc" id="L511" title="All 2 branches covered.">            if (value != null)</span>
+            {
+<span class="fc" id="L513">                return value;</span>
+            }
+<span class="fc" id="L515">        }</span>
+
+<span class="fc" id="L517">        final ConfigurationInterpolator parent = getParentInterpolator();</span>
+<span class="fc bfc" id="L518" title="All 2 branches covered.">        if (parent != null)</span>
+        {
+<span class="fc" id="L520">            return getParentInterpolator().resolve(var);</span>
+        }
+<span class="fc" id="L522">        return null;</span>
+    }
+
+    /**
+     * Interpolates a string value that seems to be a single variable.
+     *
+     * @param strValue the string to be interpolated
+     * @return the resolved value or &lt;b&gt;null&lt;/b&gt; if resolving failed
+     */
+    private Object resolveSingleVariable(final String strValue)
+    {
+<span class="fc" id="L533">        return resolve(extractVariableName(strValue));</span>
+    }
+
+    /**
+     * Sets the flag whether variable names can contain other variables. This
+     * flag corresponds to the {@code enableSubstitutionInVariables} property of
+     * the underlying {@code StringSubstitutor} object.
+     *
+     * @param f the new value of the flag
+     */
+    public void setEnableSubstitutionInVariables(final boolean f)
+    {
+<span class="fc" id="L545">        substitutor.setEnableSubstitutionInVariables(f);</span>
+<span class="fc" id="L546">    }</span>
+
+    /**
+     * Sets the parent {@code ConfigurationInterpolator}. This object is used if
+     * the {@code Lookup} objects registered at this object cannot resolve a
+     * variable.
+     *
+     * @param parentInterpolator the parent {@code ConfigurationInterpolator}
+     *        object (can be &lt;b&gt;null&lt;/b&gt;)
+     */
+    public void setParentInterpolator(
+            final ConfigurationInterpolator parentInterpolator)
+    {
+<span class="fc" id="L559">        this.parentInterpolator = parentInterpolator;</span>
+<span class="fc" id="L560">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

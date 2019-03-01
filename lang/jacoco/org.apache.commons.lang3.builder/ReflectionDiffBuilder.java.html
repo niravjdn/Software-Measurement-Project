@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReflectionDiffBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Lang</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.lang3.builder</a> &gt; <span class="el_source">ReflectionDiffBuilder.java</span></div><h1>ReflectionDiffBuilder.java</h1><pre class="source lang-java linenums">/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.lang3.builder;
+
+import static org.apache.commons.lang3.reflect.FieldUtils.readField;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+
+import org.apache.commons.lang3.ClassUtils;
+import org.apache.commons.lang3.reflect.FieldUtils;
+
+/**
+ * &lt;p&gt;
+ * Assists in implementing {@link Diffable#diff(Object)} methods.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * All non-static, non-transient fields (including inherited fields)
+ * of the objects to diff are discovered using reflection and compared
+ * for differences.
+ * &lt;/p&gt;
+ *
+ * &lt;p&gt;
+ * To use this class, write code as follows:
+ * &lt;/p&gt;
+ *
+ * &lt;pre&gt;
+ * public class Person implements Diffable&amp;lt;Person&amp;gt; {
+ *   String name;
+ *   int age;
+ *   boolean smoker;
+ *   ...
+ *
+ *   public DiffResult diff(Person obj) {
+ *     // No need for null check, as NullPointerException correct if obj is null
+ *     return new ReflectionDiffBuilder(this, obj, ToStringStyle.SHORT_PREFIX_STYLE)
+ *       .build();
+ *   }
+ * }
+ * &lt;/pre&gt;
+ *
+ * &lt;p&gt;
+ * The {@code ToStringStyle} passed to the constructor is embedded in the
+ * returned {@code DiffResult} and influences the style of the
+ * {@code DiffResult.toString()} method. This style choice can be overridden by
+ * calling {@link DiffResult#toString(ToStringStyle)}.
+ * &lt;/p&gt;
+ * @see Diffable
+ * @see Diff
+ * @see DiffResult
+ * @see ToStringStyle
+ * @since 3.6
+ */
+public class ReflectionDiffBuilder implements Builder&lt;DiffResult&gt; {
+
+    private final Object left;
+    private final Object right;
+    private final DiffBuilder diffBuilder;
+
+    /**
+     * &lt;p&gt;
+     * Constructs a builder for the specified objects with the specified style.
+     * &lt;/p&gt;
+     *
+     * &lt;p&gt;
+     * If {@code lhs == rhs} or {@code lhs.equals(rhs)} then the builder will
+     * not evaluate any calls to {@code append(...)} and will return an empty
+     * {@link DiffResult} when {@link #build()} is executed.
+     * &lt;/p&gt;
+     * @param &lt;T&gt;
+     *            type of the objects to diff
+     * @param lhs
+     *            {@code this} object
+     * @param rhs
+     *            the object to diff against
+     * @param style
+     *            the style will use when outputting the objects, {@code null}
+     *            uses the default
+     * @throws IllegalArgumentException
+     *             if {@code lhs} or {@code rhs} is {@code null}
+     */
+<span class="fc" id="L96">    public &lt;T&gt; ReflectionDiffBuilder(final T lhs, final T rhs, final ToStringStyle style) {</span>
+<span class="fc" id="L97">        this.left = lhs;</span>
+<span class="fc" id="L98">        this.right = rhs;</span>
+<span class="fc" id="L99">        diffBuilder = new DiffBuilder(lhs, rhs, style);</span>
+<span class="fc" id="L100">    }</span>
+
+    @Override
+    public DiffResult build() {
+<span class="fc bfc" id="L104" title="All 2 branches covered.">        if (left.equals(right)) {</span>
+<span class="fc" id="L105">            return diffBuilder.build();</span>
+        }
+
+<span class="fc" id="L108">        appendFields(left.getClass());</span>
+<span class="fc" id="L109">        return diffBuilder.build();</span>
+    }
+
+    private void appendFields(final Class&lt;?&gt; clazz) {
+<span class="fc bfc" id="L113" title="All 2 branches covered.">        for (final Field field : FieldUtils.getAllFields(clazz)) {</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">            if (accept(field)) {</span>
+                try {
+<span class="fc" id="L116">                    diffBuilder.append(field.getName(), readField(field, left, true),</span>
+<span class="fc" id="L117">                            readField(field, right, true));</span>
+<span class="pc" id="L118">                } catch (final IllegalAccessException ex) {</span>
+                    //this can't happen. Would get a Security exception instead
+                    //throw a runtime exception in case the impossible happens.
+<span class="nc" id="L121">                    throw new InternalError(&quot;Unexpected IllegalAccessException: &quot; + ex.getMessage());</span>
+                }
+            }
+        }
+<span class="fc" id="L125">    }</span>
+
+    private boolean accept(final Field field) {
+<span class="fc bfc" id="L128" title="All 2 branches covered.">        if (field.getName().indexOf(ClassUtils.INNER_CLASS_SEPARATOR_CHAR) != -1) {</span>
+<span class="fc" id="L129">            return false;</span>
+        }
+<span class="fc bfc" id="L131" title="All 2 branches covered.">        if (Modifier.isTransient(field.getModifiers())) {</span>
+<span class="fc" id="L132">            return false;</span>
+        }
+<span class="fc bfc" id="L134" title="All 2 branches covered.">        return !Modifier.isStatic(field.getModifiers());</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

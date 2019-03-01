@@ -1,0 +1,622 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractLinkedMap.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.map</a> &gt; <span class="el_source">AbstractLinkedMap.java</span></div><h1>AbstractLinkedMap.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.map;
+
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
+import org.apache.commons.collections4.OrderedIterator;
+import org.apache.commons.collections4.OrderedMap;
+import org.apache.commons.collections4.OrderedMapIterator;
+import org.apache.commons.collections4.ResettableIterator;
+import org.apache.commons.collections4.iterators.EmptyOrderedIterator;
+import org.apache.commons.collections4.iterators.EmptyOrderedMapIterator;
+
+/**
+ * An abstract implementation of a hash-based map that links entries to create an
+ * ordered map and which provides numerous points for subclasses to override.
+ * &lt;p&gt;
+ * This class implements all the features necessary for a subclass linked
+ * hash-based map. Key-value entries are stored in instances of the
+ * &lt;code&gt;LinkEntry&lt;/code&gt; class which can be overridden and replaced.
+ * The iterators can similarly be replaced, without the need to replace the KeySet,
+ * EntrySet and Values view classes.
+ * &lt;p&gt;
+ * Overridable methods are provided to change the default hashing behaviour, and
+ * to change how entries are added to and removed from the map. Hopefully, all you
+ * need for unusual subclasses is here.
+ * &lt;p&gt;
+ * This implementation maintains order by original insertion, but subclasses
+ * may work differently. The &lt;code&gt;OrderedMap&lt;/code&gt; interface is implemented
+ * to provide access to bidirectional iteration and extra convenience methods.
+ * &lt;p&gt;
+ * The &lt;code&gt;orderedMapIterator()&lt;/code&gt; method provides direct access to a
+ * bidirectional iterator. The iterators from the other views can also be cast
+ * to &lt;code&gt;OrderedIterator&lt;/code&gt; if required.
+ * &lt;p&gt;
+ * All the available iterators can be reset back to the start by casting to
+ * &lt;code&gt;ResettableIterator&lt;/code&gt; and calling &lt;code&gt;reset()&lt;/code&gt;.
+ * &lt;p&gt;
+ * The implementation is also designed to be subclassed, with lots of useful
+ * methods exposed.
+ *
+ * @param &lt;K&gt; the type of the keys in this map
+ * @param &lt;V&gt; the type of the values in this map
+ * @since 3.0
+ */
+public abstract class AbstractLinkedMap&lt;K, V&gt; extends AbstractHashedMap&lt;K, V&gt; implements OrderedMap&lt;K, V&gt; {
+
+    /** Header in the linked list */
+    transient LinkEntry&lt;K, V&gt; header;
+
+    /**
+     * Constructor only used in deserialization, do not use otherwise.
+     */
+    protected AbstractLinkedMap() {
+<span class="fc" id="L72">        super();</span>
+<span class="fc" id="L73">    }</span>
+
+    /**
+     * Constructor which performs no validation on the passed in parameters.
+     *
+     * @param initialCapacity  the initial capacity, must be a power of two
+     * @param loadFactor  the load factor, must be &amp;gt; 0.0f and generally &amp;lt; 1.0f
+     * @param threshold  the threshold, must be sensible
+     */
+    protected AbstractLinkedMap(final int initialCapacity, final float loadFactor, final int threshold) {
+<span class="fc" id="L83">        super(initialCapacity, loadFactor, threshold);</span>
+<span class="fc" id="L84">    }</span>
+
+    /**
+     * Constructs a new, empty map with the specified initial capacity.
+     *
+     * @param initialCapacity  the initial capacity
+     * @throws IllegalArgumentException if the initial capacity is negative
+     */
+    protected AbstractLinkedMap(final int initialCapacity) {
+<span class="fc" id="L93">        super(initialCapacity);</span>
+<span class="fc" id="L94">    }</span>
+
+    /**
+     * Constructs a new, empty map with the specified initial capacity and
+     * load factor.
+     *
+     * @param initialCapacity  the initial capacity
+     * @param loadFactor  the load factor
+     * @throws IllegalArgumentException if the initial capacity is negative
+     * @throws IllegalArgumentException if the load factor is less than zero
+     */
+    protected AbstractLinkedMap(final int initialCapacity, final float loadFactor) {
+<span class="fc" id="L106">        super(initialCapacity, loadFactor);</span>
+<span class="fc" id="L107">    }</span>
+
+    /**
+     * Constructor copying elements from another map.
+     *
+     * @param map  the map to copy
+     * @throws NullPointerException if the map is null
+     */
+    protected AbstractLinkedMap(final Map&lt;? extends K, ? extends V&gt; map) {
+<span class="nc" id="L116">        super(map);</span>
+<span class="nc" id="L117">    }</span>
+
+    /**
+     * Initialise this subclass during construction.
+     * &lt;p&gt;
+     * NOTE: As from v3.2 this method calls
+     * {@link #createEntry(HashEntry, int, Object, Object)} to create
+     * the map entry object.
+     */
+    @Override
+    protected void init() {
+<span class="fc" id="L128">        header = createEntry(null, -1, null, null);</span>
+<span class="fc" id="L129">        header.before = header.after = header;</span>
+<span class="fc" id="L130">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Checks whether the map contains the specified value.
+     *
+     * @param value  the value to search for
+     * @return true if the map contains the value
+     */
+    @Override
+    public boolean containsValue(final Object value) {
+        // override uses faster iterator
+<span class="fc bfc" id="L142" title="All 2 branches covered.">        if (value == null) {</span>
+<span class="fc bfc" id="L143" title="All 2 branches covered.">            for (LinkEntry&lt;K, V&gt; entry = header.after; entry != header; entry = entry.after) {</span>
+<span class="fc bfc" id="L144" title="All 2 branches covered.">                if (entry.getValue() == null) {</span>
+<span class="fc" id="L145">                    return true;</span>
+                }
+            }
+        } else {
+<span class="fc bfc" id="L149" title="All 2 branches covered.">            for (LinkEntry&lt;K, V&gt; entry = header.after; entry != header; entry = entry.after) {</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">                if (isEqualValue(value, entry.getValue())) {</span>
+<span class="fc" id="L151">                    return true;</span>
+                }
+            }
+        }
+<span class="fc" id="L155">        return false;</span>
+    }
+
+    /**
+     * Clears the map, resetting the size to zero and nullifying references
+     * to avoid garbage collection issues.
+     */
+    @Override
+    public void clear() {
+        // override to reset the linked list
+<span class="fc" id="L165">        super.clear();</span>
+<span class="fc" id="L166">        header.before = header.after = header;</span>
+<span class="fc" id="L167">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets the first key in the map, which is the first inserted.
+     *
+     * @return the eldest key
+     */
+    @Override
+    public K firstKey() {
+<span class="fc bfc" id="L177" title="All 2 branches covered.">        if (size == 0) {</span>
+<span class="fc" id="L178">            throw new NoSuchElementException(&quot;Map is empty&quot;);</span>
+        }
+<span class="fc" id="L180">        return header.after.getKey();</span>
+    }
+
+    /**
+     * Gets the last key in the map, which is the most recently inserted.
+     *
+     * @return the most recently inserted key
+     */
+    @Override
+    public K lastKey() {
+<span class="fc bfc" id="L190" title="All 2 branches covered.">        if (size == 0) {</span>
+<span class="fc" id="L191">            throw new NoSuchElementException(&quot;Map is empty&quot;);</span>
+        }
+<span class="fc" id="L193">        return header.before.getKey();</span>
+    }
+
+    /**
+     * Gets the next key in sequence.
+     *
+     * @param key  the key to get after
+     * @return the next key
+     */
+    @Override
+    public K nextKey(final Object key) {
+<span class="fc" id="L204">        final LinkEntry&lt;K, V&gt; entry = getEntry(key);</span>
+<span class="fc bfc" id="L205" title="All 4 branches covered.">        return entry == null || entry.after == header ? null : entry.after.getKey();</span>
+    }
+
+    @Override
+    protected LinkEntry&lt;K, V&gt; getEntry(final Object key) {
+<span class="fc" id="L210">        return (LinkEntry&lt;K, V&gt;) super.getEntry(key);</span>
+    }
+
+    /**
+     * Gets the previous key in sequence.
+     *
+     * @param key  the key to get before
+     * @return the previous key
+     */
+    @Override
+    public K previousKey(final Object key) {
+<span class="fc" id="L221">        final LinkEntry&lt;K, V&gt; entry = getEntry(key);</span>
+<span class="fc bfc" id="L222" title="All 4 branches covered.">        return entry == null || entry.before == header ? null : entry.before.getKey();</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets the key at the specified index.
+     *
+     * @param index  the index to retrieve
+     * @return the key at the specified index
+     * @throws IndexOutOfBoundsException if the index is invalid
+     */
+    protected LinkEntry&lt;K, V&gt; getEntry(final int index) {
+<span class="fc bfc" id="L234" title="All 2 branches covered.">        if (index &lt; 0) {</span>
+<span class="fc" id="L235">            throw new IndexOutOfBoundsException(&quot;Index &quot; + index + &quot; is less than zero&quot;);</span>
+        }
+<span class="fc bfc" id="L237" title="All 2 branches covered.">        if (index &gt;= size) {</span>
+<span class="fc" id="L238">            throw new IndexOutOfBoundsException(&quot;Index &quot; + index + &quot; is invalid for size &quot; + size);</span>
+        }
+        LinkEntry&lt;K, V&gt; entry;
+<span class="fc bfc" id="L241" title="All 2 branches covered.">        if (index &lt; size / 2) {</span>
+            // Search forwards
+<span class="fc" id="L243">            entry = header.after;</span>
+<span class="fc bfc" id="L244" title="All 2 branches covered.">            for (int currentIndex = 0; currentIndex &lt; index; currentIndex++) {</span>
+<span class="fc" id="L245">                entry = entry.after;</span>
+            }
+        } else {
+            // Search backwards
+<span class="fc" id="L249">            entry = header;</span>
+<span class="fc bfc" id="L250" title="All 2 branches covered.">            for (int currentIndex = size; currentIndex &gt; index; currentIndex--) {</span>
+<span class="fc" id="L251">                entry = entry.before;</span>
+            }
+        }
+<span class="fc" id="L254">        return entry;</span>
+    }
+
+    /**
+     * Adds an entry into this map, maintaining insertion order.
+     * &lt;p&gt;
+     * This implementation adds the entry to the data storage table and
+     * to the end of the linked list.
+     *
+     * @param entry  the entry to add
+     * @param hashIndex  the index into the data array to store at
+     */
+    @Override
+    protected void addEntry(final HashEntry&lt;K, V&gt; entry, final int hashIndex) {
+<span class="fc" id="L268">        final LinkEntry&lt;K, V&gt; link = (LinkEntry&lt;K, V&gt;) entry;</span>
+<span class="fc" id="L269">        link.after  = header;</span>
+<span class="fc" id="L270">        link.before = header.before;</span>
+<span class="fc" id="L271">        header.before.after = link;</span>
+<span class="fc" id="L272">        header.before = link;</span>
+<span class="fc" id="L273">        data[hashIndex] = link;</span>
+<span class="fc" id="L274">    }</span>
+
+    /**
+     * Creates an entry to store the data.
+     * &lt;p&gt;
+     * This implementation creates a new LinkEntry instance.
+     *
+     * @param next  the next entry in sequence
+     * @param hashCode  the hash code to use
+     * @param key  the key to store
+     * @param value  the value to store
+     * @return the newly created entry
+     */
+    @Override
+    protected LinkEntry&lt;K, V&gt; createEntry(final HashEntry&lt;K, V&gt; next, final int hashCode, final K key, final V value) {
+<span class="fc" id="L289">        return new LinkEntry&lt;&gt;(next, hashCode, convertKey(key), value);</span>
+    }
+
+    /**
+     * Removes an entry from the map and the linked list.
+     * &lt;p&gt;
+     * This implementation removes the entry from the linked list chain, then
+     * calls the superclass implementation.
+     *
+     * @param entry  the entry to remove
+     * @param hashIndex  the index into the data structure
+     * @param previous  the previous entry in the chain
+     */
+    @Override
+    protected void removeEntry(final HashEntry&lt;K, V&gt; entry, final int hashIndex, final HashEntry&lt;K, V&gt; previous) {
+<span class="fc" id="L304">        final LinkEntry&lt;K, V&gt; link = (LinkEntry&lt;K, V&gt;) entry;</span>
+<span class="fc" id="L305">        link.before.after = link.after;</span>
+<span class="fc" id="L306">        link.after.before = link.before;</span>
+<span class="fc" id="L307">        link.after = null;</span>
+<span class="fc" id="L308">        link.before = null;</span>
+<span class="fc" id="L309">        super.removeEntry(entry, hashIndex, previous);</span>
+<span class="fc" id="L310">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets the &lt;code&gt;before&lt;/code&gt; field from a &lt;code&gt;LinkEntry&lt;/code&gt;.
+     * Used in subclasses that have no visibility of the field.
+     *
+     * @param entry  the entry to query, must not be null
+     * @return the &lt;code&gt;before&lt;/code&gt; field of the entry
+     * @throws NullPointerException if the entry is null
+     * @since 3.1
+     */
+    protected LinkEntry&lt;K, V&gt; entryBefore(final LinkEntry&lt;K, V&gt; entry) {
+<span class="nc" id="L323">        return entry.before;</span>
+    }
+
+    /**
+     * Gets the &lt;code&gt;after&lt;/code&gt; field from a &lt;code&gt;LinkEntry&lt;/code&gt;.
+     * Used in subclasses that have no visibility of the field.
+     *
+     * @param entry  the entry to query, must not be null
+     * @return the &lt;code&gt;after&lt;/code&gt; field of the entry
+     * @throws NullPointerException if the entry is null
+     * @since 3.1
+     */
+    protected LinkEntry&lt;K, V&gt; entryAfter(final LinkEntry&lt;K, V&gt; entry) {
+<span class="nc" id="L336">        return entry.after;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public OrderedMapIterator&lt;K, V&gt; mapIterator() {
+<span class="fc bfc" id="L345" title="All 2 branches covered.">        if (size == 0) {</span>
+<span class="fc" id="L346">            return EmptyOrderedMapIterator.&lt;K, V&gt;emptyOrderedMapIterator();</span>
+        }
+<span class="fc" id="L348">        return new LinkMapIterator&lt;&gt;(this);</span>
+    }
+
+    /**
+     * MapIterator implementation.
+     */
+    protected static class LinkMapIterator&lt;K, V&gt; extends LinkIterator&lt;K, V&gt; implements
+            OrderedMapIterator&lt;K, V&gt;, ResettableIterator&lt;K&gt; {
+
+        protected LinkMapIterator(final AbstractLinkedMap&lt;K, V&gt; parent) {
+<span class="fc" id="L358">            super(parent);</span>
+<span class="fc" id="L359">        }</span>
+
+        @Override
+        public K next() {
+<span class="fc" id="L363">            return super.nextEntry().getKey();</span>
+        }
+
+        @Override
+        public K previous() {
+<span class="fc" id="L368">            return super.previousEntry().getKey();</span>
+        }
+
+        @Override
+        public K getKey() {
+<span class="fc" id="L373">            final LinkEntry&lt;K, V&gt; current = currentEntry();</span>
+<span class="fc bfc" id="L374" title="All 2 branches covered.">            if (current == null) {</span>
+<span class="fc" id="L375">                throw new IllegalStateException(AbstractHashedMap.GETKEY_INVALID);</span>
+            }
+<span class="fc" id="L377">            return current.getKey();</span>
+        }
+
+        @Override
+        public V getValue() {
+<span class="fc" id="L382">            final LinkEntry&lt;K, V&gt; current = currentEntry();</span>
+<span class="fc bfc" id="L383" title="All 2 branches covered.">            if (current == null) {</span>
+<span class="fc" id="L384">                throw new IllegalStateException(AbstractHashedMap.GETVALUE_INVALID);</span>
+            }
+<span class="fc" id="L386">            return current.getValue();</span>
+        }
+
+        @Override
+        public V setValue(final V value) {
+<span class="fc" id="L391">            final LinkEntry&lt;K, V&gt; current = currentEntry();</span>
+<span class="fc bfc" id="L392" title="All 2 branches covered.">            if (current == null) {</span>
+<span class="fc" id="L393">                throw new IllegalStateException(AbstractHashedMap.SETVALUE_INVALID);</span>
+            }
+<span class="fc" id="L395">            return current.setValue(value);</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Creates an entry set iterator.
+     * Subclasses can override this to return iterators with different properties.
+     *
+     * @return the entrySet iterator
+     */
+    @Override
+    protected Iterator&lt;Map.Entry&lt;K, V&gt;&gt; createEntrySetIterator() {
+<span class="fc bfc" id="L408" title="All 2 branches covered.">        if (size() == 0) {</span>
+<span class="fc" id="L409">            return EmptyOrderedIterator.&lt;Map.Entry&lt;K, V&gt;&gt;emptyOrderedIterator();</span>
+        }
+<span class="fc" id="L411">        return new EntrySetIterator&lt;&gt;(this);</span>
+    }
+
+    /**
+     * EntrySet iterator.
+     */
+    protected static class EntrySetIterator&lt;K, V&gt; extends LinkIterator&lt;K, V&gt; implements
+            OrderedIterator&lt;Map.Entry&lt;K, V&gt;&gt;, ResettableIterator&lt;Map.Entry&lt;K, V&gt;&gt; {
+
+        protected EntrySetIterator(final AbstractLinkedMap&lt;K, V&gt; parent) {
+<span class="fc" id="L421">            super(parent);</span>
+<span class="fc" id="L422">        }</span>
+
+        @Override
+        public Map.Entry&lt;K, V&gt; next() {
+<span class="fc" id="L426">            return super.nextEntry();</span>
+        }
+
+        @Override
+        public Map.Entry&lt;K, V&gt; previous() {
+<span class="nc" id="L431">            return super.previousEntry();</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Creates a key set iterator.
+     * Subclasses can override this to return iterators with different properties.
+     *
+     * @return the keySet iterator
+     */
+    @Override
+    protected Iterator&lt;K&gt; createKeySetIterator() {
+<span class="fc bfc" id="L444" title="All 2 branches covered.">        if (size() == 0) {</span>
+<span class="fc" id="L445">            return EmptyOrderedIterator.&lt;K&gt;emptyOrderedIterator();</span>
+        }
+<span class="fc" id="L447">        return new KeySetIterator&lt;&gt;(this);</span>
+    }
+
+    /**
+     * KeySet iterator.
+     */
+    protected static class KeySetIterator&lt;K&gt; extends LinkIterator&lt;K, Object&gt; implements
+            OrderedIterator&lt;K&gt;, ResettableIterator&lt;K&gt; {
+
+        @SuppressWarnings(&quot;unchecked&quot;)
+        protected KeySetIterator(final AbstractLinkedMap&lt;K, ?&gt; parent) {
+<span class="fc" id="L458">            super((AbstractLinkedMap&lt;K, Object&gt;) parent);</span>
+<span class="fc" id="L459">        }</span>
+
+        @Override
+        public K next() {
+<span class="fc" id="L463">            return super.nextEntry().getKey();</span>
+        }
+
+        @Override
+        public K previous() {
+<span class="nc" id="L468">            return super.previousEntry().getKey();</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Creates a values iterator.
+     * Subclasses can override this to return iterators with different properties.
+     *
+     * @return the values iterator
+     */
+    @Override
+    protected Iterator&lt;V&gt; createValuesIterator() {
+<span class="fc bfc" id="L481" title="All 2 branches covered.">        if (size() == 0) {</span>
+<span class="fc" id="L482">            return EmptyOrderedIterator.&lt;V&gt;emptyOrderedIterator();</span>
+        }
+<span class="fc" id="L484">        return new ValuesIterator&lt;&gt;(this);</span>
+    }
+
+    /**
+     * Values iterator.
+     */
+    protected static class ValuesIterator&lt;V&gt; extends LinkIterator&lt;Object, V&gt; implements
+            OrderedIterator&lt;V&gt;, ResettableIterator&lt;V&gt; {
+
+        @SuppressWarnings(&quot;unchecked&quot;)
+        protected ValuesIterator(final AbstractLinkedMap&lt;?, V&gt; parent) {
+<span class="fc" id="L495">            super((AbstractLinkedMap&lt;Object, V&gt;) parent);</span>
+<span class="fc" id="L496">        }</span>
+
+        @Override
+        public V next() {
+<span class="fc" id="L500">            return super.nextEntry().getValue();</span>
+        }
+
+        @Override
+        public V previous() {
+<span class="nc" id="L505">            return super.previousEntry().getValue();</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * LinkEntry that stores the data.
+     * &lt;p&gt;
+     * If you subclass &lt;code&gt;AbstractLinkedMap&lt;/code&gt; but not &lt;code&gt;LinkEntry&lt;/code&gt;
+     * then you will not be able to access the protected fields.
+     * The &lt;code&gt;entryXxx()&lt;/code&gt; methods on &lt;code&gt;AbstractLinkedMap&lt;/code&gt; exist
+     * to provide the necessary access.
+     */
+    protected static class LinkEntry&lt;K, V&gt; extends HashEntry&lt;K, V&gt; {
+        /** The entry before this one in the order */
+        protected LinkEntry&lt;K, V&gt; before;
+        /** The entry after this one in the order */
+        protected LinkEntry&lt;K, V&gt; after;
+
+        /**
+         * Constructs a new entry.
+         *
+         * @param next  the next entry in the hash bucket sequence
+         * @param hashCode  the hash code
+         * @param key  the key
+         * @param value  the value
+         */
+        protected LinkEntry(final HashEntry&lt;K, V&gt; next, final int hashCode, final Object key, final V value) {
+<span class="fc" id="L533">            super(next, hashCode, key, value);</span>
+<span class="fc" id="L534">        }</span>
+    }
+
+    /**
+     * Base Iterator that iterates in link order.
+     */
+    protected static abstract class LinkIterator&lt;K, V&gt; {
+
+        /** The parent map */
+        protected final AbstractLinkedMap&lt;K, V&gt; parent;
+        /** The current (last returned) entry */
+        protected LinkEntry&lt;K, V&gt; last;
+        /** The next entry */
+        protected LinkEntry&lt;K, V&gt; next;
+        /** The modification count expected */
+        protected int expectedModCount;
+
+        protected LinkIterator(final AbstractLinkedMap&lt;K, V&gt; parent) {
+<span class="fc" id="L552">            super();</span>
+<span class="fc" id="L553">            this.parent = parent;</span>
+<span class="fc" id="L554">            this.next = parent.header.after;</span>
+<span class="fc" id="L555">            this.expectedModCount = parent.modCount;</span>
+<span class="fc" id="L556">        }</span>
+
+        public boolean hasNext() {
+<span class="fc bfc" id="L559" title="All 2 branches covered.">            return next != parent.header;</span>
+        }
+
+        public boolean hasPrevious() {
+<span class="fc bfc" id="L563" title="All 2 branches covered.">            return next.before != parent.header;</span>
+        }
+
+        protected LinkEntry&lt;K, V&gt; nextEntry() {
+<span class="fc bfc" id="L567" title="All 2 branches covered.">            if (parent.modCount != expectedModCount) {</span>
+<span class="fc" id="L568">                throw new ConcurrentModificationException();</span>
+            }
+<span class="fc bfc" id="L570" title="All 2 branches covered.">            if (next == parent.header)  {</span>
+<span class="fc" id="L571">                throw new NoSuchElementException(AbstractHashedMap.NO_NEXT_ENTRY);</span>
+            }
+<span class="fc" id="L573">            last = next;</span>
+<span class="fc" id="L574">            next = next.after;</span>
+<span class="fc" id="L575">            return last;</span>
+        }
+
+        protected LinkEntry&lt;K, V&gt; previousEntry() {
+<span class="pc bpc" id="L579" title="1 of 2 branches missed.">            if (parent.modCount != expectedModCount) {</span>
+<span class="nc" id="L580">                throw new ConcurrentModificationException();</span>
+            }
+<span class="fc" id="L582">            final LinkEntry&lt;K, V&gt; previous = next.before;</span>
+<span class="pc bpc" id="L583" title="1 of 2 branches missed.">            if (previous == parent.header)  {</span>
+<span class="nc" id="L584">                throw new NoSuchElementException(AbstractHashedMap.NO_PREVIOUS_ENTRY);</span>
+            }
+<span class="fc" id="L586">            next = previous;</span>
+<span class="fc" id="L587">            last = previous;</span>
+<span class="fc" id="L588">            return last;</span>
+        }
+
+        protected LinkEntry&lt;K, V&gt; currentEntry() {
+<span class="fc" id="L592">            return last;</span>
+        }
+
+        public void remove() {
+<span class="fc bfc" id="L596" title="All 2 branches covered.">            if (last == null) {</span>
+<span class="fc" id="L597">                throw new IllegalStateException(AbstractHashedMap.REMOVE_INVALID);</span>
+            }
+<span class="pc bpc" id="L599" title="1 of 2 branches missed.">            if (parent.modCount != expectedModCount) {</span>
+<span class="nc" id="L600">                throw new ConcurrentModificationException();</span>
+            }
+<span class="fc" id="L602">            parent.remove(last.getKey());</span>
+<span class="fc" id="L603">            last = null;</span>
+<span class="fc" id="L604">            expectedModCount = parent.modCount;</span>
+<span class="fc" id="L605">        }</span>
+
+        public void reset() {
+<span class="fc" id="L608">            last = null;</span>
+<span class="fc" id="L609">            next = parent.header.after;</span>
+<span class="fc" id="L610">        }</span>
+
+        @Override
+        public String toString() {
+<span class="pc bpc" id="L614" title="1 of 2 branches missed.">            if (last != null) {</span>
+<span class="fc" id="L615">                return &quot;Iterator[&quot; + last.getKey() + &quot;=&quot; + last.getValue() + &quot;]&quot;;</span>
+            }
+<span class="nc" id="L617">            return &quot;Iterator[]&quot;;</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

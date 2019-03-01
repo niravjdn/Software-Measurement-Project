@@ -1,0 +1,3110 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FileUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons IO</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.io</a> &gt; <span class="el_source">FileUtils.java</span></div><h1>FileUtils.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.io;
+
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.math.BigInteger;
+import java.net.URL;
+import java.net.URLConnection;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.zip.CRC32;
+import java.util.zip.CheckedInputStream;
+import java.util.zip.Checksum;
+
+import org.apache.commons.io.filefilter.DirectoryFileFilter;
+import org.apache.commons.io.filefilter.FalseFileFilter;
+import org.apache.commons.io.filefilter.FileFilterUtils;
+import org.apache.commons.io.filefilter.IOFileFilter;
+import org.apache.commons.io.filefilter.SuffixFileFilter;
+import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.apache.commons.io.output.NullOutputStream;
+
+/**
+ * General file manipulation utilities.
+ * &lt;p&gt;
+ * Facilities are provided in the following areas:
+ * &lt;ul&gt;
+ * &lt;li&gt;writing to a file
+ * &lt;li&gt;reading from a file
+ * &lt;li&gt;make a directory including parent directories
+ * &lt;li&gt;copying files and directories
+ * &lt;li&gt;deleting files and directories
+ * &lt;li&gt;converting to and from a URL
+ * &lt;li&gt;listing files and directories by filter and extension
+ * &lt;li&gt;comparing file content
+ * &lt;li&gt;file last changed date
+ * &lt;li&gt;calculating a checksum
+ * &lt;/ul&gt;
+ * &lt;p&gt;
+ * Note that a specific charset should be specified whenever possible.
+ * Relying on the platform default means that the code is Locale-dependent.
+ * Only use the default if the files are known to always use the platform default.
+ * &lt;p&gt;
+ * Origin of code: Excalibur, Alexandria, Commons-Utils
+ *
+ */
+public class FileUtils {
+
+    /**
+     * Instances should NOT be constructed in standard programming.
+     */
+    public FileUtils() {
+<span class="nc" id="L85">        super();</span>
+<span class="nc" id="L86">    }</span>
+
+    /**
+     * The number of bytes in a kilobyte.
+     */
+    public static final long ONE_KB = 1024;
+
+    /**
+     * The number of bytes in a kilobyte.
+     *
+     * @since 2.4
+     */
+<span class="fc" id="L98">    public static final BigInteger ONE_KB_BI = BigInteger.valueOf(ONE_KB);</span>
+
+    /**
+     * The number of bytes in a megabyte.
+     */
+    public static final long ONE_MB = ONE_KB * ONE_KB;
+
+    /**
+     * The number of bytes in a megabyte.
+     *
+     * @since 2.4
+     */
+<span class="fc" id="L110">    public static final BigInteger ONE_MB_BI = ONE_KB_BI.multiply(ONE_KB_BI);</span>
+
+    /**
+     * The file copy buffer size (30 MB)
+     */
+    private static final long FILE_COPY_BUFFER_SIZE = ONE_MB * 30;
+
+    /**
+     * The number of bytes in a gigabyte.
+     */
+    public static final long ONE_GB = ONE_KB * ONE_MB;
+
+    /**
+     * The number of bytes in a gigabyte.
+     *
+     * @since 2.4
+     */
+<span class="fc" id="L127">    public static final BigInteger ONE_GB_BI = ONE_KB_BI.multiply(ONE_MB_BI);</span>
+
+    /**
+     * The number of bytes in a terabyte.
+     */
+    public static final long ONE_TB = ONE_KB * ONE_GB;
+
+    /**
+     * The number of bytes in a terabyte.
+     *
+     * @since 2.4
+     */
+<span class="fc" id="L139">    public static final BigInteger ONE_TB_BI = ONE_KB_BI.multiply(ONE_GB_BI);</span>
+
+    /**
+     * The number of bytes in a petabyte.
+     */
+    public static final long ONE_PB = ONE_KB * ONE_TB;
+
+    /**
+     * The number of bytes in a petabyte.
+     *
+     * @since 2.4
+     */
+<span class="fc" id="L151">    public static final BigInteger ONE_PB_BI = ONE_KB_BI.multiply(ONE_TB_BI);</span>
+
+    /**
+     * The number of bytes in an exabyte.
+     */
+    public static final long ONE_EB = ONE_KB * ONE_PB;
+
+    /**
+     * The number of bytes in an exabyte.
+     *
+     * @since 2.4
+     */
+<span class="fc" id="L163">    public static final BigInteger ONE_EB_BI = ONE_KB_BI.multiply(ONE_PB_BI);</span>
+
+    /**
+     * The number of bytes in a zettabyte.
+     */
+<span class="fc" id="L168">    public static final BigInteger ONE_ZB = BigInteger.valueOf(ONE_KB).multiply(BigInteger.valueOf(ONE_EB));</span>
+
+    /**
+     * The number of bytes in a yottabyte.
+     */
+<span class="fc" id="L173">    public static final BigInteger ONE_YB = ONE_KB_BI.multiply(ONE_ZB);</span>
+
+    /**
+     * An empty array of type &lt;code&gt;File&lt;/code&gt;.
+     */
+<span class="fc" id="L178">    public static final File[] EMPTY_FILE_ARRAY = new File[0];</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Construct a file from the set of name elements.
+     *
+     * @param directory the parent directory
+     * @param names the name elements
+     * @return the file
+     * @since 2.1
+     */
+    public static File getFile(final File directory, final String... names) {
+<span class="fc bfc" id="L190" title="All 2 branches covered.">        if (directory == null) {</span>
+<span class="fc" id="L191">            throw new NullPointerException(&quot;directory must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L193" title="All 2 branches covered.">        if (names == null) {</span>
+<span class="fc" id="L194">            throw new NullPointerException(&quot;names must not be null&quot;);</span>
+        }
+<span class="fc" id="L196">        File file = directory;</span>
+<span class="fc bfc" id="L197" title="All 2 branches covered.">        for (final String name : names) {</span>
+<span class="fc" id="L198">            file = new File(file, name);</span>
+        }
+<span class="fc" id="L200">        return file;</span>
+    }
+
+    /**
+     * Construct a file from the set of name elements.
+     *
+     * @param names the name elements
+     * @return the file
+     * @since 2.1
+     */
+    public static File getFile(final String... names) {
+<span class="fc bfc" id="L211" title="All 2 branches covered.">        if (names == null) {</span>
+<span class="fc" id="L212">            throw new NullPointerException(&quot;names must not be null&quot;);</span>
+        }
+<span class="fc" id="L214">        File file = null;</span>
+<span class="fc bfc" id="L215" title="All 2 branches covered.">        for (final String name : names) {</span>
+<span class="fc bfc" id="L216" title="All 2 branches covered.">            if (file == null) {</span>
+<span class="fc" id="L217">                file = new File(name);</span>
+<span class="fc" id="L218">            } else {</span>
+<span class="fc" id="L219">                file = new File(file, name);</span>
+            }
+        }
+<span class="fc" id="L222">        return file;</span>
+    }
+
+    /**
+     * Returns the path to the system temporary directory.
+     *
+     * @return the path to the system temporary directory.
+     *
+     * @since 2.0
+     */
+    public static String getTempDirectoryPath() {
+<span class="fc" id="L233">        return System.getProperty(&quot;java.io.tmpdir&quot;);</span>
+    }
+
+    /**
+     * Returns a {@link File} representing the system temporary directory.
+     *
+     * @return the system temporary directory.
+     *
+     * @since 2.0
+     */
+    public static File getTempDirectory() {
+<span class="fc" id="L244">        return new File(getTempDirectoryPath());</span>
+    }
+
+    /**
+     * Returns the path to the user's home directory.
+     *
+     * @return the path to the user's home directory.
+     *
+     * @since 2.0
+     */
+    public static String getUserDirectoryPath() {
+<span class="fc" id="L255">        return System.getProperty(&quot;user.home&quot;);</span>
+    }
+
+    /**
+     * Returns a {@link File} representing the user's home directory.
+     *
+     * @return the user's home directory.
+     *
+     * @since 2.0
+     */
+    public static File getUserDirectory() {
+<span class="fc" id="L266">        return new File(getUserDirectoryPath());</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Opens a {@link FileInputStream} for the specified file, providing better
+     * error messages than simply calling &lt;code&gt;new FileInputStream(file)&lt;/code&gt;.
+     * &lt;p&gt;
+     * At the end of the method either the stream will be successfully opened,
+     * or an exception will have been thrown.
+     * &lt;p&gt;
+     * An exception is thrown if the file does not exist.
+     * An exception is thrown if the file object exists but is a directory.
+     * An exception is thrown if the file exists but cannot be read.
+     *
+     * @param file the file to open for input, must not be {@code null}
+     * @return a new {@link FileInputStream} for the specified file
+     * @throws FileNotFoundException if the file does not exist
+     * @throws IOException           if the file object is a directory
+     * @throws IOException           if the file cannot be read
+     * @since 1.3
+     */
+    public static FileInputStream openInputStream(final File file) throws IOException {
+<span class="fc bfc" id="L289" title="All 2 branches covered.">        if (file.exists()) {</span>
+<span class="fc bfc" id="L290" title="All 2 branches covered.">            if (file.isDirectory()) {</span>
+<span class="fc" id="L291">                throw new IOException(&quot;File '&quot; + file + &quot;' exists but is a directory&quot;);</span>
+            }
+<span class="pc bpc" id="L293" title="1 of 2 branches missed.">            if (file.canRead() == false) {</span>
+<span class="nc" id="L294">                throw new IOException(&quot;File '&quot; + file + &quot;' cannot be read&quot;);</span>
+            }
+        } else {
+<span class="fc" id="L297">            throw new FileNotFoundException(&quot;File '&quot; + file + &quot;' does not exist&quot;);</span>
+        }
+<span class="fc" id="L299">        return new FileInputStream(file);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Opens a {@link FileOutputStream} for the specified file, checking and
+     * creating the parent directory if it does not exist.
+     * &lt;p&gt;
+     * At the end of the method either the stream will be successfully opened,
+     * or an exception will have been thrown.
+     * &lt;p&gt;
+     * The parent directory will be created if it does not exist.
+     * The file will be created if it does not exist.
+     * An exception is thrown if the file object exists but is a directory.
+     * An exception is thrown if the file exists but cannot be written to.
+     * An exception is thrown if the parent directory cannot be created.
+     *
+     * @param file the file to open for output, must not be {@code null}
+     * @return a new {@link FileOutputStream} for the specified file
+     * @throws IOException if the file object is a directory
+     * @throws IOException if the file cannot be written to
+     * @throws IOException if a parent directory needs creating but that fails
+     * @since 1.3
+     */
+    public static FileOutputStream openOutputStream(final File file) throws IOException {
+<span class="fc" id="L324">        return openOutputStream(file, false);</span>
+    }
+
+    /**
+     * Opens a {@link FileOutputStream} for the specified file, checking and
+     * creating the parent directory if it does not exist.
+     * &lt;p&gt;
+     * At the end of the method either the stream will be successfully opened,
+     * or an exception will have been thrown.
+     * &lt;p&gt;
+     * The parent directory will be created if it does not exist.
+     * The file will be created if it does not exist.
+     * An exception is thrown if the file object exists but is a directory.
+     * An exception is thrown if the file exists but cannot be written to.
+     * An exception is thrown if the parent directory cannot be created.
+     *
+     * @param file   the file to open for output, must not be {@code null}
+     * @param append if {@code true}, then bytes will be added to the
+     *               end of the file rather than overwriting
+     * @return a new {@link FileOutputStream} for the specified file
+     * @throws IOException if the file object is a directory
+     * @throws IOException if the file cannot be written to
+     * @throws IOException if a parent directory needs creating but that fails
+     * @since 2.1
+     */
+    public static FileOutputStream openOutputStream(final File file, final boolean append) throws IOException {
+<span class="fc bfc" id="L350" title="All 2 branches covered.">        if (file.exists()) {</span>
+<span class="fc bfc" id="L351" title="All 2 branches covered.">            if (file.isDirectory()) {</span>
+<span class="fc" id="L352">                throw new IOException(&quot;File '&quot; + file + &quot;' exists but is a directory&quot;);</span>
+            }
+<span class="pc bpc" id="L354" title="1 of 2 branches missed.">            if (file.canWrite() == false) {</span>
+<span class="nc" id="L355">                throw new IOException(&quot;File '&quot; + file + &quot;' cannot be written to&quot;);</span>
+            }
+        } else {
+<span class="fc" id="L358">            final File parent = file.getParentFile();</span>
+<span class="fc bfc" id="L359" title="All 2 branches covered.">            if (parent != null) {</span>
+<span class="fc bfc" id="L360" title="All 4 branches covered.">                if (!parent.mkdirs() &amp;&amp; !parent.isDirectory()) {</span>
+<span class="fc" id="L361">                    throw new IOException(&quot;Directory '&quot; + parent + &quot;' could not be created&quot;);</span>
+                }
+            }
+        }
+<span class="fc" id="L365">        return new FileOutputStream(file, append);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Returns a human-readable version of the file size, where the input represents a specific number of bytes.
+     * &lt;p&gt;
+     * If the size is over 1GB, the size is returned as the number of whole GB, i.e. the size is rounded down to the
+     * nearest GB boundary.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Similarly for the 1MB and 1KB boundaries.
+     * &lt;/p&gt;
+     *
+     * @param size the number of bytes
+     * @return a human-readable display value (includes units - EB, PB, TB, GB, MB, KB or bytes)
+     * @see &lt;a href=&quot;https://issues.apache.org/jira/browse/IO-226&quot;&gt;IO-226 - should the rounding be changed?&lt;/a&gt;
+     * @since 2.4
+     */
+    // See https://issues.apache.org/jira/browse/IO-226 - should the rounding be changed?
+    public static String byteCountToDisplaySize(final BigInteger size) {
+        String displaySize;
+
+<span class="fc bfc" id="L388" title="All 2 branches covered.">        if (size.divide(ONE_EB_BI).compareTo(BigInteger.ZERO) &gt; 0) {</span>
+<span class="fc" id="L389">            displaySize = String.valueOf(size.divide(ONE_EB_BI)) + &quot; EB&quot;;</span>
+<span class="fc bfc" id="L390" title="All 2 branches covered.">        } else if (size.divide(ONE_PB_BI).compareTo(BigInteger.ZERO) &gt; 0) {</span>
+<span class="fc" id="L391">            displaySize = String.valueOf(size.divide(ONE_PB_BI)) + &quot; PB&quot;;</span>
+<span class="fc bfc" id="L392" title="All 2 branches covered.">        } else if (size.divide(ONE_TB_BI).compareTo(BigInteger.ZERO) &gt; 0) {</span>
+<span class="fc" id="L393">            displaySize = String.valueOf(size.divide(ONE_TB_BI)) + &quot; TB&quot;;</span>
+<span class="fc bfc" id="L394" title="All 2 branches covered.">        } else if (size.divide(ONE_GB_BI).compareTo(BigInteger.ZERO) &gt; 0) {</span>
+<span class="fc" id="L395">            displaySize = String.valueOf(size.divide(ONE_GB_BI)) + &quot; GB&quot;;</span>
+<span class="fc bfc" id="L396" title="All 2 branches covered.">        } else if (size.divide(ONE_MB_BI).compareTo(BigInteger.ZERO) &gt; 0) {</span>
+<span class="fc" id="L397">            displaySize = String.valueOf(size.divide(ONE_MB_BI)) + &quot; MB&quot;;</span>
+<span class="fc bfc" id="L398" title="All 2 branches covered.">        } else if (size.divide(ONE_KB_BI).compareTo(BigInteger.ZERO) &gt; 0) {</span>
+<span class="fc" id="L399">            displaySize = String.valueOf(size.divide(ONE_KB_BI)) + &quot; KB&quot;;</span>
+<span class="fc" id="L400">        } else {</span>
+<span class="fc" id="L401">            displaySize = String.valueOf(size) + &quot; bytes&quot;;</span>
+        }
+<span class="fc" id="L403">        return displaySize;</span>
+    }
+
+    /**
+     * Returns a human-readable version of the file size, where the input represents a specific number of bytes.
+     * &lt;p&gt;
+     * If the size is over 1GB, the size is returned as the number of whole GB, i.e. the size is rounded down to the
+     * nearest GB boundary.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Similarly for the 1MB and 1KB boundaries.
+     * &lt;/p&gt;
+     *
+     * @param size the number of bytes
+     * @return a human-readable display value (includes units - EB, PB, TB, GB, MB, KB or bytes)
+     * @see &lt;a href=&quot;https://issues.apache.org/jira/browse/IO-226&quot;&gt;IO-226 - should the rounding be changed?&lt;/a&gt;
+     */
+    // See https://issues.apache.org/jira/browse/IO-226 - should the rounding be changed?
+    public static String byteCountToDisplaySize(final long size) {
+<span class="fc" id="L422">        return byteCountToDisplaySize(BigInteger.valueOf(size));</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Implements the same behaviour as the &quot;touch&quot; utility on Unix. It creates
+     * a new file with size 0 or, if the file exists already, it is opened and
+     * closed without modifying it, but updating the file date and time.
+     * &lt;p&gt;
+     * NOTE: As from v1.3, this method throws an IOException if the last
+     * modified date of the file cannot be set. Also, as from v1.3 this method
+     * creates parent directories if they do not exist.
+     *
+     * @param file the File to touch
+     * @throws IOException If an I/O problem occurs
+     */
+    public static void touch(final File file) throws IOException {
+<span class="fc bfc" id="L439" title="All 2 branches covered.">        if (!file.exists()) {</span>
+<span class="fc" id="L440">            openOutputStream(file).close();</span>
+        }
+<span class="fc" id="L442">        final boolean success = file.setLastModified(System.currentTimeMillis());</span>
+<span class="pc bpc" id="L443" title="1 of 2 branches missed.">        if (!success) {</span>
+<span class="nc" id="L444">            throw new IOException(&quot;Unable to set the last modification time for &quot; + file);</span>
+        }
+<span class="fc" id="L446">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Converts a Collection containing java.io.File instanced into array
+     * representation. This is to account for the difference between
+     * File.listFiles() and FileUtils.listFiles().
+     *
+     * @param files a Collection containing java.io.File instances
+     * @return an array of java.io.File
+     */
+    public static File[] convertFileCollectionToFileArray(final Collection&lt;File&gt; files) {
+<span class="nc" id="L458">        return files.toArray(new File[files.size()]);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Finds files within a given directory (and optionally its
+     * subdirectories). All files found are filtered by an IOFileFilter.
+     *
+     * @param files                 the collection of files found.
+     * @param directory             the directory to search in.
+     * @param filter                the filter to apply to files and directories.
+     * @param includeSubDirectories indicates if will include the subdirectories themselves
+     */
+    private static void innerListFiles(final Collection&lt;File&gt; files, final File directory,
+                                       final IOFileFilter filter, final boolean includeSubDirectories) {
+<span class="fc" id="L473">        final File[] found = directory.listFiles((FileFilter) filter);</span>
+
+<span class="pc bpc" id="L475" title="1 of 2 branches missed.">        if (found != null) {</span>
+<span class="fc bfc" id="L476" title="All 2 branches covered.">            for (final File file : found) {</span>
+<span class="fc bfc" id="L477" title="All 2 branches covered.">                if (file.isDirectory()) {</span>
+<span class="fc bfc" id="L478" title="All 2 branches covered.">                    if (includeSubDirectories) {</span>
+<span class="fc" id="L479">                        files.add(file);</span>
+                    }
+<span class="fc" id="L481">                    innerListFiles(files, file, filter, includeSubDirectories);</span>
+<span class="fc" id="L482">                } else {</span>
+<span class="fc" id="L483">                    files.add(file);</span>
+                }
+            }
+        }
+<span class="fc" id="L487">    }</span>
+
+    /**
+     * Finds files within a given directory (and optionally its
+     * subdirectories). All files found are filtered by an IOFileFilter.
+     * &lt;p&gt;
+     * If your search should recurse into subdirectories you can pass in
+     * an IOFileFilter for directories. You don't need to bind a
+     * DirectoryFileFilter (via logical AND) to this filter. This method does
+     * that for you.
+     * &lt;p&gt;
+     * An example: If you want to search through all directories called
+     * &quot;temp&quot; you pass in &lt;code&gt;FileFilterUtils.NameFileFilter(&quot;temp&quot;)&lt;/code&gt;
+     * &lt;p&gt;
+     * Another common usage of this method is find files in a directory
+     * tree but ignoring the directories generated CVS. You can simply pass
+     * in &lt;code&gt;FileFilterUtils.makeCVSAware(null)&lt;/code&gt;.
+     *
+     * @param directory  the directory to search in
+     * @param fileFilter filter to apply when finding files. Must not be {@code null},
+     *                   use {@link TrueFileFilter#INSTANCE} to match all files in selected directories.
+     * @param dirFilter  optional filter to apply when finding subdirectories.
+     *                   If this parameter is {@code null}, subdirectories will not be included in the
+     *                   search. Use {@link TrueFileFilter#INSTANCE} to match all directories.
+     * @return a collection of java.io.File with the matching files
+     * @see org.apache.commons.io.filefilter.FileFilterUtils
+     * @see org.apache.commons.io.filefilter.NameFileFilter
+     */
+    public static Collection&lt;File&gt; listFiles(
+            final File directory, final IOFileFilter fileFilter, final IOFileFilter dirFilter) {
+<span class="fc" id="L517">        validateListFilesParameters(directory, fileFilter);</span>
+
+<span class="fc" id="L519">        final IOFileFilter effFileFilter = setUpEffectiveFileFilter(fileFilter);</span>
+<span class="fc" id="L520">        final IOFileFilter effDirFilter = setUpEffectiveDirFilter(dirFilter);</span>
+
+        //Find files
+<span class="fc" id="L523">        final Collection&lt;File&gt; files = new java.util.LinkedList&lt;&gt;();</span>
+<span class="fc" id="L524">        innerListFiles(files, directory,</span>
+<span class="fc" id="L525">                FileFilterUtils.or(effFileFilter, effDirFilter), false);</span>
+<span class="fc" id="L526">        return files;</span>
+    }
+
+    /**
+     * Validates the given arguments.
+     * &lt;ul&gt;
+     * &lt;li&gt;Throws {@link IllegalArgumentException} if {@code directory} is not a directory&lt;/li&gt;
+     * &lt;li&gt;Throws {@link NullPointerException} if {@code fileFilter} is null&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * @param directory  The File to test
+     * @param fileFilter The IOFileFilter to test
+     */
+    private static void validateListFilesParameters(final File directory, final IOFileFilter fileFilter) {
+<span class="pc bpc" id="L540" title="1 of 2 branches missed.">        if (!directory.isDirectory()) {</span>
+<span class="nc" id="L541">            throw new IllegalArgumentException(&quot;Parameter 'directory' is not a directory: &quot; + directory);</span>
+        }
+<span class="fc bfc" id="L543" title="All 2 branches covered.">        if (fileFilter == null) {</span>
+<span class="fc" id="L544">            throw new NullPointerException(&quot;Parameter 'fileFilter' is null&quot;);</span>
+        }
+<span class="fc" id="L546">    }</span>
+
+    /**
+     * Returns a filter that accepts files in addition to the {@link File} objects accepted by the given filter.
+     *
+     * @param fileFilter a base filter to add to
+     * @return a filter that accepts files
+     */
+    private static IOFileFilter setUpEffectiveFileFilter(final IOFileFilter fileFilter) {
+<span class="fc" id="L555">        return FileFilterUtils.and(fileFilter, FileFilterUtils.notFileFilter(DirectoryFileFilter.INSTANCE));</span>
+    }
+
+    /**
+     * Returns a filter that accepts directories in addition to the {@link File} objects accepted by the given filter.
+     *
+     * @param dirFilter a base filter to add to
+     * @return a filter that accepts directories
+     */
+    private static IOFileFilter setUpEffectiveDirFilter(final IOFileFilter dirFilter) {
+<span class="fc bfc" id="L565" title="All 2 branches covered.">        return dirFilter == null ? FalseFileFilter.INSTANCE : FileFilterUtils.and(dirFilter,</span>
+<span class="fc" id="L566">                DirectoryFileFilter.INSTANCE);</span>
+    }
+
+    /**
+     * Finds files within a given directory (and optionally its
+     * subdirectories). All files found are filtered by an IOFileFilter.
+     * &lt;p&gt;
+     * The resulting collection includes the starting directory and
+     * any subdirectories that match the directory filter.
+     * &lt;p&gt;
+     *
+     * @param directory  the directory to search in
+     * @param fileFilter filter to apply when finding files.
+     * @param dirFilter  optional filter to apply when finding subdirectories.
+     *                   If this parameter is {@code null}, subdirectories will not be included in the
+     *                   search. Use TrueFileFilter.INSTANCE to match all directories.
+     * @return a collection of java.io.File with the matching files
+     * @see org.apache.commons.io.FileUtils#listFiles
+     * @see org.apache.commons.io.filefilter.FileFilterUtils
+     * @see org.apache.commons.io.filefilter.NameFileFilter
+     * @since 2.2
+     */
+    public static Collection&lt;File&gt; listFilesAndDirs(
+            final File directory, final IOFileFilter fileFilter, final IOFileFilter dirFilter) {
+<span class="fc" id="L590">        validateListFilesParameters(directory, fileFilter);</span>
+
+<span class="fc" id="L592">        final IOFileFilter effFileFilter = setUpEffectiveFileFilter(fileFilter);</span>
+<span class="fc" id="L593">        final IOFileFilter effDirFilter = setUpEffectiveDirFilter(dirFilter);</span>
+
+        //Find files
+<span class="fc" id="L596">        final Collection&lt;File&gt; files = new java.util.LinkedList&lt;&gt;();</span>
+<span class="pc bpc" id="L597" title="1 of 2 branches missed.">        if (directory.isDirectory()) {</span>
+<span class="fc" id="L598">            files.add(directory);</span>
+        }
+<span class="fc" id="L600">        innerListFiles(files, directory,</span>
+<span class="fc" id="L601">                FileFilterUtils.or(effFileFilter, effDirFilter), true);</span>
+<span class="fc" id="L602">        return files;</span>
+    }
+
+    /**
+     * Allows iteration over the files in given directory (and optionally
+     * its subdirectories).
+     * &lt;p&gt;
+     * All files found are filtered by an IOFileFilter. This method is
+     * based on {@link #listFiles(File, IOFileFilter, IOFileFilter)},
+     * which supports Iterable ('foreach' loop).
+     * &lt;p&gt;
+     * @param directory  the directory to search in
+     * @param fileFilter filter to apply when finding files.
+     * @param dirFilter  optional filter to apply when finding subdirectories.
+     *                   If this parameter is {@code null}, subdirectories will not be included in the
+     *                   search. Use TrueFileFilter.INSTANCE to match all directories.
+     * @return an iterator of java.io.File for the matching files
+     * @see org.apache.commons.io.filefilter.FileFilterUtils
+     * @see org.apache.commons.io.filefilter.NameFileFilter
+     * @since 1.2
+     */
+    public static Iterator&lt;File&gt; iterateFiles(
+            final File directory, final IOFileFilter fileFilter, final IOFileFilter dirFilter) {
+<span class="fc" id="L625">        return listFiles(directory, fileFilter, dirFilter).iterator();</span>
+    }
+
+    /**
+     * Allows iteration over the files in given directory (and optionally
+     * its subdirectories).
+     * &lt;p&gt;
+     * All files found are filtered by an IOFileFilter. This method is
+     * based on {@link #listFilesAndDirs(File, IOFileFilter, IOFileFilter)},
+     * which supports Iterable ('foreach' loop).
+     * &lt;p&gt;
+     * The resulting iterator includes the subdirectories themselves.
+     *
+     * @param directory  the directory to search in
+     * @param fileFilter filter to apply when finding files.
+     * @param dirFilter  optional filter to apply when finding subdirectories.
+     *                   If this parameter is {@code null}, subdirectories will not be included in the
+     *                   search. Use TrueFileFilter.INSTANCE to match all directories.
+     * @return an iterator of java.io.File for the matching files
+     * @see org.apache.commons.io.filefilter.FileFilterUtils
+     * @see org.apache.commons.io.filefilter.NameFileFilter
+     * @since 2.2
+     */
+    public static Iterator&lt;File&gt; iterateFilesAndDirs(final File directory, final IOFileFilter fileFilter,
+                                                     final IOFileFilter dirFilter) {
+<span class="fc" id="L650">        return listFilesAndDirs(directory, fileFilter, dirFilter).iterator();</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Converts an array of file extensions to suffixes for use
+     * with IOFileFilters.
+     *
+     * @param extensions an array of extensions. Format: {&quot;java&quot;, &quot;xml&quot;}
+     * @return an array of suffixes. Format: {&quot;.java&quot;, &quot;.xml&quot;}
+     */
+    private static String[] toSuffixes(final String[] extensions) {
+<span class="fc" id="L662">        final String[] suffixes = new String[extensions.length];</span>
+<span class="fc bfc" id="L663" title="All 2 branches covered.">        for (int i = 0; i &lt; extensions.length; i++) {</span>
+<span class="fc" id="L664">            suffixes[i] = &quot;.&quot; + extensions[i];</span>
+        }
+<span class="fc" id="L666">        return suffixes;</span>
+    }
+
+
+    /**
+     * Finds files within a given directory (and optionally its subdirectories)
+     * which match an array of extensions.
+     *
+     * @param directory  the directory to search in
+     * @param extensions an array of extensions, ex. {&quot;java&quot;,&quot;xml&quot;}. If this
+     *                   parameter is {@code null}, all files are returned.
+     * @param recursive  if true all subdirectories are searched as well
+     * @return a collection of java.io.File with the matching files
+     */
+    public static Collection&lt;File&gt; listFiles(
+            final File directory, final String[] extensions, final boolean recursive) {
+        IOFileFilter filter;
+<span class="fc bfc" id="L683" title="All 2 branches covered.">        if (extensions == null) {</span>
+<span class="fc" id="L684">            filter = TrueFileFilter.INSTANCE;</span>
+<span class="fc" id="L685">        } else {</span>
+<span class="fc" id="L686">            final String[] suffixes = toSuffixes(extensions);</span>
+<span class="fc" id="L687">            filter = new SuffixFileFilter(suffixes);</span>
+        }
+<span class="fc" id="L689">        return listFiles(directory, filter,</span>
+<span class="fc bfc" id="L690" title="All 2 branches covered.">                recursive ? TrueFileFilter.INSTANCE : FalseFileFilter.INSTANCE);</span>
+    }
+
+    /**
+     * Allows iteration over the files in a given directory (and optionally
+     * its subdirectories) which match an array of extensions. This method
+     * is based on {@link #listFiles(File, String[], boolean)},
+     * which supports Iterable ('foreach' loop).
+     *
+     * @param directory  the directory to search in
+     * @param extensions an array of extensions, ex. {&quot;java&quot;,&quot;xml&quot;}. If this
+     *                   parameter is {@code null}, all files are returned.
+     * @param recursive  if true all subdirectories are searched as well
+     * @return an iterator of java.io.File with the matching files
+     * @since 1.2
+     */
+    public static Iterator&lt;File&gt; iterateFiles(
+            final File directory, final String[] extensions, final boolean recursive) {
+<span class="fc" id="L708">        return listFiles(directory, extensions, recursive).iterator();</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Compares the contents of two files to determine if they are equal or not.
+     * &lt;p&gt;
+     * This method checks to see if the two files are different lengths
+     * or if they point to the same file, before resorting to byte-by-byte
+     * comparison of the contents.
+     * &lt;p&gt;
+     * Code origin: Avalon
+     *
+     * @param file1 the first file
+     * @param file2 the second file
+     * @return true if the content of the files are equal or they both don't
+     * exist, false otherwise
+     * @throws IOException in case of an I/O error
+     */
+    public static boolean contentEquals(final File file1, final File file2) throws IOException {
+<span class="fc" id="L728">        final boolean file1Exists = file1.exists();</span>
+<span class="pc bpc" id="L729" title="1 of 2 branches missed.">        if (file1Exists != file2.exists()) {</span>
+<span class="nc" id="L730">            return false;</span>
+        }
+
+<span class="fc bfc" id="L733" title="All 2 branches covered.">        if (!file1Exists) {</span>
+            // two not existing files are equal
+<span class="fc" id="L735">            return true;</span>
+        }
+
+<span class="pc bpc" id="L738" title="1 of 4 branches missed.">        if (file1.isDirectory() || file2.isDirectory()) {</span>
+            // don't want to compare directory contents
+<span class="fc" id="L740">            throw new IOException(&quot;Can't compare directories, only files&quot;);</span>
+        }
+
+<span class="fc bfc" id="L743" title="All 2 branches covered.">        if (file1.length() != file2.length()) {</span>
+            // lengths differ, cannot be equal
+<span class="fc" id="L745">            return false;</span>
+        }
+
+<span class="fc bfc" id="L748" title="All 2 branches covered.">        if (file1.getCanonicalFile().equals(file2.getCanonicalFile())) {</span>
+            // same file
+<span class="fc" id="L750">            return true;</span>
+        }
+
+<span class="fc" id="L753">        try (InputStream input1 = new FileInputStream(file1);</span>
+<span class="fc" id="L754">             InputStream input2 = new FileInputStream(file2)) {</span>
+<span class="pc" id="L755">            return IOUtils.contentEquals(input1, input2);</span>
+<span class="pc bpc" id="L756" title="14 of 16 branches missed.">        }</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Compares the contents of two files to determine if they are equal or not.
+     * &lt;p&gt;
+     * This method checks to see if the two files point to the same file,
+     * before resorting to line-by-line comparison of the contents.
+     * &lt;p&gt;
+     *
+     * @param file1       the first file
+     * @param file2       the second file
+     * @param charsetName the character encoding to be used.
+     *                    May be null, in which case the platform default is used
+     * @return true if the content of the files are equal or neither exists,
+     * false otherwise
+     * @throws IOException in case of an I/O error
+     * @see IOUtils#contentEqualsIgnoreEOL(Reader, Reader)
+     * @since 2.2
+     */
+    public static boolean contentEqualsIgnoreEOL(final File file1, final File file2, final String charsetName)
+            throws IOException {
+<span class="fc" id="L779">        final boolean file1Exists = file1.exists();</span>
+<span class="pc bpc" id="L780" title="1 of 2 branches missed.">        if (file1Exists != file2.exists()) {</span>
+<span class="nc" id="L781">            return false;</span>
+        }
+
+<span class="fc bfc" id="L784" title="All 2 branches covered.">        if (!file1Exists) {</span>
+            // two not existing files are equal
+<span class="fc" id="L786">            return true;</span>
+        }
+
+<span class="pc bpc" id="L789" title="1 of 4 branches missed.">        if (file1.isDirectory() || file2.isDirectory()) {</span>
+            // don't want to compare directory contents
+<span class="fc" id="L791">            throw new IOException(&quot;Can't compare directories, only files&quot;);</span>
+        }
+
+<span class="fc bfc" id="L794" title="All 2 branches covered.">        if (file1.getCanonicalFile().equals(file2.getCanonicalFile())) {</span>
+            // same file
+<span class="fc" id="L796">            return true;</span>
+        }
+
+<span class="pc bpc" id="L799" title="1 of 2 branches missed.">        try (Reader input1 = charsetName == null</span>
+<span class="fc" id="L800">                                 ? new InputStreamReader(new FileInputStream(file1), Charset.defaultCharset())</span>
+<span class="nc" id="L801">                                 : new InputStreamReader(new FileInputStream(file1), charsetName);</span>
+<span class="pc bpc" id="L802" title="1 of 2 branches missed.">             Reader input2 = charsetName == null</span>
+<span class="fc" id="L803">                                 ? new InputStreamReader(new FileInputStream(file2), Charset.defaultCharset())</span>
+<span class="nc" id="L804">                                 : new InputStreamReader(new FileInputStream(file2), charsetName)) {</span>
+<span class="pc" id="L805">            return IOUtils.contentEqualsIgnoreEOL(input1, input2);</span>
+<span class="pc bpc" id="L806" title="14 of 16 branches missed.">        }</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Convert from a &lt;code&gt;URL&lt;/code&gt; to a &lt;code&gt;File&lt;/code&gt;.
+     * &lt;p&gt;
+     * From version 1.1 this method will decode the URL.
+     * Syntax such as &lt;code&gt;file:///my%20docs/file.txt&lt;/code&gt; will be
+     * correctly decoded to &lt;code&gt;/my docs/file.txt&lt;/code&gt;. Starting with version
+     * 1.5, this method uses UTF-8 to decode percent-encoded octets to characters.
+     * Additionally, malformed percent-encoded octets are handled leniently by
+     * passing them through literally.
+     *
+     * @param url the file URL to convert, {@code null} returns {@code null}
+     * @return the equivalent &lt;code&gt;File&lt;/code&gt; object, or {@code null}
+     * if the URL's protocol is not &lt;code&gt;file&lt;/code&gt;
+     */
+    public static File toFile(final URL url) {
+<span class="fc bfc" id="L825" title="All 4 branches covered.">        if (url == null || !&quot;file&quot;.equalsIgnoreCase(url.getProtocol())) {</span>
+<span class="fc" id="L826">            return null;</span>
+        } else {
+<span class="fc" id="L828">            String filename = url.getFile().replace('/', File.separatorChar);</span>
+<span class="fc" id="L829">            filename = decodeUrl(filename);</span>
+<span class="fc" id="L830">            return new File(filename);</span>
+        }
+    }
+
+    /**
+     * Decodes the specified URL as per RFC 3986, i.e. transforms
+     * percent-encoded octets to characters by decoding with the UTF-8 character
+     * set. This function is primarily intended for usage with
+     * {@link java.net.URL} which unfortunately does not enforce proper URLs. As
+     * such, this method will leniently accept invalid characters or malformed
+     * percent-encoded octets and simply pass them literally through to the
+     * result string. Except for rare edge cases, this will make unencoded URLs
+     * pass through unaltered.
+     *
+     * @param url The URL to decode, may be {@code null}.
+     * @return The decoded URL or {@code null} if the input was
+     * {@code null}.
+     */
+    static String decodeUrl(final String url) {
+<span class="fc" id="L849">        String decoded = url;</span>
+<span class="fc bfc" id="L850" title="All 4 branches covered.">        if (url != null &amp;&amp; url.indexOf('%') &gt;= 0) {</span>
+<span class="fc" id="L851">            final int n = url.length();</span>
+<span class="fc" id="L852">            final StringBuilder buffer = new StringBuilder();</span>
+<span class="fc" id="L853">            final ByteBuffer bytes = ByteBuffer.allocate(n);</span>
+<span class="fc bfc" id="L854" title="All 2 branches covered.">            for (int i = 0; i &lt; n; ) {</span>
+<span class="fc bfc" id="L855" title="All 2 branches covered.">                if (url.charAt(i) == '%') {</span>
+                    try {
+                        do {
+<span class="fc" id="L858">                            final byte octet = (byte) Integer.parseInt(url.substring(i + 1, i + 3), 16);</span>
+<span class="fc" id="L859">                            bytes.put(octet);</span>
+<span class="fc" id="L860">                            i += 3;</span>
+<span class="fc bfc" id="L861" title="All 4 branches covered.">                        } while (i &lt; n &amp;&amp; url.charAt(i) == '%');</span>
+<span class="fc" id="L862">                        continue;</span>
+<span class="fc" id="L863">                    } catch (final RuntimeException e) {</span>
+                        // malformed percent-encoded octet, fall through and
+                        // append characters literally
+<span class="nc" id="L866">                    } finally {</span>
+<span class="pc bpc" id="L867" title="3 of 6 branches missed.">                        if (bytes.position() &gt; 0) {</span>
+<span class="pc" id="L868">                            bytes.flip();</span>
+<span class="pc" id="L869">                            buffer.append(StandardCharsets.UTF_8.decode(bytes).toString());</span>
+<span class="pc" id="L870">                            bytes.clear();</span>
+                        }
+<span class="nc" id="L872">                    }</span>
+                }
+<span class="fc" id="L874">                buffer.append(url.charAt(i++));</span>
+            }
+<span class="fc" id="L876">            decoded = buffer.toString();</span>
+        }
+<span class="fc" id="L878">        return decoded;</span>
+    }
+
+    /**
+     * Converts each of an array of &lt;code&gt;URL&lt;/code&gt; to a &lt;code&gt;File&lt;/code&gt;.
+     * &lt;p&gt;
+     * Returns an array of the same size as the input.
+     * If the input is {@code null}, an empty array is returned.
+     * If the input contains {@code null}, the output array contains {@code null} at the same
+     * index.
+     * &lt;p&gt;
+     * This method will decode the URL.
+     * Syntax such as &lt;code&gt;file:///my%20docs/file.txt&lt;/code&gt; will be
+     * correctly decoded to &lt;code&gt;/my docs/file.txt&lt;/code&gt;.
+     *
+     * @param urls the file URLs to convert, {@code null} returns empty array
+     * @return a non-{@code null} array of Files matching the input, with a {@code null} item
+     * if there was a {@code null} at that index in the input array
+     * @throws IllegalArgumentException if any file is not a URL file
+     * @throws IllegalArgumentException if any file is incorrectly encoded
+     * @since 1.1
+     */
+    public static File[] toFiles(final URL[] urls) {
+<span class="fc bfc" id="L901" title="All 4 branches covered.">        if (urls == null || urls.length == 0) {</span>
+<span class="fc" id="L902">            return EMPTY_FILE_ARRAY;</span>
+        }
+<span class="fc" id="L904">        final File[] files = new File[urls.length];</span>
+<span class="fc bfc" id="L905" title="All 2 branches covered.">        for (int i = 0; i &lt; urls.length; i++) {</span>
+<span class="fc" id="L906">            final URL url = urls[i];</span>
+<span class="fc bfc" id="L907" title="All 2 branches covered.">            if (url != null) {</span>
+<span class="fc bfc" id="L908" title="All 2 branches covered.">                if (url.getProtocol().equals(&quot;file&quot;) == false) {</span>
+<span class="fc" id="L909">                    throw new IllegalArgumentException(</span>
+<span class="fc" id="L910">                            &quot;URL could not be converted to a File: &quot; + url);</span>
+                }
+<span class="fc" id="L912">                files[i] = toFile(url);</span>
+            }
+        }
+<span class="fc" id="L915">        return files;</span>
+    }
+
+    /**
+     * Converts each of an array of &lt;code&gt;File&lt;/code&gt; to a &lt;code&gt;URL&lt;/code&gt;.
+     * &lt;p&gt;
+     * Returns an array of the same size as the input.
+     *
+     * @param files the files to convert, must not be {@code null}
+     * @return an array of URLs matching the input
+     * @throws IOException          if a file cannot be converted
+     * @throws NullPointerException if the parameter is null
+     */
+    public static URL[] toURLs(final File[] files) throws IOException {
+<span class="fc" id="L929">        final URL[] urls = new URL[files.length];</span>
+
+<span class="fc bfc" id="L931" title="All 2 branches covered.">        for (int i = 0; i &lt; urls.length; i++) {</span>
+<span class="fc" id="L932">            urls[i] = files[i].toURI().toURL();</span>
+        }
+
+<span class="fc" id="L935">        return urls;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Copies a file to a directory preserving the file date.
+     * &lt;p&gt;
+     * This method copies the contents of the specified source file
+     * to a file of the same name in the specified destination directory.
+     * The destination directory is created if it does not exist.
+     * If the destination file exists, then this method will overwrite it.
+     * &lt;p&gt;
+     * &lt;strong&gt;Note:&lt;/strong&gt; This method tries to preserve the file's last
+     * modified date/times using {@link File#setLastModified(long)}, however
+     * it is not guaranteed that the operation will succeed.
+     * If the modification operation fails, no indication is provided.
+     *
+     * @param srcFile an existing file to copy, must not be {@code null}
+     * @param destDir the directory to place the copy in, must not be {@code null}
+     *
+     * @throws NullPointerException if source or destination is null
+     * @throws IOException          if source or destination is invalid
+     * @throws IOException          if an IO error occurs during copying
+     * @see #copyFile(File, File, boolean)
+     */
+    public static void copyFileToDirectory(final File srcFile, final File destDir) throws IOException {
+<span class="fc" id="L961">        copyFileToDirectory(srcFile, destDir, true);</span>
+<span class="fc" id="L962">    }</span>
+
+    /**
+     * Copies a file to a directory optionally preserving the file date.
+     * &lt;p&gt;
+     * This method copies the contents of the specified source file
+     * to a file of the same name in the specified destination directory.
+     * The destination directory is created if it does not exist.
+     * If the destination file exists, then this method will overwrite it.
+     * &lt;p&gt;
+     * &lt;strong&gt;Note:&lt;/strong&gt; Setting &lt;code&gt;preserveFileDate&lt;/code&gt; to
+     * {@code true} tries to preserve the file's last modified
+     * date/times using {@link File#setLastModified(long)}, however it is
+     * not guaranteed that the operation will succeed.
+     * If the modification operation fails, no indication is provided.
+     *
+     * @param srcFile          an existing file to copy, must not be {@code null}
+     * @param destDir          the directory to place the copy in, must not be {@code null}
+     * @param preserveFileDate true if the file date of the copy
+     *                         should be the same as the original
+     *
+     * @throws NullPointerException if source or destination is {@code null}
+     * @throws IOException          if source or destination is invalid
+     * @throws IOException          if an IO error occurs during copying
+     * @throws IOException          if the output file length is not the same as the input file length after the copy
+     * completes
+     * @see #copyFile(File, File, boolean)
+     * @since 1.3
+     */
+    public static void copyFileToDirectory(final File srcFile, final File destDir, final boolean preserveFileDate)
+            throws IOException {
+<span class="pc bpc" id="L993" title="1 of 2 branches missed.">        if (destDir == null) {</span>
+<span class="nc" id="L994">            throw new NullPointerException(&quot;Destination must not be null&quot;);</span>
+        }
+<span class="pc bpc" id="L996" title="2 of 4 branches missed.">        if (destDir.exists() &amp;&amp; destDir.isDirectory() == false) {</span>
+<span class="nc" id="L997">            throw new IllegalArgumentException(&quot;Destination '&quot; + destDir + &quot;' is not a directory&quot;);</span>
+        }
+<span class="fc" id="L999">        final File destFile = new File(destDir, srcFile.getName());</span>
+<span class="fc" id="L1000">        copyFile(srcFile, destFile, preserveFileDate);</span>
+<span class="fc" id="L1001">    }</span>
+
+    /**
+     * Copies a file to a new location preserving the file date.
+     * &lt;p&gt;
+     * This method copies the contents of the specified source file to the
+     * specified destination file. The directory holding the destination file is
+     * created if it does not exist. If the destination file exists, then this
+     * method will overwrite it.
+     * &lt;p&gt;
+     * &lt;strong&gt;Note:&lt;/strong&gt; This method tries to preserve the file's last
+     * modified date/times using {@link File#setLastModified(long)}, however
+     * it is not guaranteed that the operation will succeed.
+     * If the modification operation fails, no indication is provided.
+     *
+     * @param srcFile  an existing file to copy, must not be {@code null}
+     * @param destFile the new file, must not be {@code null}
+     *
+     * @throws NullPointerException if source or destination is {@code null}
+     * @throws IOException          if source or destination is invalid
+     * @throws IOException          if an IO error occurs during copying
+     * @throws IOException          if the output file length is not the same as the input file length after the copy
+     * completes
+     * @see #copyFileToDirectory(File, File)
+     * @see #copyFile(File, File, boolean)
+     */
+    public static void copyFile(final File srcFile, final File destFile) throws IOException {
+<span class="fc" id="L1028">        copyFile(srcFile, destFile, true);</span>
+<span class="fc" id="L1029">    }</span>
+
+    /**
+     * Copies a file to a new location.
+     * &lt;p&gt;
+     * This method copies the contents of the specified source file
+     * to the specified destination file.
+     * The directory holding the destination file is created if it does not exist.
+     * If the destination file exists, then this method will overwrite it.
+     * &lt;p&gt;
+     * &lt;strong&gt;Note:&lt;/strong&gt; Setting &lt;code&gt;preserveFileDate&lt;/code&gt; to
+     * {@code true} tries to preserve the file's last modified
+     * date/times using {@link File#setLastModified(long)}, however it is
+     * not guaranteed that the operation will succeed.
+     * If the modification operation fails, no indication is provided.
+     *
+     * @param srcFile          an existing file to copy, must not be {@code null}
+     * @param destFile         the new file, must not be {@code null}
+     * @param preserveFileDate true if the file date of the copy
+     *                         should be the same as the original
+     *
+     * @throws NullPointerException if source or destination is {@code null}
+     * @throws IOException          if source or destination is invalid
+     * @throws IOException          if an IO error occurs during copying
+     * @throws IOException          if the output file length is not the same as the input file length after the copy
+     * completes
+     * @see #copyFileToDirectory(File, File, boolean)
+     * @see #doCopyFile(File, File, boolean)
+     */
+    public static void copyFile(final File srcFile, final File destFile,
+                                final boolean preserveFileDate) throws IOException {
+<span class="fc" id="L1060">        checkFileRequirements(srcFile, destFile);</span>
+<span class="pc bpc" id="L1061" title="1 of 2 branches missed.">        if (srcFile.isDirectory()) {</span>
+<span class="nc" id="L1062">            throw new IOException(&quot;Source '&quot; + srcFile + &quot;' exists but is a directory&quot;);</span>
+        }
+<span class="fc bfc" id="L1064" title="All 2 branches covered.">        if (srcFile.getCanonicalPath().equals(destFile.getCanonicalPath())) {</span>
+<span class="fc" id="L1065">            throw new IOException(&quot;Source '&quot; + srcFile + &quot;' and destination '&quot; + destFile + &quot;' are the same&quot;);</span>
+        }
+<span class="fc" id="L1067">        final File parentFile = destFile.getParentFile();</span>
+<span class="pc bpc" id="L1068" title="1 of 2 branches missed.">        if (parentFile != null) {</span>
+<span class="pc bpc" id="L1069" title="2 of 4 branches missed.">            if (!parentFile.mkdirs() &amp;&amp; !parentFile.isDirectory()) {</span>
+<span class="nc" id="L1070">                throw new IOException(&quot;Destination '&quot; + parentFile + &quot;' directory cannot be created&quot;);</span>
+            }
+        }
+<span class="pc bpc" id="L1073" title="3 of 4 branches missed.">        if (destFile.exists() &amp;&amp; destFile.canWrite() == false) {</span>
+<span class="nc" id="L1074">            throw new IOException(&quot;Destination '&quot; + destFile + &quot;' exists but is read-only&quot;);</span>
+        }
+<span class="fc" id="L1076">        doCopyFile(srcFile, destFile, preserveFileDate);</span>
+<span class="fc" id="L1077">    }</span>
+
+    /**
+     * Copy bytes from a &lt;code&gt;File&lt;/code&gt; to an &lt;code&gt;OutputStream&lt;/code&gt;.
+     * &lt;p&gt;
+     * This method buffers the input internally, so there is no need to use a &lt;code&gt;BufferedInputStream&lt;/code&gt;.
+     * &lt;/p&gt;
+     *
+     * @param input  the &lt;code&gt;File&lt;/code&gt; to read from
+     * @param output the &lt;code&gt;OutputStream&lt;/code&gt; to write to
+     * @return the number of bytes copied
+     * @throws NullPointerException if the input or output is null
+     * @throws IOException          if an I/O error occurs
+     * @since 2.1
+     */
+    public static long copyFile(final File input, final OutputStream output) throws IOException {
+<span class="fc" id="L1093">        try (FileInputStream fis = new FileInputStream(input)) {</span>
+<span class="pc" id="L1094">            return IOUtils.copyLarge(fis, output);</span>
+<span class="pc bpc" id="L1095" title="7 of 8 branches missed.">        }</span>
+    }
+
+    /**
+     * Internal copy file method.
+     * This caches the original file length, and throws an IOException
+     * if the output file length is different from the current input file length.
+     * So it may fail if the file changes size.
+     * It may also fail with &quot;IllegalArgumentException: Negative size&quot; if the input file is truncated part way
+     * through copying the data and the new file size is less than the current position.
+     *
+     * @param srcFile          the validated source file, must not be {@code null}
+     * @param destFile         the validated destination file, must not be {@code null}
+     * @param preserveFileDate whether to preserve the file date
+     * @throws IOException              if an error occurs
+     * @throws IOException              if the output file length is not the same as the input file length after the
+     * copy completes
+     * @throws IllegalArgumentException &quot;Negative size&quot; if the file is truncated so that the size is less than the
+     * position
+     */
+    private static void doCopyFile(final File srcFile, final File destFile, final boolean preserveFileDate)
+            throws IOException {
+<span class="pc bpc" id="L1117" title="3 of 4 branches missed.">        if (destFile.exists() &amp;&amp; destFile.isDirectory()) {</span>
+<span class="nc" id="L1118">            throw new IOException(&quot;Destination '&quot; + destFile + &quot;' exists but is a directory&quot;);</span>
+        }
+
+<span class="fc" id="L1121">        try (FileInputStream fis = new FileInputStream(srcFile);</span>
+<span class="fc" id="L1122">             FileChannel input = fis.getChannel();</span>
+<span class="fc" id="L1123">             FileOutputStream fos = new FileOutputStream(destFile);</span>
+<span class="fc" id="L1124">             FileChannel output = fos.getChannel()) {</span>
+<span class="fc" id="L1125">            final long size = input.size(); // TODO See IO-386</span>
+<span class="fc" id="L1126">            long pos = 0;</span>
+<span class="fc" id="L1127">            long count = 0;</span>
+<span class="fc bfc" id="L1128" title="All 2 branches covered.">            while (pos &lt; size) {</span>
+<span class="fc" id="L1129">                final long remain = size - pos;</span>
+<span class="pc bpc" id="L1130" title="1 of 2 branches missed.">                count = remain &gt; FILE_COPY_BUFFER_SIZE ? FILE_COPY_BUFFER_SIZE : remain;</span>
+<span class="fc" id="L1131">                final long bytesCopied = output.transferFrom(input, pos, count);</span>
+<span class="pc bpc" id="L1132" title="1 of 2 branches missed.">                if (bytesCopied == 0) { // IO-385 - can happen if file is truncated after caching the size</span>
+<span class="nc" id="L1133">                    break; // ensure we don't loop forever</span>
+                }
+<span class="fc" id="L1135">                pos += bytesCopied;</span>
+            }
+<span class="pc bpc" id="L1137" title="28 of 32 branches missed.">        }</span>
+
+<span class="fc" id="L1139">        final long srcLen = srcFile.length(); // TODO See IO-386</span>
+<span class="fc" id="L1140">        final long dstLen = destFile.length(); // TODO See IO-386</span>
+<span class="fc bfc" id="L1141" title="All 2 branches covered.">        if (srcLen != dstLen) {</span>
+<span class="fc" id="L1142">            throw new IOException(&quot;Failed to copy full contents from '&quot; +</span>
+<span class="fc" id="L1143">                    srcFile + &quot;' to '&quot; + destFile + &quot;' Expected length: &quot; + srcLen + &quot; Actual: &quot; + dstLen);</span>
+        }
+<span class="fc bfc" id="L1145" title="All 2 branches covered.">        if (preserveFileDate) {</span>
+<span class="fc" id="L1146">            destFile.setLastModified(srcFile.lastModified());</span>
+        }
+<span class="fc" id="L1148">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Copies a directory to within another directory preserving the file dates.
+     * &lt;p&gt;
+     * This method copies the source directory and all its contents to a
+     * directory of the same name in the specified destination directory.
+     * &lt;p&gt;
+     * The destination directory is created if it does not exist.
+     * If the destination directory did exist, then this method merges
+     * the source with the destination, with the source taking precedence.
+     * &lt;p&gt;
+     * &lt;strong&gt;Note:&lt;/strong&gt; This method tries to preserve the files' last
+     * modified date/times using {@link File#setLastModified(long)}, however
+     * it is not guaranteed that those operations will succeed.
+     * If the modification operation fails, no indication is provided.
+     *
+     * @param srcDir  an existing directory to copy, must not be {@code null}
+     * @param destDir the directory to place the copy in, must not be {@code null}
+     *
+     * @throws NullPointerException if source or destination is {@code null}
+     * @throws IOException          if source or destination is invalid
+     * @throws IOException          if an IO error occurs during copying
+     * @since 1.2
+     */
+    public static void copyDirectoryToDirectory(final File srcDir, final File destDir) throws IOException {
+<span class="pc bpc" id="L1175" title="1 of 2 branches missed.">        if (srcDir == null) {</span>
+<span class="nc" id="L1176">            throw new NullPointerException(&quot;Source must not be null&quot;);</span>
+        }
+<span class="pc bpc" id="L1178" title="2 of 4 branches missed.">        if (srcDir.exists() &amp;&amp; srcDir.isDirectory() == false) {</span>
+<span class="nc" id="L1179">            throw new IllegalArgumentException(&quot;Source '&quot; + destDir + &quot;' is not a directory&quot;);</span>
+        }
+<span class="pc bpc" id="L1181" title="1 of 2 branches missed.">        if (destDir == null) {</span>
+<span class="nc" id="L1182">            throw new NullPointerException(&quot;Destination must not be null&quot;);</span>
+        }
+<span class="pc bpc" id="L1184" title="1 of 4 branches missed.">        if (destDir.exists() &amp;&amp; destDir.isDirectory() == false) {</span>
+<span class="nc" id="L1185">            throw new IllegalArgumentException(&quot;Destination '&quot; + destDir + &quot;' is not a directory&quot;);</span>
+        }
+<span class="fc" id="L1187">        copyDirectory(srcDir, new File(destDir, srcDir.getName()), true);</span>
+<span class="fc" id="L1188">    }</span>
+
+    /**
+     * Copies a whole directory to a new location preserving the file dates.
+     * &lt;p&gt;
+     * This method copies the specified directory and all its child
+     * directories and files to the specified destination.
+     * The destination is the new location and name of the directory.
+     * &lt;p&gt;
+     * The destination directory is created if it does not exist.
+     * If the destination directory did exist, then this method merges
+     * the source with the destination, with the source taking precedence.
+     * &lt;p&gt;
+     * &lt;strong&gt;Note:&lt;/strong&gt; This method tries to preserve the files' last
+     * modified date/times using {@link File#setLastModified(long)}, however
+     * it is not guaranteed that those operations will succeed.
+     * If the modification operation fails, no indication is provided.
+     *
+     * @param srcDir  an existing directory to copy, must not be {@code null}
+     * @param destDir the new directory, must not be {@code null}
+     *
+     * @throws NullPointerException if source or destination is {@code null}
+     * @throws IOException          if source or destination is invalid
+     * @throws IOException          if an IO error occurs during copying
+     * @since 1.1
+     */
+    public static void copyDirectory(final File srcDir, final File destDir) throws IOException {
+<span class="fc" id="L1215">        copyDirectory(srcDir, destDir, true);</span>
+<span class="fc" id="L1216">    }</span>
+
+    /**
+     * Copies a whole directory to a new location.
+     * &lt;p&gt;
+     * This method copies the contents of the specified source directory
+     * to within the specified destination directory.
+     * &lt;p&gt;
+     * The destination directory is created if it does not exist.
+     * If the destination directory did exist, then this method merges
+     * the source with the destination, with the source taking precedence.
+     * &lt;p&gt;
+     * &lt;strong&gt;Note:&lt;/strong&gt; Setting &lt;code&gt;preserveFileDate&lt;/code&gt; to
+     * {@code true} tries to preserve the files' last modified
+     * date/times using {@link File#setLastModified(long)}, however it is
+     * not guaranteed that those operations will succeed.
+     * If the modification operation fails, no indication is provided.
+     *
+     * @param srcDir           an existing directory to copy, must not be {@code null}
+     * @param destDir          the new directory, must not be {@code null}
+     * @param preserveFileDate true if the file date of the copy
+     *                         should be the same as the original
+     *
+     * @throws NullPointerException if source or destination is {@code null}
+     * @throws IOException          if source or destination is invalid
+     * @throws IOException          if an IO error occurs during copying
+     * @since 1.1
+     */
+    public static void copyDirectory(final File srcDir, final File destDir,
+                                     final boolean preserveFileDate) throws IOException {
+<span class="fc" id="L1246">        copyDirectory(srcDir, destDir, null, preserveFileDate);</span>
+<span class="fc" id="L1247">    }</span>
+
+    /**
+     * Copies a filtered directory to a new location preserving the file dates.
+     * &lt;p&gt;
+     * This method copies the contents of the specified source directory
+     * to within the specified destination directory.
+     * &lt;p&gt;
+     * The destination directory is created if it does not exist.
+     * If the destination directory did exist, then this method merges
+     * the source with the destination, with the source taking precedence.
+     * &lt;p&gt;
+     * &lt;strong&gt;Note:&lt;/strong&gt; This method tries to preserve the files' last
+     * modified date/times using {@link File#setLastModified(long)}, however
+     * it is not guaranteed that those operations will succeed.
+     * If the modification operation fails, no indication is provided.
+     * &lt;/p&gt;
+     * &lt;h3&gt;Example: Copy directories only&lt;/h3&gt;
+     * &lt;pre&gt;
+     *  // only copy the directory structure
+     *  FileUtils.copyDirectory(srcDir, destDir, DirectoryFileFilter.DIRECTORY);
+     *  &lt;/pre&gt;
+     *
+     * &lt;h3&gt;Example: Copy directories and txt files&lt;/h3&gt;
+     * &lt;pre&gt;
+     *  // Create a filter for &quot;.txt&quot; files
+     *  IOFileFilter txtSuffixFilter = FileFilterUtils.suffixFileFilter(&quot;.txt&quot;);
+     *  IOFileFilter txtFiles = FileFilterUtils.andFileFilter(FileFileFilter.FILE, txtSuffixFilter);
+     *
+     *  // Create a filter for either directories or &quot;.txt&quot; files
+     *  FileFilter filter = FileFilterUtils.orFileFilter(DirectoryFileFilter.DIRECTORY, txtFiles);
+     *
+     *  // Copy using the filter
+     *  FileUtils.copyDirectory(srcDir, destDir, filter);
+     *  &lt;/pre&gt;
+     *
+     * @param srcDir  an existing directory to copy, must not be {@code null}
+     * @param destDir the new directory, must not be {@code null}
+     * @param filter  the filter to apply, null means copy all directories and files
+     *                should be the same as the original
+     *
+     * @throws NullPointerException if source or destination is {@code null}
+     * @throws IOException          if source or destination is invalid
+     * @throws IOException          if an IO error occurs during copying
+     * @since 1.4
+     */
+    public static void copyDirectory(final File srcDir, final File destDir,
+                                     final FileFilter filter) throws IOException {
+<span class="fc" id="L1295">        copyDirectory(srcDir, destDir, filter, true);</span>
+<span class="fc" id="L1296">    }</span>
+
+    /**
+     * Copies a filtered directory to a new location.
+     * &lt;p&gt;
+     * This method copies the contents of the specified source directory
+     * to within the specified destination directory.
+     * &lt;p&gt;
+     * The destination directory is created if it does not exist.
+     * If the destination directory did exist, then this method merges
+     * the source with the destination, with the source taking precedence.
+     * &lt;p&gt;
+     * &lt;strong&gt;Note:&lt;/strong&gt; Setting &lt;code&gt;preserveFileDate&lt;/code&gt; to
+     * {@code true} tries to preserve the files' last modified
+     * date/times using {@link File#setLastModified(long)}, however it is
+     * not guaranteed that those operations will succeed.
+     * If the modification operation fails, no indication is provided.
+     * &lt;/p&gt;
+     * &lt;h3&gt;Example: Copy directories only&lt;/h3&gt;
+     * &lt;pre&gt;
+     *  // only copy the directory structure
+     *  FileUtils.copyDirectory(srcDir, destDir, DirectoryFileFilter.DIRECTORY, false);
+     *  &lt;/pre&gt;
+     *
+     * &lt;h3&gt;Example: Copy directories and txt files&lt;/h3&gt;
+     * &lt;pre&gt;
+     *  // Create a filter for &quot;.txt&quot; files
+     *  IOFileFilter txtSuffixFilter = FileFilterUtils.suffixFileFilter(&quot;.txt&quot;);
+     *  IOFileFilter txtFiles = FileFilterUtils.andFileFilter(FileFileFilter.FILE, txtSuffixFilter);
+     *
+     *  // Create a filter for either directories or &quot;.txt&quot; files
+     *  FileFilter filter = FileFilterUtils.orFileFilter(DirectoryFileFilter.DIRECTORY, txtFiles);
+     *
+     *  // Copy using the filter
+     *  FileUtils.copyDirectory(srcDir, destDir, filter, false);
+     *  &lt;/pre&gt;
+     *
+     * @param srcDir           an existing directory to copy, must not be {@code null}
+     * @param destDir          the new directory, must not be {@code null}
+     * @param filter           the filter to apply, null means copy all directories and files
+     * @param preserveFileDate true if the file date of the copy
+     *                         should be the same as the original
+     *
+     * @throws NullPointerException if source or destination is {@code null}
+     * @throws IOException          if source or destination is invalid
+     * @throws IOException          if an IO error occurs during copying
+     * @since 1.4
+     */
+    public static void copyDirectory(final File srcDir, final File destDir,
+                                     final FileFilter filter, final boolean preserveFileDate) throws IOException {
+<span class="fc" id="L1346">        checkFileRequirements(srcDir, destDir);</span>
+<span class="fc bfc" id="L1347" title="All 2 branches covered.">        if (!srcDir.isDirectory()) {</span>
+<span class="fc" id="L1348">            throw new IOException(&quot;Source '&quot; + srcDir + &quot;' exists but is not a directory&quot;);</span>
+        }
+<span class="fc bfc" id="L1350" title="All 2 branches covered.">        if (srcDir.getCanonicalPath().equals(destDir.getCanonicalPath())) {</span>
+<span class="fc" id="L1351">            throw new IOException(&quot;Source '&quot; + srcDir + &quot;' and destination '&quot; + destDir + &quot;' are the same&quot;);</span>
+        }
+
+        // Cater for destination being directory within the source directory (see IO-141)
+<span class="fc" id="L1355">        List&lt;String&gt; exclusionList = null;</span>
+<span class="fc bfc" id="L1356" title="All 2 branches covered.">        if (destDir.getCanonicalPath().startsWith(srcDir.getCanonicalPath())) {</span>
+<span class="pc bpc" id="L1357" title="1 of 2 branches missed.">            final File[] srcFiles = filter == null ? srcDir.listFiles() : srcDir.listFiles(filter);</span>
+<span class="pc bpc" id="L1358" title="1 of 4 branches missed.">            if (srcFiles != null &amp;&amp; srcFiles.length &gt; 0) {</span>
+<span class="fc" id="L1359">                exclusionList = new ArrayList&lt;&gt;(srcFiles.length);</span>
+<span class="fc bfc" id="L1360" title="All 2 branches covered.">                for (final File srcFile : srcFiles) {</span>
+<span class="fc" id="L1361">                    final File copiedFile = new File(destDir, srcFile.getName());</span>
+<span class="fc" id="L1362">                    exclusionList.add(copiedFile.getCanonicalPath());</span>
+                }
+            }
+        }
+<span class="fc" id="L1366">        doCopyDirectory(srcDir, destDir, filter, preserveFileDate, exclusionList);</span>
+<span class="fc" id="L1367">    }</span>
+
+    /**
+     * checks requirements for file copy
+     * @param src the source file
+     * @param dest the destination
+     * @throws FileNotFoundException if the destination does not exist
+     */
+    private static void checkFileRequirements(final File src, final File dest) throws FileNotFoundException {
+<span class="fc bfc" id="L1376" title="All 2 branches covered.">        if (src == null) {</span>
+<span class="fc" id="L1377">            throw new NullPointerException(&quot;Source must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L1379" title="All 2 branches covered.">        if (dest == null) {</span>
+<span class="fc" id="L1380">            throw new NullPointerException(&quot;Destination must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L1382" title="All 2 branches covered.">        if (!src.exists()) {</span>
+<span class="fc" id="L1383">            throw new FileNotFoundException(&quot;Source '&quot; + src + &quot;' does not exist&quot;);</span>
+        }
+<span class="fc" id="L1385">    }</span>
+
+    /**
+     * Internal copy directory method.
+     *
+     * @param srcDir           the validated source directory, must not be {@code null}
+     * @param destDir          the validated destination directory, must not be {@code null}
+     * @param filter           the filter to apply, null means copy all directories and files
+     * @param preserveFileDate whether to preserve the file date
+     * @param exclusionList    List of files and directories to exclude from the copy, may be null
+     * @throws IOException if an error occurs
+     * @since 1.1
+     */
+    private static void doCopyDirectory(final File srcDir, final File destDir, final FileFilter filter,
+                                        final boolean preserveFileDate, final List&lt;String&gt; exclusionList)
+            throws IOException {
+        // recurse
+<span class="fc bfc" id="L1402" title="All 2 branches covered.">        final File[] srcFiles = filter == null ? srcDir.listFiles() : srcDir.listFiles(filter);</span>
+<span class="pc bpc" id="L1403" title="1 of 2 branches missed.">        if (srcFiles == null) {  // null if abstract pathname does not denote a directory, or if an I/O error occurs</span>
+<span class="nc" id="L1404">            throw new IOException(&quot;Failed to list contents of &quot; + srcDir);</span>
+        }
+<span class="fc bfc" id="L1406" title="All 2 branches covered.">        if (destDir.exists()) {</span>
+<span class="fc bfc" id="L1407" title="All 2 branches covered.">            if (destDir.isDirectory() == false) {</span>
+<span class="fc" id="L1408">                throw new IOException(&quot;Destination '&quot; + destDir + &quot;' exists but is not a directory&quot;);</span>
+            }
+        } else {
+<span class="pc bpc" id="L1411" title="3 of 4 branches missed.">            if (!destDir.mkdirs() &amp;&amp; !destDir.isDirectory()) {</span>
+<span class="nc" id="L1412">                throw new IOException(&quot;Destination '&quot; + destDir + &quot;' directory cannot be created&quot;);</span>
+            }
+        }
+<span class="pc bpc" id="L1415" title="1 of 2 branches missed.">        if (destDir.canWrite() == false) {</span>
+<span class="nc" id="L1416">            throw new IOException(&quot;Destination '&quot; + destDir + &quot;' cannot be written to&quot;);</span>
+        }
+<span class="fc bfc" id="L1418" title="All 2 branches covered.">        for (final File srcFile : srcFiles) {</span>
+<span class="fc" id="L1419">            final File dstFile = new File(destDir, srcFile.getName());</span>
+<span class="fc bfc" id="L1420" title="All 4 branches covered.">            if (exclusionList == null || !exclusionList.contains(srcFile.getCanonicalPath())) {</span>
+<span class="fc bfc" id="L1421" title="All 2 branches covered.">                if (srcFile.isDirectory()) {</span>
+<span class="fc" id="L1422">                    doCopyDirectory(srcFile, dstFile, filter, preserveFileDate, exclusionList);</span>
+<span class="fc" id="L1423">                } else {</span>
+<span class="fc" id="L1424">                    doCopyFile(srcFile, dstFile, preserveFileDate);</span>
+                }
+            }
+        }
+
+        // Do this last, as the above has probably affected directory metadata
+<span class="fc bfc" id="L1430" title="All 2 branches covered.">        if (preserveFileDate) {</span>
+<span class="fc" id="L1431">            destDir.setLastModified(srcDir.lastModified());</span>
+        }
+<span class="fc" id="L1433">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Copies bytes from the URL &lt;code&gt;source&lt;/code&gt; to a file
+     * &lt;code&gt;destination&lt;/code&gt;. The directories up to &lt;code&gt;destination&lt;/code&gt;
+     * will be created if they don't already exist. &lt;code&gt;destination&lt;/code&gt;
+     * will be overwritten if it already exists.
+     * &lt;p&gt;
+     * Warning: this method does not set a connection or read timeout and thus
+     * might block forever. Use {@link #copyURLToFile(URL, File, int, int)}
+     * with reasonable timeouts to prevent this.
+     *
+     * @param source      the &lt;code&gt;URL&lt;/code&gt; to copy bytes from, must not be {@code null}
+     * @param destination the non-directory &lt;code&gt;File&lt;/code&gt; to write bytes to
+     *                    (possibly overwriting), must not be {@code null}
+     * @throws IOException if &lt;code&gt;source&lt;/code&gt; URL cannot be opened
+     * @throws IOException if &lt;code&gt;destination&lt;/code&gt; is a directory
+     * @throws IOException if &lt;code&gt;destination&lt;/code&gt; cannot be written
+     * @throws IOException if &lt;code&gt;destination&lt;/code&gt; needs creating but can't be
+     * @throws IOException if an IO error occurs during copying
+     */
+    public static void copyURLToFile(final URL source, final File destination) throws IOException {
+<span class="fc" id="L1456">        copyInputStreamToFile(source.openStream(), destination);</span>
+<span class="fc" id="L1457">    }</span>
+
+    /**
+     * Copies bytes from the URL &lt;code&gt;source&lt;/code&gt; to a file
+     * &lt;code&gt;destination&lt;/code&gt;. The directories up to &lt;code&gt;destination&lt;/code&gt;
+     * will be created if they don't already exist. &lt;code&gt;destination&lt;/code&gt;
+     * will be overwritten if it already exists.
+     *
+     * @param source            the &lt;code&gt;URL&lt;/code&gt; to copy bytes from, must not be {@code null}
+     * @param destination       the non-directory &lt;code&gt;File&lt;/code&gt; to write bytes to
+     *                          (possibly overwriting), must not be {@code null}
+     * @param connectionTimeout the number of milliseconds until this method
+     *                          will timeout if no connection could be established to the &lt;code&gt;source&lt;/code&gt;
+     * @param readTimeout       the number of milliseconds until this method will
+     *                          timeout if no data could be read from the &lt;code&gt;source&lt;/code&gt;
+     * @throws IOException if &lt;code&gt;source&lt;/code&gt; URL cannot be opened
+     * @throws IOException if &lt;code&gt;destination&lt;/code&gt; is a directory
+     * @throws IOException if &lt;code&gt;destination&lt;/code&gt; cannot be written
+     * @throws IOException if &lt;code&gt;destination&lt;/code&gt; needs creating but can't be
+     * @throws IOException if an IO error occurs during copying
+     * @since 2.0
+     */
+    public static void copyURLToFile(final URL source, final File destination,
+                                     final int connectionTimeout, final int readTimeout) throws IOException {
+<span class="fc" id="L1481">        final URLConnection connection = source.openConnection();</span>
+<span class="fc" id="L1482">        connection.setConnectTimeout(connectionTimeout);</span>
+<span class="fc" id="L1483">        connection.setReadTimeout(readTimeout);</span>
+<span class="fc" id="L1484">        copyInputStreamToFile(connection.getInputStream(), destination);</span>
+<span class="fc" id="L1485">    }</span>
+
+    /**
+     * Copies bytes from an {@link InputStream} &lt;code&gt;source&lt;/code&gt; to a file
+     * &lt;code&gt;destination&lt;/code&gt;. The directories up to &lt;code&gt;destination&lt;/code&gt;
+     * will be created if they don't already exist. &lt;code&gt;destination&lt;/code&gt;
+     * will be overwritten if it already exists.
+     * The {@code source} stream is closed.
+     * See {@link #copyToFile(InputStream, File)} for a method that does not close the input stream.
+     *
+     * @param source      the &lt;code&gt;InputStream&lt;/code&gt; to copy bytes from, must not be {@code null}, will be closed
+     * @param destination the non-directory &lt;code&gt;File&lt;/code&gt; to write bytes to
+     *                    (possibly overwriting), must not be {@code null}
+     * @throws IOException if &lt;code&gt;destination&lt;/code&gt; is a directory
+     * @throws IOException if &lt;code&gt;destination&lt;/code&gt; cannot be written
+     * @throws IOException if &lt;code&gt;destination&lt;/code&gt; needs creating but can't be
+     * @throws IOException if an IO error occurs during copying
+     * @since 2.0
+     */
+    public static void copyInputStreamToFile(final InputStream source, final File destination) throws IOException {
+<span class="fc" id="L1505">        try (InputStream in = source) {</span>
+<span class="fc" id="L1506">            copyToFile(in, destination);</span>
+<span class="pc bpc" id="L1507" title="7 of 8 branches missed.">        }</span>
+<span class="fc" id="L1508">    }</span>
+
+    /**
+     * Copies bytes from an {@link InputStream} &lt;code&gt;source&lt;/code&gt; to a file
+     * &lt;code&gt;destination&lt;/code&gt;. The directories up to &lt;code&gt;destination&lt;/code&gt;
+     * will be created if they don't already exist. &lt;code&gt;destination&lt;/code&gt;
+     * will be overwritten if it already exists.
+     * The {@code source} stream is left open, e.g. for use with {@link java.util.zip.ZipInputStream ZipInputStream}.
+     * See {@link #copyInputStreamToFile(InputStream, File)} for a method that closes the input stream.
+     *
+     * @param source      the &lt;code&gt;InputStream&lt;/code&gt; to copy bytes from, must not be {@code null}
+     * @param destination the non-directory &lt;code&gt;File&lt;/code&gt; to write bytes to
+     *                    (possibly overwriting), must not be {@code null}
+     * @throws IOException if &lt;code&gt;destination&lt;/code&gt; is a directory
+     * @throws IOException if &lt;code&gt;destination&lt;/code&gt; cannot be written
+     * @throws IOException if &lt;code&gt;destination&lt;/code&gt; needs creating but can't be
+     * @throws IOException if an IO error occurs during copying
+     * @since 2.5
+     */
+    public static void copyToFile(final InputStream source, final File destination) throws IOException {
+<span class="fc" id="L1528">        try (InputStream in = source;</span>
+<span class="fc" id="L1529">             OutputStream out = openOutputStream(destination)) {</span>
+<span class="fc" id="L1530">            IOUtils.copy(in, out);</span>
+<span class="pc bpc" id="L1531" title="14 of 16 branches missed.">        }</span>
+<span class="fc" id="L1532">    }</span>
+
+    /**
+     * Copies a file or directory to within another directory preserving the file dates.
+     * &lt;p&gt;
+     * This method copies the source file or directory, along all its contents, to a
+     * directory of the same name in the specified destination directory.
+     * &lt;p&gt;
+     * The destination directory is created if it does not exist.
+     * If the destination directory did exist, then this method merges
+     * the source with the destination, with the source taking precedence.
+     * &lt;p&gt;
+     * &lt;strong&gt;Note:&lt;/strong&gt; This method tries to preserve the files' last
+     * modified date/times using {@link File#setLastModified(long)}, however
+     * it is not guaranteed that those operations will succeed.
+     * If the modification operation fails, no indication is provided.
+     *
+     * @param src      an existing file or directory to copy, must not be {@code null}
+     * @param destDir  the directory to place the copy in, must not be {@code null}
+     *
+     * @throws NullPointerException if source or destination is {@code null}
+     * @throws IOException if source or destination is invalid
+     * @throws IOException if an IO error occurs during copying
+     * @see #copyDirectoryToDirectory(File, File)
+     * @see #copyFileToDirectory(File, File)
+     * @since 2.6
+     */
+    public static void copyToDirectory(final File src, final File destDir) throws IOException {
+<span class="fc bfc" id="L1560" title="All 2 branches covered.">        if (src == null) {</span>
+<span class="fc" id="L1561">            throw new NullPointerException(&quot;Source must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L1563" title="All 2 branches covered.">        if (src.isFile()) {</span>
+<span class="fc" id="L1564">            copyFileToDirectory(src, destDir);</span>
+<span class="fc bfc" id="L1565" title="All 2 branches covered.">        } else if (src.isDirectory()) {</span>
+<span class="fc" id="L1566">            copyDirectoryToDirectory(src, destDir);</span>
+<span class="fc" id="L1567">        } else {</span>
+<span class="fc" id="L1568">            throw new IOException(&quot;The source &quot; + src + &quot; does not exist&quot;);</span>
+        }
+<span class="fc" id="L1570">    }</span>
+
+    /**
+     * Copies a files to a directory preserving each file's date.
+     * &lt;p&gt;
+     * This method copies the contents of the specified source files
+     * to a file of the same name in the specified destination directory.
+     * The destination directory is created if it does not exist.
+     * If the destination file exists, then this method will overwrite it.
+     * &lt;p&gt;
+     * &lt;strong&gt;Note:&lt;/strong&gt; This method tries to preserve the file's last
+     * modified date/times using {@link File#setLastModified(long)}, however
+     * it is not guaranteed that the operation will succeed.
+     * If the modification operation fails, no indication is provided.
+     *
+     * @param srcs     a existing files to copy, must not be {@code null}
+     * @param destDir  the directory to place the copy in, must not be {@code null}
+     *
+     * @throws NullPointerException if source or destination is null
+     * @throws IOException if source or destination is invalid
+     * @throws IOException if an IO error occurs during copying
+     * @see #copyFileToDirectory(File, File)
+     * @since 2.6
+     */
+    public static void copyToDirectory(final Iterable&lt;File&gt; srcs, final File destDir) throws IOException {
+<span class="fc bfc" id="L1595" title="All 2 branches covered.">        if (srcs == null) {</span>
+<span class="fc" id="L1596">            throw new NullPointerException(&quot;Sources must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L1598" title="All 2 branches covered.">        for (final File src : srcs) {</span>
+<span class="fc" id="L1599">            copyFileToDirectory(src, destDir);</span>
+        }
+<span class="fc" id="L1601">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Deletes a directory recursively.
+     *
+     * @param directory directory to delete
+     * @throws IOException              in case deletion is unsuccessful
+     * @throws IllegalArgumentException if {@code directory} does not exist or is not a directory
+     */
+    public static void deleteDirectory(final File directory) throws IOException {
+<span class="fc bfc" id="L1612" title="All 2 branches covered.">        if (!directory.exists()) {</span>
+<span class="fc" id="L1613">            return;</span>
+        }
+
+<span class="fc bfc" id="L1616" title="All 2 branches covered.">        if (!isSymlink(directory)) {</span>
+<span class="fc" id="L1617">            cleanDirectory(directory);</span>
+        }
+
+<span class="pc bpc" id="L1620" title="1 of 2 branches missed.">        if (!directory.delete()) {</span>
+<span class="nc" id="L1621">            final String message =</span>
+<span class="nc" id="L1622">                    &quot;Unable to delete directory &quot; + directory + &quot;.&quot;;</span>
+<span class="nc" id="L1623">            throw new IOException(message);</span>
+        }
+<span class="fc" id="L1625">    }</span>
+
+    /**
+     * Deletes a file, never throwing an exception. If file is a directory, delete it and all sub-directories.
+     * &lt;p&gt;
+     * The difference between File.delete() and this method are:
+     * &lt;ul&gt;
+     * &lt;li&gt;A directory to be deleted does not have to be empty.&lt;/li&gt;
+     * &lt;li&gt;No exceptions are thrown when a file or directory cannot be deleted.&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * @param file file or directory to delete, can be {@code null}
+     * @return {@code true} if the file or directory was deleted, otherwise
+     * {@code false}
+     *
+     * @since 1.4
+     */
+    public static boolean deleteQuietly(final File file) {
+<span class="fc bfc" id="L1643" title="All 2 branches covered.">        if (file == null) {</span>
+<span class="fc" id="L1644">            return false;</span>
+        }
+        try {
+<span class="fc bfc" id="L1647" title="All 2 branches covered.">            if (file.isDirectory()) {</span>
+<span class="fc" id="L1648">                cleanDirectory(file);</span>
+            }
+<span class="pc" id="L1650">        } catch (final Exception ignored) {</span>
+        }
+
+        try {
+<span class="fc" id="L1654">            return file.delete();</span>
+<span class="nc" id="L1655">        } catch (final Exception ignored) {</span>
+<span class="nc" id="L1656">            return false;</span>
+        }
+    }
+
+    /**
+     * Determines whether the {@code parent} directory contains the {@code child} element (a file or directory).
+     * &lt;p&gt;
+     * Files are normalized before comparison.
+     * &lt;/p&gt;
+     *
+     * Edge cases:
+     * &lt;ul&gt;
+     * &lt;li&gt;A {@code directory} must not be null: if null, throw IllegalArgumentException&lt;/li&gt;
+     * &lt;li&gt;A {@code directory} must be a directory: if not a directory, throw IllegalArgumentException&lt;/li&gt;
+     * &lt;li&gt;A directory does not contain itself: return false&lt;/li&gt;
+     * &lt;li&gt;A null child file is not contained in any parent: return false&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * @param directory the file to consider as the parent.
+     * @param child     the file to consider as the child.
+     * @return true is the candidate leaf is under by the specified composite. False otherwise.
+     * @throws IOException              if an IO error occurs while checking the files.
+     * @throws IllegalArgumentException if {@code directory} is null or not a directory.
+     * @see FilenameUtils#directoryContains(String, String)
+     * @since 2.2
+     */
+    public static boolean directoryContains(final File directory, final File child) throws IOException {
+
+        // Fail fast against NullPointerException
+<span class="pc bpc" id="L1685" title="1 of 2 branches missed.">        if (directory == null) {</span>
+<span class="nc" id="L1686">            throw new IllegalArgumentException(&quot;Directory must not be null&quot;);</span>
+        }
+
+<span class="fc bfc" id="L1689" title="All 2 branches covered.">        if (!directory.isDirectory()) {</span>
+<span class="fc" id="L1690">            throw new IllegalArgumentException(&quot;Not a directory: &quot; + directory);</span>
+        }
+
+<span class="fc bfc" id="L1693" title="All 2 branches covered.">        if (child == null) {</span>
+<span class="fc" id="L1694">            return false;</span>
+        }
+
+<span class="pc bpc" id="L1697" title="1 of 4 branches missed.">        if (!directory.exists() || !child.exists()) {</span>
+<span class="fc" id="L1698">            return false;</span>
+        }
+
+        // Canonicalize paths (normalizes relative paths)
+<span class="fc" id="L1702">        final String canonicalParent = directory.getCanonicalPath();</span>
+<span class="fc" id="L1703">        final String canonicalChild = child.getCanonicalPath();</span>
+
+<span class="fc" id="L1705">        return FilenameUtils.directoryContains(canonicalParent, canonicalChild);</span>
+    }
+
+    /**
+     * Cleans a directory without deleting it.
+     *
+     * @param directory directory to clean
+     * @throws IOException              in case cleaning is unsuccessful
+     * @throws IllegalArgumentException if {@code directory} does not exist or is not a directory
+     */
+    public static void cleanDirectory(final File directory) throws IOException {
+<span class="fc" id="L1716">        final File[] files = verifiedListFiles(directory);</span>
+
+<span class="fc" id="L1718">        IOException exception = null;</span>
+<span class="fc bfc" id="L1719" title="All 2 branches covered.">        for (final File file : files) {</span>
+            try {
+<span class="fc" id="L1721">                forceDelete(file);</span>
+<span class="fc" id="L1722">            } catch (final IOException ioe) {</span>
+<span class="fc" id="L1723">                exception = ioe;</span>
+            }
+        }
+
+<span class="fc bfc" id="L1727" title="All 2 branches covered.">        if (null != exception) {</span>
+<span class="fc" id="L1728">            throw exception;</span>
+        }
+<span class="fc" id="L1730">    }</span>
+
+    /**
+     * Lists files in a directory, asserting that the supplied directory satisfies exists and is a directory
+     * @param directory The directory to list
+     * @return The files in the directory, never null.
+     * @throws IOException if an I/O error occurs
+     */
+    private static File[] verifiedListFiles(final File directory) throws IOException {
+<span class="pc bpc" id="L1739" title="1 of 2 branches missed.">        if (!directory.exists()) {</span>
+<span class="nc" id="L1740">            final String message = directory + &quot; does not exist&quot;;</span>
+<span class="nc" id="L1741">            throw new IllegalArgumentException(message);</span>
+        }
+
+<span class="fc bfc" id="L1744" title="All 2 branches covered.">        if (!directory.isDirectory()) {</span>
+<span class="fc" id="L1745">            final String message = directory + &quot; is not a directory&quot;;</span>
+<span class="fc" id="L1746">            throw new IllegalArgumentException(message);</span>
+        }
+
+<span class="fc" id="L1749">        final File[] files = directory.listFiles();</span>
+<span class="fc bfc" id="L1750" title="All 2 branches covered.">        if (files == null) {  // null if security restricted</span>
+<span class="fc" id="L1751">            throw new IOException(&quot;Failed to list contents of &quot; + directory);</span>
+        }
+<span class="fc" id="L1753">        return files;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Waits for NFS to propagate a file creation, imposing a timeout.
+     * &lt;p&gt;
+     * This method repeatedly tests {@link File#exists()} until it returns
+     * true up to the maximum time specified in seconds.
+     *
+     * @param file    the file to check, must not be {@code null}
+     * @param seconds the maximum time in seconds to wait
+     * @return true if file exists
+     * @throws NullPointerException if the file is {@code null}
+     */
+    public static boolean waitFor(final File file, final int seconds) {
+<span class="fc" id="L1769">        final long finishAt = System.currentTimeMillis() + (seconds * 1000L);</span>
+<span class="fc" id="L1770">        boolean wasInterrupted = false;</span>
+        try {
+<span class="pc bpc" id="L1772" title="1 of 2 branches missed.">            while (!file.exists()) {</span>
+<span class="fc" id="L1773">                final long remaining = finishAt -  System.currentTimeMillis();</span>
+<span class="fc bfc" id="L1774" title="All 2 branches covered.">                if (remaining &lt; 0){</span>
+<span class="fc" id="L1775">                    return false;</span>
+                }
+                try {
+<span class="fc" id="L1778">                    Thread.sleep(Math.min(100, remaining));</span>
+<span class="fc" id="L1779">                } catch (final InterruptedException ignore) {</span>
+<span class="fc" id="L1780">                    wasInterrupted = true;</span>
+<span class="nc" id="L1781">                } catch (final Exception ex) {</span>
+<span class="nc" id="L1782">                    break;</span>
+                }
+            }
+<span class="nc" id="L1785">        } finally {</span>
+<span class="pc bpc" id="L1786" title="4 of 6 branches missed.">            if (wasInterrupted) {</span>
+<span class="pc" id="L1787">                Thread.currentThread().interrupt();</span>
+            }
+<span class="nc" id="L1789">        }</span>
+<span class="nc" id="L1790">        return true;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Reads the contents of a file into a String.
+     * The file is always closed.
+     *
+     * @param file     the file to read, must not be {@code null}
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @return the file contents, never {@code null}
+     * @throws IOException in case of an I/O error
+     * @since 2.3
+     */
+    public static String readFileToString(final File file, final Charset encoding) throws IOException {
+<span class="fc" id="L1805">        try (InputStream in = openInputStream(file)) {</span>
+<span class="pc" id="L1806">            return IOUtils.toString(in, Charsets.toCharset(encoding));</span>
+<span class="pc bpc" id="L1807" title="7 of 8 branches missed.">        }</span>
+    }
+
+    /**
+     * Reads the contents of a file into a String. The file is always closed.
+     *
+     * @param file     the file to read, must not be {@code null}
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @return the file contents, never {@code null}
+     * @throws IOException                 in case of an I/O error
+     * @throws java.nio.charset.UnsupportedCharsetException thrown instead of {@link java.io
+     * .UnsupportedEncodingException} in version 2.2 if the encoding is not supported.
+     * @since 2.3
+     */
+    public static String readFileToString(final File file, final String encoding) throws IOException {
+<span class="fc" id="L1822">        return readFileToString(file, Charsets.toCharset(encoding));</span>
+    }
+
+
+    /**
+     * Reads the contents of a file into a String using the default encoding for the VM.
+     * The file is always closed.
+     *
+     * @param file the file to read, must not be {@code null}
+     * @return the file contents, never {@code null}
+     * @throws IOException in case of an I/O error
+     * @since 1.3.1
+     * @deprecated 2.5 use {@link #readFileToString(File, Charset)} instead (and specify the appropriate encoding)
+     */
+    @Deprecated
+    public static String readFileToString(final File file) throws IOException {
+<span class="fc" id="L1838">        return readFileToString(file, Charset.defaultCharset());</span>
+    }
+
+    /**
+     * Reads the contents of a file into a byte array.
+     * The file is always closed.
+     *
+     * @param file the file to read, must not be {@code null}
+     * @return the file contents, never {@code null}
+     * @throws IOException in case of an I/O error
+     * @since 1.1
+     */
+    public static byte[] readFileToByteArray(final File file) throws IOException {
+<span class="fc" id="L1851">        try (InputStream in = openInputStream(file)) {</span>
+<span class="fc" id="L1852">            final long fileLength = file.length();</span>
+            // file.length() may return 0 for system-dependent entities, treat 0 as unknown length - see IO-453
+<span class="pc bfc" id="L1854" title="All 2 branches covered.">            return fileLength &gt; 0 ? IOUtils.toByteArray(in, fileLength) : IOUtils.toByteArray(in);</span>
+<span class="pc bpc" id="L1855" title="7 of 8 branches missed.">        }</span>
+    }
+
+    /**
+     * Reads the contents of a file line by line to a List of Strings.
+     * The file is always closed.
+     *
+     * @param file     the file to read, must not be {@code null}
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @return the list of Strings representing each line in the file, never {@code null}
+     * @throws IOException in case of an I/O error
+     * @since 2.3
+     */
+    public static List&lt;String&gt; readLines(final File file, final Charset encoding) throws IOException {
+<span class="fc" id="L1869">        try (InputStream in = openInputStream(file)) {</span>
+<span class="pc" id="L1870">            return IOUtils.readLines(in, Charsets.toCharset(encoding));</span>
+<span class="pc bpc" id="L1871" title="7 of 8 branches missed.">        }</span>
+    }
+
+    /**
+     * Reads the contents of a file line by line to a List of Strings. The file is always closed.
+     *
+     * @param file     the file to read, must not be {@code null}
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @return the list of Strings representing each line in the file, never {@code null}
+     * @throws IOException                 in case of an I/O error
+     * @throws java.nio.charset.UnsupportedCharsetException thrown instead of {@link java.io
+     * .UnsupportedEncodingException} in version 2.2 if the encoding is not supported.
+     * @since 1.1
+     */
+    public static List&lt;String&gt; readLines(final File file, final String encoding) throws IOException {
+<span class="fc" id="L1886">        return readLines(file, Charsets.toCharset(encoding));</span>
+    }
+
+    /**
+     * Reads the contents of a file line by line to a List of Strings using the default encoding for the VM.
+     * The file is always closed.
+     *
+     * @param file the file to read, must not be {@code null}
+     * @return the list of Strings representing each line in the file, never {@code null}
+     * @throws IOException in case of an I/O error
+     * @since 1.3
+     * @deprecated 2.5 use {@link #readLines(File, Charset)} instead (and specify the appropriate encoding)
+     */
+    @Deprecated
+    public static List&lt;String&gt; readLines(final File file) throws IOException {
+<span class="nc" id="L1901">        return readLines(file, Charset.defaultCharset());</span>
+    }
+
+    /**
+     * Returns an Iterator for the lines in a &lt;code&gt;File&lt;/code&gt;.
+     * &lt;p&gt;
+     * This method opens an &lt;code&gt;InputStream&lt;/code&gt; for the file.
+     * When you have finished with the iterator you should close the stream
+     * to free internal resources. This can be done by calling the
+     * {@link LineIterator#close()} or
+     * {@link LineIterator#closeQuietly(LineIterator)} method.
+     * &lt;p&gt;
+     * The recommended usage pattern is:
+     * &lt;pre&gt;
+     * LineIterator it = FileUtils.lineIterator(file, &quot;UTF-8&quot;);
+     * try {
+     *   while (it.hasNext()) {
+     *     String line = it.nextLine();
+     *     /// do something with line
+     *   }
+     * } finally {
+     *   LineIterator.closeQuietly(iterator);
+     * }
+     * &lt;/pre&gt;
+     * &lt;p&gt;
+     * If an exception occurs during the creation of the iterator, the
+     * underlying stream is closed.
+     *
+     * @param file     the file to open for input, must not be {@code null}
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @return an Iterator of the lines in the file, never {@code null}
+     * @throws IOException in case of an I/O error (file closed)
+     * @since 1.2
+     */
+    public static LineIterator lineIterator(final File file, final String encoding) throws IOException {
+<span class="fc" id="L1936">        InputStream in = null;</span>
+        try {
+<span class="fc" id="L1938">            in = openInputStream(file);</span>
+<span class="fc" id="L1939">            return IOUtils.lineIterator(in, encoding);</span>
+<span class="fc" id="L1940">        } catch (final IOException | RuntimeException ex) {</span>
+            try {
+<span class="fc bfc" id="L1942" title="All 2 branches covered.">                if (in != null) {</span>
+<span class="fc" id="L1943">                    in.close();</span>
+                }
+<span class="fc" id="L1945">            }</span>
+<span class="nc" id="L1946">            catch (final IOException e) {</span>
+<span class="nc" id="L1947">                ex.addSuppressed(e);</span>
+            }
+<span class="fc" id="L1949">            throw ex;</span>
+        }
+    }
+
+    /**
+     * Returns an Iterator for the lines in a &lt;code&gt;File&lt;/code&gt; using the default encoding for the VM.
+     *
+     * @param file the file to open for input, must not be {@code null}
+     * @return an Iterator of the lines in the file, never {@code null}
+     * @throws IOException in case of an I/O error (file closed)
+     * @see #lineIterator(File, String)
+     * @since 1.3
+     */
+    public static LineIterator lineIterator(final File file) throws IOException {
+<span class="fc" id="L1963">        return lineIterator(file, null);</span>
+    }
+
+    //-----------------------------------------------------------------------
+
+    /**
+     * Writes a String to a file creating the file if it does not exist.
+     * &lt;p&gt;
+     * NOTE: As from v1.3, the parent directories of the file will be created
+     * if they do not exist.
+     *
+     * @param file     the file to write
+     * @param data     the content to write to the file
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @throws IOException                          in case of an I/O error
+     * @throws java.io.UnsupportedEncodingException if the encoding is not supported by the VM
+     * @since 2.4
+     */
+    public static void writeStringToFile(final File file, final String data, final Charset encoding)
+            throws IOException {
+<span class="fc" id="L1983">        writeStringToFile(file, data, encoding, false);</span>
+<span class="fc" id="L1984">    }</span>
+
+    /**
+     * Writes a String to a file creating the file if it does not exist.
+     * &lt;p&gt;
+     * NOTE: As from v1.3, the parent directories of the file will be created
+     * if they do not exist.
+     *
+     * @param file     the file to write
+     * @param data     the content to write to the file
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @throws IOException                          in case of an I/O error
+     * @throws java.io.UnsupportedEncodingException if the encoding is not supported by the VM
+     */
+    public static void writeStringToFile(final File file, final String data, final String encoding) throws IOException {
+<span class="fc" id="L1999">        writeStringToFile(file, data, encoding, false);</span>
+<span class="fc" id="L2000">    }</span>
+
+    /**
+     * Writes a String to a file creating the file if it does not exist.
+     *
+     * @param file     the file to write
+     * @param data     the content to write to the file
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @param append   if {@code true}, then the String will be added to the
+     *                 end of the file rather than overwriting
+     * @throws IOException in case of an I/O error
+     * @since 2.3
+     */
+    public static void writeStringToFile(final File file, final String data, final Charset encoding,
+                                         final boolean append) throws IOException {
+<span class="fc" id="L2015">        try (OutputStream out = openOutputStream(file, append)) {</span>
+<span class="fc" id="L2016">            IOUtils.write(data, out, encoding);</span>
+<span class="pc bpc" id="L2017" title="7 of 8 branches missed.">        }</span>
+<span class="fc" id="L2018">    }</span>
+
+    /**
+     * Writes a String to a file creating the file if it does not exist.
+     *
+     * @param file     the file to write
+     * @param data     the content to write to the file
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @param append   if {@code true}, then the String will be added to the
+     *                 end of the file rather than overwriting
+     * @throws IOException                 in case of an I/O error
+     * @throws java.nio.charset.UnsupportedCharsetException thrown instead of {@link java.io
+     * .UnsupportedEncodingException} in version 2.2 if the encoding is not supported by the VM
+     * @since 2.1
+     */
+    public static void writeStringToFile(final File file, final String data, final String encoding,
+                                         final boolean append) throws IOException {
+<span class="fc" id="L2035">        writeStringToFile(file, data, Charsets.toCharset(encoding), append);</span>
+<span class="fc" id="L2036">    }</span>
+
+    /**
+     * Writes a String to a file creating the file if it does not exist using the default encoding for the VM.
+     *
+     * @param file the file to write
+     * @param data the content to write to the file
+     * @throws IOException in case of an I/O error
+     * @deprecated 2.5 use {@link #writeStringToFile(File, String, Charset)} instead (and specify the appropriate encoding)
+     */
+    @Deprecated
+    public static void writeStringToFile(final File file, final String data) throws IOException {
+<span class="fc" id="L2048">        writeStringToFile(file, data, Charset.defaultCharset(), false);</span>
+<span class="fc" id="L2049">    }</span>
+
+    /**
+     * Writes a String to a file creating the file if it does not exist using the default encoding for the VM.
+     *
+     * @param file   the file to write
+     * @param data   the content to write to the file
+     * @param append if {@code true}, then the String will be added to the
+     *               end of the file rather than overwriting
+     * @throws IOException in case of an I/O error
+     * @since 2.1
+     * @deprecated 2.5 use {@link #writeStringToFile(File, String, Charset, boolean)} instead (and specify the appropriate encoding)
+     */
+    @Deprecated
+    public static void writeStringToFile(final File file, final String data, final boolean append) throws IOException {
+<span class="fc" id="L2064">        writeStringToFile(file, data, Charset.defaultCharset(), append);</span>
+<span class="fc" id="L2065">    }</span>
+
+    /**
+     * Writes a CharSequence to a file creating the file if it does not exist using the default encoding for the VM.
+     *
+     * @param file the file to write
+     * @param data the content to write to the file
+     * @throws IOException in case of an I/O error
+     * @since 2.0
+     * @deprecated 2.5 use {@link #write(File, CharSequence, Charset)} instead (and specify the appropriate encoding)
+     */
+    @Deprecated
+    public static void write(final File file, final CharSequence data) throws IOException {
+<span class="fc" id="L2078">        write(file, data, Charset.defaultCharset(), false);</span>
+<span class="fc" id="L2079">    }</span>
+
+    /**
+     * Writes a CharSequence to a file creating the file if it does not exist using the default encoding for the VM.
+     *
+     * @param file   the file to write
+     * @param data   the content to write to the file
+     * @param append if {@code true}, then the data will be added to the
+     *               end of the file rather than overwriting
+     * @throws IOException in case of an I/O error
+     * @since 2.1
+     * @deprecated 2.5 use {@link #write(File, CharSequence, Charset, boolean)} instead (and specify the appropriate encoding)
+     */
+    @Deprecated
+    public static void write(final File file, final CharSequence data, final boolean append) throws IOException {
+<span class="fc" id="L2094">        write(file, data, Charset.defaultCharset(), append);</span>
+<span class="fc" id="L2095">    }</span>
+
+    /**
+     * Writes a CharSequence to a file creating the file if it does not exist.
+     *
+     * @param file     the file to write
+     * @param data     the content to write to the file
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @throws IOException in case of an I/O error
+     * @since 2.3
+     */
+    public static void write(final File file, final CharSequence data, final Charset encoding) throws IOException {
+<span class="fc" id="L2107">        write(file, data, encoding, false);</span>
+<span class="fc" id="L2108">    }</span>
+
+    /**
+     * Writes a CharSequence to a file creating the file if it does not exist.
+     *
+     * @param file     the file to write
+     * @param data     the content to write to the file
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @throws IOException                          in case of an I/O error
+     * @throws java.io.UnsupportedEncodingException if the encoding is not supported by the VM
+     * @since 2.0
+     */
+    public static void write(final File file, final CharSequence data, final String encoding) throws IOException {
+<span class="fc" id="L2121">        write(file, data, encoding, false);</span>
+<span class="fc" id="L2122">    }</span>
+
+    /**
+     * Writes a CharSequence to a file creating the file if it does not exist.
+     *
+     * @param file     the file to write
+     * @param data     the content to write to the file
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @param append   if {@code true}, then the data will be added to the
+     *                 end of the file rather than overwriting
+     * @throws IOException in case of an I/O error
+     * @since 2.3
+     */
+    public static void write(final File file, final CharSequence data, final Charset encoding, final boolean append)
+            throws IOException {
+<span class="pc bpc" id="L2137" title="1 of 2 branches missed.">        final String str = data == null ? null : data.toString();</span>
+<span class="fc" id="L2138">        writeStringToFile(file, str, encoding, append);</span>
+<span class="fc" id="L2139">    }</span>
+
+    /**
+     * Writes a CharSequence to a file creating the file if it does not exist.
+     *
+     * @param file     the file to write
+     * @param data     the content to write to the file
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @param append   if {@code true}, then the data will be added to the
+     *                 end of the file rather than overwriting
+     * @throws IOException                 in case of an I/O error
+     * @throws java.nio.charset.UnsupportedCharsetException thrown instead of {@link java.io
+     * .UnsupportedEncodingException} in version 2.2 if the encoding is not supported by the VM
+     * @since 2.1
+     */
+    public static void write(final File file, final CharSequence data, final String encoding, final boolean append)
+            throws IOException {
+<span class="fc" id="L2156">        write(file, data, Charsets.toCharset(encoding), append);</span>
+<span class="fc" id="L2157">    }</span>
+
+    /**
+     * Writes a byte array to a file creating the file if it does not exist.
+     * &lt;p&gt;
+     * NOTE: As from v1.3, the parent directories of the file will be created
+     * if they do not exist.
+     *
+     * @param file the file to write to
+     * @param data the content to write to the file
+     * @throws IOException in case of an I/O error
+     * @since 1.1
+     */
+    public static void writeByteArrayToFile(final File file, final byte[] data) throws IOException {
+<span class="fc" id="L2171">        writeByteArrayToFile(file, data, false);</span>
+<span class="fc" id="L2172">    }</span>
+
+    /**
+     * Writes a byte array to a file creating the file if it does not exist.
+     *
+     * @param file   the file to write to
+     * @param data   the content to write to the file
+     * @param append if {@code true}, then bytes will be added to the
+     *               end of the file rather than overwriting
+     * @throws IOException in case of an I/O error
+     * @since 2.1
+     */
+    public static void writeByteArrayToFile(final File file, final byte[] data, final boolean append)
+            throws IOException {
+<span class="fc" id="L2186">        writeByteArrayToFile(file, data, 0, data.length, append);</span>
+<span class="fc" id="L2187">    }</span>
+
+    /**
+     * Writes {@code len} bytes from the specified byte array starting
+     * at offset {@code off} to a file, creating the file if it does
+     * not exist.
+     *
+     * @param file the file to write to
+     * @param data the content to write to the file
+     * @param off  the start offset in the data
+     * @param len  the number of bytes to write
+     * @throws IOException in case of an I/O error
+     * @since 2.5
+     */
+    public static void writeByteArrayToFile(final File file, final byte[] data, final int off, final int len)
+            throws IOException {
+<span class="fc" id="L2203">        writeByteArrayToFile(file, data, off, len, false);</span>
+<span class="fc" id="L2204">    }</span>
+
+    /**
+     * Writes {@code len} bytes from the specified byte array starting
+     * at offset {@code off} to a file, creating the file if it does
+     * not exist.
+     *
+     * @param file   the file to write to
+     * @param data   the content to write to the file
+     * @param off    the start offset in the data
+     * @param len    the number of bytes to write
+     * @param append if {@code true}, then bytes will be added to the
+     *               end of the file rather than overwriting
+     * @throws IOException in case of an I/O error
+     * @since 2.5
+     */
+    public static void writeByteArrayToFile(final File file, final byte[] data, final int off, final int len,
+                                            final boolean append) throws IOException {
+<span class="fc" id="L2222">        try (OutputStream out = openOutputStream(file, append)) {</span>
+<span class="fc" id="L2223">            out.write(data, off, len);</span>
+<span class="pc bpc" id="L2224" title="7 of 8 branches missed.">        }</span>
+<span class="fc" id="L2225">    }</span>
+
+    /**
+     * Writes the &lt;code&gt;toString()&lt;/code&gt; value of each item in a collection to
+     * the specified &lt;code&gt;File&lt;/code&gt; line by line.
+     * The specified character encoding and the default line ending will be used.
+     * &lt;p&gt;
+     * NOTE: As from v1.3, the parent directories of the file will be created
+     * if they do not exist.
+     *
+     * @param file     the file to write to
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @param lines    the lines to write, {@code null} entries produce blank lines
+     * @throws IOException                          in case of an I/O error
+     * @throws java.io.UnsupportedEncodingException if the encoding is not supported by the VM
+     * @since 1.1
+     */
+    public static void writeLines(final File file, final String encoding, final Collection&lt;?&gt; lines)
+            throws IOException {
+<span class="fc" id="L2244">        writeLines(file, encoding, lines, null, false);</span>
+<span class="fc" id="L2245">    }</span>
+
+    /**
+     * Writes the &lt;code&gt;toString()&lt;/code&gt; value of each item in a collection to
+     * the specified &lt;code&gt;File&lt;/code&gt; line by line, optionally appending.
+     * The specified character encoding and the default line ending will be used.
+     *
+     * @param file     the file to write to
+     * @param encoding the encoding to use, {@code null} means platform default
+     * @param lines    the lines to write, {@code null} entries produce blank lines
+     * @param append   if {@code true}, then the lines will be added to the
+     *                 end of the file rather than overwriting
+     * @throws IOException                          in case of an I/O error
+     * @throws java.io.UnsupportedEncodingException if the encoding is not supported by the VM
+     * @since 2.1
+     */
+    public static void writeLines(final File file, final String encoding, final Collection&lt;?&gt; lines,
+                                  final boolean append) throws IOException {
+<span class="fc" id="L2263">        writeLines(file, encoding, lines, null, append);</span>
+<span class="fc" id="L2264">    }</span>
+
+    /**
+     * Writes the &lt;code&gt;toString()&lt;/code&gt; value of each item in a collection to
+     * the specified &lt;code&gt;File&lt;/code&gt; line by line.
+     * The default VM encoding and the default line ending will be used.
+     *
+     * @param file  the file to write to
+     * @param lines the lines to write, {@code null} entries produce blank lines
+     * @throws IOException in case of an I/O error
+     * @since 1.3
+     */
+    public static void writeLines(final File file, final Collection&lt;?&gt; lines) throws IOException {
+<span class="fc" id="L2277">        writeLines(file, null, lines, null, false);</span>
+<span class="fc" id="L2278">    }</span>
+
+    /**
+     * Writes the &lt;code&gt;toString()&lt;/code&gt; value of each item in a collection to
+     * the specified &lt;code&gt;File&lt;/code&gt; line by line.
+     * The default VM encoding and the default line ending will be used.
+     *
+     * @param file   the file to write to
+     * @param lines  the lines to write, {@code null} entries produce blank lines
+     * @param append if {@code true}, then the lines will be added to the
+     *               end of the file rather than overwriting
+     * @throws IOException in case of an I/O error
+     * @since 2.1
+     */
+    public static void writeLines(final File file, final Collection&lt;?&gt; lines, final boolean append) throws IOException {
+<span class="fc" id="L2293">        writeLines(file, null, lines, null, append);</span>
+<span class="fc" id="L2294">    }</span>
+
+    /**
+     * Writes the &lt;code&gt;toString()&lt;/code&gt; value of each item in a collection to
+     * the specified &lt;code&gt;File&lt;/code&gt; line by line.
+     * The specified character encoding and the line ending will be used.
+     * &lt;p&gt;
+     * NOTE: As from v1.3, the parent directories of the file will be created
+     * if they do not exist.
+     *
+     * @param file       the file to write to
+     * @param encoding   the encoding to use, {@code null} means platform default
+     * @param lines      the lines to write, {@code null} entries produce blank lines
+     * @param lineEnding the line separator to use, {@code null} is system default
+     * @throws IOException                          in case of an I/O error
+     * @throws java.io.UnsupportedEncodingException if the encoding is not supported by the VM
+     * @since 1.1
+     */
+    public static void writeLines(final File file, final String encoding, final Collection&lt;?&gt; lines,
+                                  final String lineEnding) throws IOException {
+<span class="fc" id="L2314">        writeLines(file, encoding, lines, lineEnding, false);</span>
+<span class="fc" id="L2315">    }</span>
+
+    /**
+     * Writes the &lt;code&gt;toString()&lt;/code&gt; value of each item in a collection to
+     * the specified &lt;code&gt;File&lt;/code&gt; line by line.
+     * The specified character encoding and the line ending will be used.
+     *
+     * @param file       the file to write to
+     * @param encoding   the encoding to use, {@code null} means platform default
+     * @param lines      the lines to write, {@code null} entries produce blank lines
+     * @param lineEnding the line separator to use, {@code null} is system default
+     * @param append     if {@code true}, then the lines will be added to the
+     *                   end of the file rather than overwriting
+     * @throws IOException                          in case of an I/O error
+     * @throws java.io.UnsupportedEncodingException if the encoding is not supported by the VM
+     * @since 2.1
+     */
+    public static void writeLines(final File file, final String encoding, final Collection&lt;?&gt; lines,
+                                  final String lineEnding, final boolean append) throws IOException {
+<span class="fc" id="L2334">        try (OutputStream out = new BufferedOutputStream(openOutputStream(file, append))) {</span>
+<span class="fc" id="L2335">            IOUtils.writeLines(lines, lineEnding, out, encoding);</span>
+<span class="pc bpc" id="L2336" title="7 of 8 branches missed.">        }</span>
+<span class="fc" id="L2337">    }</span>
+
+    /**
+     * Writes the &lt;code&gt;toString()&lt;/code&gt; value of each item in a collection to
+     * the specified &lt;code&gt;File&lt;/code&gt; line by line.
+     * The default VM encoding and the specified line ending will be used.
+     *
+     * @param file       the file to write to
+     * @param lines      the lines to write, {@code null} entries produce blank lines
+     * @param lineEnding the line separator to use, {@code null} is system default
+     * @throws IOException in case of an I/O error
+     * @since 1.3
+     */
+    public static void writeLines(final File file, final Collection&lt;?&gt; lines, final String lineEnding)
+            throws IOException {
+<span class="nc" id="L2352">        writeLines(file, null, lines, lineEnding, false);</span>
+<span class="nc" id="L2353">    }</span>
+
+    /**
+     * Writes the &lt;code&gt;toString()&lt;/code&gt; value of each item in a collection to
+     * the specified &lt;code&gt;File&lt;/code&gt; line by line.
+     * The default VM encoding and the specified line ending will be used.
+     *
+     * @param file       the file to write to
+     * @param lines      the lines to write, {@code null} entries produce blank lines
+     * @param lineEnding the line separator to use, {@code null} is system default
+     * @param append     if {@code true}, then the lines will be added to the
+     *                   end of the file rather than overwriting
+     * @throws IOException in case of an I/O error
+     * @since 2.1
+     */
+    public static void writeLines(final File file, final Collection&lt;?&gt; lines, final String lineEnding,
+                                  final boolean append) throws IOException {
+<span class="fc" id="L2370">        writeLines(file, null, lines, lineEnding, append);</span>
+<span class="fc" id="L2371">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Deletes a file. If file is a directory, delete it and all sub-directories.
+     * &lt;p&gt;
+     * The difference between File.delete() and this method are:
+     * &lt;ul&gt;
+     * &lt;li&gt;A directory to be deleted does not have to be empty.&lt;/li&gt;
+     * &lt;li&gt;You get exceptions when a file or directory cannot be deleted.
+     * (java.io.File methods returns a boolean)&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * @param file file or directory to delete, must not be {@code null}
+     * @throws NullPointerException  if the directory is {@code null}
+     * @throws FileNotFoundException if the file was not found
+     * @throws IOException           in case deletion is unsuccessful
+     */
+    public static void forceDelete(final File file) throws IOException {
+<span class="fc bfc" id="L2390" title="All 2 branches covered.">        if (file.isDirectory()) {</span>
+<span class="fc" id="L2391">            deleteDirectory(file);</span>
+<span class="fc" id="L2392">        } else {</span>
+<span class="fc" id="L2393">            final boolean filePresent = file.exists();</span>
+<span class="fc bfc" id="L2394" title="All 2 branches covered.">            if (!file.delete()) {</span>
+<span class="fc bfc" id="L2395" title="All 2 branches covered.">                if (!filePresent) {</span>
+<span class="fc" id="L2396">                    throw new FileNotFoundException(&quot;File does not exist: &quot; + file);</span>
+                }
+<span class="fc" id="L2398">                final String message =</span>
+<span class="fc" id="L2399">                        &quot;Unable to delete file: &quot; + file;</span>
+<span class="fc" id="L2400">                throw new IOException(message);</span>
+            }
+        }
+<span class="fc" id="L2403">    }</span>
+
+    /**
+     * Schedules a file to be deleted when JVM exits.
+     * If file is directory delete it and all sub-directories.
+     *
+     * @param file file or directory to delete, must not be {@code null}
+     * @throws NullPointerException if the file is {@code null}
+     * @throws IOException          in case deletion is unsuccessful
+     */
+    public static void forceDeleteOnExit(final File file) throws IOException {
+<span class="fc bfc" id="L2414" title="All 2 branches covered.">        if (file.isDirectory()) {</span>
+<span class="fc" id="L2415">            deleteDirectoryOnExit(file);</span>
+<span class="fc" id="L2416">        } else {</span>
+<span class="fc" id="L2417">            file.deleteOnExit();</span>
+        }
+<span class="fc" id="L2419">    }</span>
+
+    /**
+     * Schedules a directory recursively for deletion on JVM exit.
+     *
+     * @param directory directory to delete, must not be {@code null}
+     * @throws NullPointerException if the directory is {@code null}
+     * @throws IOException          in case deletion is unsuccessful
+     */
+    private static void deleteDirectoryOnExit(final File directory) throws IOException {
+<span class="pc bpc" id="L2429" title="1 of 2 branches missed.">        if (!directory.exists()) {</span>
+<span class="nc" id="L2430">            return;</span>
+        }
+
+<span class="fc" id="L2433">        directory.deleteOnExit();</span>
+<span class="pc bpc" id="L2434" title="1 of 2 branches missed.">        if (!isSymlink(directory)) {</span>
+<span class="fc" id="L2435">            cleanDirectoryOnExit(directory);</span>
+        }
+<span class="fc" id="L2437">    }</span>
+
+    /**
+     * Cleans a directory without deleting it.
+     *
+     * @param directory directory to clean, must not be {@code null}
+     * @throws NullPointerException if the directory is {@code null}
+     * @throws IOException          in case cleaning is unsuccessful
+     */
+    private static void cleanDirectoryOnExit(final File directory) throws IOException {
+<span class="fc" id="L2447">        final File[] files = verifiedListFiles(directory);</span>
+
+<span class="fc" id="L2449">        IOException exception = null;</span>
+<span class="fc bfc" id="L2450" title="All 2 branches covered.">        for (final File file : files) {</span>
+            try {
+<span class="fc" id="L2452">                forceDeleteOnExit(file);</span>
+<span class="pc" id="L2453">            } catch (final IOException ioe) {</span>
+<span class="nc" id="L2454">                exception = ioe;</span>
+            }
+        }
+
+<span class="pc bpc" id="L2458" title="1 of 2 branches missed.">        if (null != exception) {</span>
+<span class="nc" id="L2459">            throw exception;</span>
+        }
+<span class="fc" id="L2461">    }</span>
+
+    /**
+     * Makes a directory, including any necessary but nonexistent parent
+     * directories. If a file already exists with specified name but it is
+     * not a directory then an IOException is thrown.
+     * If the directory cannot be created (or does not already exist)
+     * then an IOException is thrown.
+     *
+     * @param directory directory to create, must not be {@code null}
+     * @throws NullPointerException if the directory is {@code null}
+     * @throws IOException          if the directory cannot be created or the file already exists but is not a directory
+     */
+    public static void forceMkdir(final File directory) throws IOException {
+<span class="fc bfc" id="L2475" title="All 2 branches covered.">        if (directory.exists()) {</span>
+<span class="fc bfc" id="L2476" title="All 2 branches covered.">            if (!directory.isDirectory()) {</span>
+<span class="fc" id="L2477">                final String message =</span>
+<span class="fc" id="L2478">                        &quot;File &quot;</span>
+<span class="fc" id="L2479">                                + directory</span>
+<span class="fc" id="L2480">                                + &quot; exists and is &quot;</span>
+<span class="fc" id="L2481">                                + &quot;not a directory. Unable to create directory.&quot;;</span>
+<span class="fc" id="L2482">                throw new IOException(message);</span>
+            }
+        } else {
+<span class="pc bpc" id="L2485" title="1 of 2 branches missed.">            if (!directory.mkdirs()) {</span>
+                // Double-check that some other thread or process hasn't made
+                // the directory in the background
+<span class="nc bnc" id="L2488" title="All 2 branches missed.">                if (!directory.isDirectory()) {</span>
+<span class="nc" id="L2489">                    final String message =</span>
+<span class="nc" id="L2490">                            &quot;Unable to create directory &quot; + directory;</span>
+<span class="nc" id="L2491">                    throw new IOException(message);</span>
+                }
+            }
+        }
+<span class="fc" id="L2495">    }</span>
+
+    /**
+     * Makes any necessary but nonexistent parent directories for a given File. If the parent directory cannot be
+     * created then an IOException is thrown.
+     *
+     * @param file file with parent to create, must not be {@code null}
+     * @throws NullPointerException if the file is {@code null}
+     * @throws IOException          if the parent directory cannot be created
+     * @since 2.5
+     */
+    public static void forceMkdirParent(final File file) throws IOException {
+<span class="fc" id="L2507">        final File parent = file.getParentFile();</span>
+<span class="fc bfc" id="L2508" title="All 2 branches covered.">        if (parent == null) {</span>
+<span class="fc" id="L2509">            return;</span>
+        }
+<span class="fc" id="L2511">        forceMkdir(parent);</span>
+<span class="fc" id="L2512">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Returns the size of the specified file or directory. If the provided
+     * {@link File} is a regular file, then the file's length is returned.
+     * If the argument is a directory, then the size of the directory is
+     * calculated recursively. If a directory or subdirectory is security
+     * restricted, its size will not be included.
+     * &lt;p&gt;
+     * Note that overflow is not detected, and the return value may be negative if
+     * overflow occurs. See {@link #sizeOfAsBigInteger(File)} for an alternative
+     * method that does not overflow.
+     *
+     * @param file the regular file or directory to return the size
+     *             of (must not be {@code null}).
+     *
+     * @return the length of the file, or recursive size of the directory,
+     * provided (in bytes).
+     *
+     * @throws NullPointerException     if the file is {@code null}
+     * @throws IllegalArgumentException if the file does not exist.
+     *
+     * @since 2.0
+     */
+    public static long sizeOf(final File file) {
+
+<span class="fc bfc" id="L2539" title="All 2 branches covered.">        if (!file.exists()) {</span>
+<span class="fc" id="L2540">            final String message = file + &quot; does not exist&quot;;</span>
+<span class="fc" id="L2541">            throw new IllegalArgumentException(message);</span>
+        }
+
+<span class="fc bfc" id="L2544" title="All 2 branches covered.">        if (file.isDirectory()) {</span>
+<span class="fc" id="L2545">            return sizeOfDirectory0(file); // private method; expects directory</span>
+        } else {
+<span class="fc" id="L2547">            return file.length();</span>
+        }
+
+    }
+
+    /**
+     * Returns the size of the specified file or directory. If the provided
+     * {@link File} is a regular file, then the file's length is returned.
+     * If the argument is a directory, then the size of the directory is
+     * calculated recursively. If a directory or subdirectory is security
+     * restricted, its size will not be included.
+     *
+     * @param file the regular file or directory to return the size
+     *             of (must not be {@code null}).
+     *
+     * @return the length of the file, or recursive size of the directory,
+     * provided (in bytes).
+     *
+     * @throws NullPointerException     if the file is {@code null}
+     * @throws IllegalArgumentException if the file does not exist.
+     *
+     * @since 2.4
+     */
+    public static BigInteger sizeOfAsBigInteger(final File file) {
+
+<span class="fc bfc" id="L2572" title="All 2 branches covered.">        if (!file.exists()) {</span>
+<span class="fc" id="L2573">            final String message = file + &quot; does not exist&quot;;</span>
+<span class="fc" id="L2574">            throw new IllegalArgumentException(message);</span>
+        }
+
+<span class="fc bfc" id="L2577" title="All 2 branches covered.">        if (file.isDirectory()) {</span>
+<span class="fc" id="L2578">            return sizeOfDirectoryBig0(file); // internal method</span>
+        } else {
+<span class="fc" id="L2580">            return BigInteger.valueOf(file.length());</span>
+        }
+
+    }
+
+    /**
+     * Counts the size of a directory recursively (sum of the length of all files).
+     * &lt;p&gt;
+     * Note that overflow is not detected, and the return value may be negative if
+     * overflow occurs. See {@link #sizeOfDirectoryAsBigInteger(File)} for an alternative
+     * method that does not overflow.
+     *
+     * @param directory directory to inspect, must not be {@code null}
+     * @return size of directory in bytes, 0 if directory is security restricted, a negative number when the real total
+     * is greater than {@link Long#MAX_VALUE}.
+     * @throws NullPointerException if the directory is {@code null}
+     */
+    public static long sizeOfDirectory(final File directory) {
+<span class="fc" id="L2598">        checkDirectory(directory);</span>
+<span class="fc" id="L2599">        return sizeOfDirectory0(directory);</span>
+    }
+
+    // Private method, must be invoked will a directory parameter
+
+    /**
+     * the size of a director
+     * @param directory the directory to check
+     * @return the size
+     */
+    private static long sizeOfDirectory0(final File directory) {
+<span class="fc" id="L2610">        final File[] files = directory.listFiles();</span>
+<span class="pc bpc" id="L2611" title="1 of 2 branches missed.">        if (files == null) {  // null if security restricted</span>
+<span class="nc" id="L2612">            return 0L;</span>
+        }
+<span class="fc" id="L2614">        long size = 0;</span>
+
+<span class="fc bfc" id="L2616" title="All 2 branches covered.">        for (final File file : files) {</span>
+            try {
+<span class="pc bpc" id="L2618" title="1 of 2 branches missed.">                if (!isSymlink(file)) {</span>
+<span class="fc" id="L2619">                    size += sizeOf0(file); // internal method</span>
+<span class="pc bpc" id="L2620" title="1 of 2 branches missed.">                    if (size &lt; 0) {</span>
+<span class="nc" id="L2621">                        break;</span>
+                    }
+                }
+<span class="nc" id="L2624">            } catch (final IOException ioe) {</span>
+                // Ignore exceptions caught when asking if a File is a symlink.
+            }
+        }
+
+<span class="fc" id="L2629">        return size;</span>
+    }
+
+    // Internal method - does not check existence
+
+    /**
+     * the size of a file
+     * @param file the file to check
+     * @return the size of the file
+     */
+    private static long sizeOf0(final File file) {
+<span class="fc bfc" id="L2640" title="All 2 branches covered.">        if (file.isDirectory()) {</span>
+<span class="fc" id="L2641">            return sizeOfDirectory0(file);</span>
+        } else {
+<span class="fc" id="L2643">            return file.length(); // will be 0 if file does not exist</span>
+        }
+    }
+
+    /**
+     * Counts the size of a directory recursively (sum of the length of all files).
+     *
+     * @param directory directory to inspect, must not be {@code null}
+     * @return size of directory in bytes, 0 if directory is security restricted.
+     * @throws NullPointerException if the directory is {@code null}
+     * @since 2.4
+     */
+    public static BigInteger sizeOfDirectoryAsBigInteger(final File directory) {
+<span class="fc" id="L2656">        checkDirectory(directory);</span>
+<span class="fc" id="L2657">        return sizeOfDirectoryBig0(directory);</span>
+    }
+
+    // Must be called with a directory
+
+    /**
+     * Finds the size of a directory
+     *
+     * @param directory The directory
+     * @return the size
+     */
+    private static BigInteger sizeOfDirectoryBig0(final File directory) {
+<span class="fc" id="L2669">        final File[] files = directory.listFiles();</span>
+<span class="pc bpc" id="L2670" title="1 of 2 branches missed.">        if (files == null) {  // null if security restricted</span>
+<span class="nc" id="L2671">            return BigInteger.ZERO;</span>
+        }
+<span class="fc" id="L2673">        BigInteger size = BigInteger.ZERO;</span>
+
+<span class="fc bfc" id="L2675" title="All 2 branches covered.">        for (final File file : files) {</span>
+            try {
+<span class="pc bpc" id="L2677" title="1 of 2 branches missed.">                if (!isSymlink(file)) {</span>
+<span class="fc" id="L2678">                    size = size.add(sizeOfBig0(file));</span>
+                }
+<span class="pc" id="L2680">            } catch (final IOException ioe) {</span>
+                // Ignore exceptions caught when asking if a File is a symlink.
+            }
+        }
+
+<span class="fc" id="L2685">        return size;</span>
+    }
+
+    // internal method; if file does not exist will return 0
+
+    /**
+     * Returns the size of a file
+     * @param fileOrDir The file
+     * @return the size
+     */
+    private static BigInteger sizeOfBig0(final File fileOrDir) {
+<span class="fc bfc" id="L2696" title="All 2 branches covered.">        if (fileOrDir.isDirectory()) {</span>
+<span class="fc" id="L2697">            return sizeOfDirectoryBig0(fileOrDir);</span>
+        } else {
+<span class="fc" id="L2699">            return BigInteger.valueOf(fileOrDir.length());</span>
+        }
+    }
+
+    /**
+     * Checks that the given {@code File} exists and is a directory.
+     *
+     * @param directory The {@code File} to check.
+     * @throws IllegalArgumentException if the given {@code File} does not exist or is not a directory.
+     */
+    private static void checkDirectory(final File directory) {
+<span class="fc bfc" id="L2710" title="All 2 branches covered.">        if (!directory.exists()) {</span>
+<span class="fc" id="L2711">            throw new IllegalArgumentException(directory + &quot; does not exist&quot;);</span>
+        }
+<span class="fc bfc" id="L2713" title="All 2 branches covered.">        if (!directory.isDirectory()) {</span>
+<span class="fc" id="L2714">            throw new IllegalArgumentException(directory + &quot; is not a directory&quot;);</span>
+        }
+<span class="fc" id="L2716">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Tests if the specified &lt;code&gt;File&lt;/code&gt; is newer than the reference
+     * &lt;code&gt;File&lt;/code&gt;.
+     *
+     * @param file      the &lt;code&gt;File&lt;/code&gt; of which the modification date must
+     *                  be compared, must not be {@code null}
+     * @param reference the &lt;code&gt;File&lt;/code&gt; of which the modification date
+     *                  is used, must not be {@code null}
+     * @return true if the &lt;code&gt;File&lt;/code&gt; exists and has been modified more
+     * recently than the reference &lt;code&gt;File&lt;/code&gt;
+     * @throws IllegalArgumentException if the file is {@code null}
+     * @throws IllegalArgumentException if the reference file is {@code null} or doesn't exist
+     */
+    public static boolean isFileNewer(final File file, final File reference) {
+<span class="fc bfc" id="L2733" title="All 2 branches covered.">        if (reference == null) {</span>
+<span class="fc" id="L2734">            throw new IllegalArgumentException(&quot;No specified reference file&quot;);</span>
+        }
+<span class="fc bfc" id="L2736" title="All 2 branches covered.">        if (!reference.exists()) {</span>
+<span class="fc" id="L2737">            throw new IllegalArgumentException(&quot;The reference file '&quot;</span>
+<span class="fc" id="L2738">                    + reference + &quot;' doesn't exist&quot;);</span>
+        }
+<span class="fc" id="L2740">        return isFileNewer(file, reference.lastModified());</span>
+    }
+
+    /**
+     * Tests if the specified &lt;code&gt;File&lt;/code&gt; is newer than the specified
+     * &lt;code&gt;Date&lt;/code&gt;.
+     *
+     * @param file the &lt;code&gt;File&lt;/code&gt; of which the modification date
+     *             must be compared, must not be {@code null}
+     * @param date the date reference, must not be {@code null}
+     * @return true if the &lt;code&gt;File&lt;/code&gt; exists and has been modified
+     * after the given &lt;code&gt;Date&lt;/code&gt;.
+     * @throws IllegalArgumentException if the file is {@code null}
+     * @throws IllegalArgumentException if the date is {@code null}
+     */
+    public static boolean isFileNewer(final File file, final Date date) {
+<span class="fc bfc" id="L2756" title="All 2 branches covered.">        if (date == null) {</span>
+<span class="fc" id="L2757">            throw new IllegalArgumentException(&quot;No specified date&quot;);</span>
+        }
+<span class="fc" id="L2759">        return isFileNewer(file, date.getTime());</span>
+    }
+
+    /**
+     * Tests if the specified &lt;code&gt;File&lt;/code&gt; is newer than the specified
+     * time reference.
+     *
+     * @param file       the &lt;code&gt;File&lt;/code&gt; of which the modification date must
+     *                   be compared, must not be {@code null}
+     * @param timeMillis the time reference measured in milliseconds since the
+     *                   epoch (00:00:00 GMT, January 1, 1970)
+     * @return true if the &lt;code&gt;File&lt;/code&gt; exists and has been modified after
+     * the given time reference.
+     * @throws IllegalArgumentException if the file is {@code null}
+     */
+    public static boolean isFileNewer(final File file, final long timeMillis) {
+<span class="fc bfc" id="L2775" title="All 2 branches covered.">        if (file == null) {</span>
+<span class="fc" id="L2776">            throw new IllegalArgumentException(&quot;No specified file&quot;);</span>
+        }
+<span class="fc bfc" id="L2778" title="All 2 branches covered.">        if (!file.exists()) {</span>
+<span class="fc" id="L2779">            return false;</span>
+        }
+<span class="fc bfc" id="L2781" title="All 2 branches covered.">        return file.lastModified() &gt; timeMillis;</span>
+    }
+
+
+    //-----------------------------------------------------------------------
+    /**
+     * Tests if the specified &lt;code&gt;File&lt;/code&gt; is older than the reference
+     * &lt;code&gt;File&lt;/code&gt;.
+     *
+     * @param file      the &lt;code&gt;File&lt;/code&gt; of which the modification date must
+     *                  be compared, must not be {@code null}
+     * @param reference the &lt;code&gt;File&lt;/code&gt; of which the modification date
+     *                  is used, must not be {@code null}
+     * @return true if the &lt;code&gt;File&lt;/code&gt; exists and has been modified before
+     * the reference &lt;code&gt;File&lt;/code&gt;
+     * @throws IllegalArgumentException if the file is {@code null}
+     * @throws IllegalArgumentException if the reference file is {@code null} or doesn't exist
+     */
+    public static boolean isFileOlder(final File file, final File reference) {
+<span class="fc bfc" id="L2800" title="All 2 branches covered.">        if (reference == null) {</span>
+<span class="fc" id="L2801">            throw new IllegalArgumentException(&quot;No specified reference file&quot;);</span>
+        }
+<span class="fc bfc" id="L2803" title="All 2 branches covered.">        if (!reference.exists()) {</span>
+<span class="fc" id="L2804">            throw new IllegalArgumentException(&quot;The reference file '&quot;</span>
+<span class="fc" id="L2805">                    + reference + &quot;' doesn't exist&quot;);</span>
+        }
+<span class="fc" id="L2807">        return isFileOlder(file, reference.lastModified());</span>
+    }
+
+    /**
+     * Tests if the specified &lt;code&gt;File&lt;/code&gt; is older than the specified
+     * &lt;code&gt;Date&lt;/code&gt;.
+     *
+     * @param file the &lt;code&gt;File&lt;/code&gt; of which the modification date
+     *             must be compared, must not be {@code null}
+     * @param date the date reference, must not be {@code null}
+     * @return true if the &lt;code&gt;File&lt;/code&gt; exists and has been modified
+     * before the given &lt;code&gt;Date&lt;/code&gt;.
+     * @throws IllegalArgumentException if the file is {@code null}
+     * @throws IllegalArgumentException if the date is {@code null}
+     */
+    public static boolean isFileOlder(final File file, final Date date) {
+<span class="fc bfc" id="L2823" title="All 2 branches covered.">        if (date == null) {</span>
+<span class="fc" id="L2824">            throw new IllegalArgumentException(&quot;No specified date&quot;);</span>
+        }
+<span class="fc" id="L2826">        return isFileOlder(file, date.getTime());</span>
+    }
+
+    /**
+     * Tests if the specified &lt;code&gt;File&lt;/code&gt; is older than the specified
+     * time reference.
+     *
+     * @param file       the &lt;code&gt;File&lt;/code&gt; of which the modification date must
+     *                   be compared, must not be {@code null}
+     * @param timeMillis the time reference measured in milliseconds since the
+     *                   epoch (00:00:00 GMT, January 1, 1970)
+     * @return true if the &lt;code&gt;File&lt;/code&gt; exists and has been modified before
+     * the given time reference.
+     * @throws IllegalArgumentException if the file is {@code null}
+     */
+    public static boolean isFileOlder(final File file, final long timeMillis) {
+<span class="fc bfc" id="L2842" title="All 2 branches covered.">        if (file == null) {</span>
+<span class="fc" id="L2843">            throw new IllegalArgumentException(&quot;No specified file&quot;);</span>
+        }
+<span class="fc bfc" id="L2845" title="All 2 branches covered.">        if (!file.exists()) {</span>
+<span class="fc" id="L2846">            return false;</span>
+        }
+<span class="fc bfc" id="L2848" title="All 2 branches covered.">        return file.lastModified() &lt; timeMillis;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Computes the checksum of a file using the CRC32 checksum routine.
+     * The value of the checksum is returned.
+     *
+     * @param file the file to checksum, must not be {@code null}
+     * @return the checksum value
+     * @throws NullPointerException     if the file or checksum is {@code null}
+     * @throws IllegalArgumentException if the file is a directory
+     * @throws IOException              if an IO error occurs reading the file
+     * @since 1.3
+     */
+    public static long checksumCRC32(final File file) throws IOException {
+<span class="fc" id="L2864">        final CRC32 crc = new CRC32();</span>
+<span class="fc" id="L2865">        checksum(file, crc);</span>
+<span class="fc" id="L2866">        return crc.getValue();</span>
+    }
+
+    /**
+     * Computes the checksum of a file using the specified checksum object.
+     * Multiple files may be checked using one &lt;code&gt;Checksum&lt;/code&gt; instance
+     * if desired simply by reusing the same checksum object.
+     * For example:
+     * &lt;pre&gt;
+     *   long csum = FileUtils.checksum(file, new CRC32()).getValue();
+     * &lt;/pre&gt;
+     *
+     * @param file     the file to checksum, must not be {@code null}
+     * @param checksum the checksum object to be used, must not be {@code null}
+     * @return the checksum specified, updated with the content of the file
+     * @throws NullPointerException     if the file or checksum is {@code null}
+     * @throws IllegalArgumentException if the file is a directory
+     * @throws IOException              if an IO error occurs reading the file
+     * @since 1.3
+     */
+    public static Checksum checksum(final File file, final Checksum checksum) throws IOException {
+<span class="fc bfc" id="L2887" title="All 2 branches covered.">        if (file.isDirectory()) {</span>
+<span class="fc" id="L2888">            throw new IllegalArgumentException(&quot;Checksums can't be computed on directories&quot;);</span>
+        }
+<span class="fc" id="L2890">        try (InputStream in = new CheckedInputStream(new FileInputStream(file), checksum)) {</span>
+<span class="fc" id="L2891">            IOUtils.copy(in, new NullOutputStream());</span>
+<span class="pc bpc" id="L2892" title="4 of 8 branches missed.">        }</span>
+<span class="fc" id="L2893">        return checksum;</span>
+    }
+
+    /**
+     * Moves a directory.
+     * &lt;p&gt;
+     * When the destination directory is on another file system, do a &quot;copy and delete&quot;.
+     *
+     * @param srcDir  the directory to be moved
+     * @param destDir the destination directory
+     * @throws NullPointerException if source or destination is {@code null}
+     * @throws FileExistsException  if the destination directory exists
+     * @throws IOException          if source or destination is invalid
+     * @throws IOException          if an IO error occurs moving the file
+     * @since 1.4
+     */
+    public static void moveDirectory(final File srcDir, final File destDir) throws IOException {
+<span class="fc bfc" id="L2910" title="All 2 branches covered.">        if (srcDir == null) {</span>
+<span class="fc" id="L2911">            throw new NullPointerException(&quot;Source must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L2913" title="All 2 branches covered.">        if (destDir == null) {</span>
+<span class="fc" id="L2914">            throw new NullPointerException(&quot;Destination must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L2916" title="All 2 branches covered.">        if (!srcDir.exists()) {</span>
+<span class="fc" id="L2917">            throw new FileNotFoundException(&quot;Source '&quot; + srcDir + &quot;' does not exist&quot;);</span>
+        }
+<span class="fc bfc" id="L2919" title="All 2 branches covered.">        if (!srcDir.isDirectory()) {</span>
+<span class="fc" id="L2920">            throw new IOException(&quot;Source '&quot; + srcDir + &quot;' is not a directory&quot;);</span>
+        }
+<span class="fc bfc" id="L2922" title="All 2 branches covered.">        if (destDir.exists()) {</span>
+<span class="fc" id="L2923">            throw new FileExistsException(&quot;Destination '&quot; + destDir + &quot;' already exists&quot;);</span>
+        }
+<span class="fc" id="L2925">        final boolean rename = srcDir.renameTo(destDir);</span>
+<span class="fc bfc" id="L2926" title="All 2 branches covered.">        if (!rename) {</span>
+<span class="fc bfc" id="L2927" title="All 2 branches covered.">            if (destDir.getCanonicalPath().startsWith(srcDir.getCanonicalPath() + File.separator)) {</span>
+<span class="fc" id="L2928">                throw new IOException(&quot;Cannot move directory: &quot; + srcDir + &quot; to a subdirectory of itself: &quot; + destDir);</span>
+            }
+<span class="fc" id="L2930">            copyDirectory(srcDir, destDir);</span>
+<span class="fc" id="L2931">            deleteDirectory(srcDir);</span>
+<span class="pc bpc" id="L2932" title="1 of 2 branches missed.">            if (srcDir.exists()) {</span>
+<span class="nc" id="L2933">                throw new IOException(&quot;Failed to delete original directory '&quot; + srcDir +</span>
+<span class="nc" id="L2934">                        &quot;' after copy to '&quot; + destDir + &quot;'&quot;);</span>
+            }
+        }
+<span class="fc" id="L2937">    }</span>
+
+    /**
+     * Moves a directory to another directory.
+     *
+     * @param src           the file to be moved
+     * @param destDir       the destination file
+     * @param createDestDir If {@code true} create the destination directory,
+     *                      otherwise if {@code false} throw an IOException
+     * @throws NullPointerException if source or destination is {@code null}
+     * @throws FileExistsException  if the directory exists in the destination directory
+     * @throws IOException          if source or destination is invalid
+     * @throws IOException          if an IO error occurs moving the file
+     * @since 1.4
+     */
+    public static void moveDirectoryToDirectory(final File src, final File destDir, final boolean createDestDir)
+            throws IOException {
+<span class="fc bfc" id="L2954" title="All 2 branches covered.">        if (src == null) {</span>
+<span class="fc" id="L2955">            throw new NullPointerException(&quot;Source must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L2957" title="All 2 branches covered.">        if (destDir == null) {</span>
+<span class="fc" id="L2958">            throw new NullPointerException(&quot;Destination directory must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L2960" title="All 4 branches covered.">        if (!destDir.exists() &amp;&amp; createDestDir) {</span>
+<span class="fc" id="L2961">            destDir.mkdirs();</span>
+        }
+<span class="fc bfc" id="L2963" title="All 2 branches covered.">        if (!destDir.exists()) {</span>
+<span class="fc" id="L2964">            throw new FileNotFoundException(&quot;Destination directory '&quot; + destDir +</span>
+<span class="fc" id="L2965">                    &quot;' does not exist [createDestDir=&quot; + createDestDir + &quot;]&quot;);</span>
+        }
+<span class="fc bfc" id="L2967" title="All 2 branches covered.">        if (!destDir.isDirectory()) {</span>
+<span class="fc" id="L2968">            throw new IOException(&quot;Destination '&quot; + destDir + &quot;' is not a directory&quot;);</span>
+        }
+<span class="fc" id="L2970">        moveDirectory(src, new File(destDir, src.getName()));</span>
+
+<span class="fc" id="L2972">    }</span>
+
+    /**
+     * Moves a file.
+     * &lt;p&gt;
+     * When the destination file is on another file system, do a &quot;copy and delete&quot;.
+     *
+     * @param srcFile  the file to be moved
+     * @param destFile the destination file
+     * @throws NullPointerException if source or destination is {@code null}
+     * @throws FileExistsException  if the destination file exists
+     * @throws IOException          if source or destination is invalid
+     * @throws IOException          if an IO error occurs moving the file
+     * @since 1.4
+     */
+    public static void moveFile(final File srcFile, final File destFile) throws IOException {
+<span class="fc bfc" id="L2988" title="All 2 branches covered.">        if (srcFile == null) {</span>
+<span class="fc" id="L2989">            throw new NullPointerException(&quot;Source must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L2991" title="All 2 branches covered.">        if (destFile == null) {</span>
+<span class="fc" id="L2992">            throw new NullPointerException(&quot;Destination must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L2994" title="All 2 branches covered.">        if (!srcFile.exists()) {</span>
+<span class="fc" id="L2995">            throw new FileNotFoundException(&quot;Source '&quot; + srcFile + &quot;' does not exist&quot;);</span>
+        }
+<span class="fc bfc" id="L2997" title="All 2 branches covered.">        if (srcFile.isDirectory()) {</span>
+<span class="fc" id="L2998">            throw new IOException(&quot;Source '&quot; + srcFile + &quot;' is a directory&quot;);</span>
+        }
+<span class="fc bfc" id="L3000" title="All 2 branches covered.">        if (destFile.exists()) {</span>
+<span class="fc" id="L3001">            throw new FileExistsException(&quot;Destination '&quot; + destFile + &quot;' already exists&quot;);</span>
+        }
+<span class="pc bpc" id="L3003" title="1 of 2 branches missed.">        if (destFile.isDirectory()) {</span>
+<span class="nc" id="L3004">            throw new IOException(&quot;Destination '&quot; + destFile + &quot;' is a directory&quot;);</span>
+        }
+<span class="fc" id="L3006">        final boolean rename = srcFile.renameTo(destFile);</span>
+<span class="fc bfc" id="L3007" title="All 2 branches covered.">        if (!rename) {</span>
+<span class="fc" id="L3008">            copyFile(srcFile, destFile);</span>
+<span class="fc bfc" id="L3009" title="All 2 branches covered.">            if (!srcFile.delete()) {</span>
+<span class="fc" id="L3010">                FileUtils.deleteQuietly(destFile);</span>
+<span class="fc" id="L3011">                throw new IOException(&quot;Failed to delete original file '&quot; + srcFile +</span>
+<span class="fc" id="L3012">                        &quot;' after copy to '&quot; + destFile + &quot;'&quot;);</span>
+            }
+        }
+<span class="fc" id="L3015">    }</span>
+
+    /**
+     * Moves a file to a directory.
+     *
+     * @param srcFile       the file to be moved
+     * @param destDir       the destination file
+     * @param createDestDir If {@code true} create the destination directory,
+     *                      otherwise if {@code false} throw an IOException
+     * @throws NullPointerException if source or destination is {@code null}
+     * @throws FileExistsException  if the destination file exists
+     * @throws IOException          if source or destination is invalid
+     * @throws IOException          if an IO error occurs moving the file
+     * @since 1.4
+     */
+    public static void moveFileToDirectory(final File srcFile, final File destDir, final boolean createDestDir)
+            throws IOException {
+<span class="fc bfc" id="L3032" title="All 2 branches covered.">        if (srcFile == null) {</span>
+<span class="fc" id="L3033">            throw new NullPointerException(&quot;Source must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L3035" title="All 2 branches covered.">        if (destDir == null) {</span>
+<span class="fc" id="L3036">            throw new NullPointerException(&quot;Destination directory must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L3038" title="All 4 branches covered.">        if (!destDir.exists() &amp;&amp; createDestDir) {</span>
+<span class="fc" id="L3039">            destDir.mkdirs();</span>
+        }
+<span class="fc bfc" id="L3041" title="All 2 branches covered.">        if (!destDir.exists()) {</span>
+<span class="fc" id="L3042">            throw new FileNotFoundException(&quot;Destination directory '&quot; + destDir +</span>
+<span class="fc" id="L3043">                    &quot;' does not exist [createDestDir=&quot; + createDestDir + &quot;]&quot;);</span>
+        }
+<span class="fc bfc" id="L3045" title="All 2 branches covered.">        if (!destDir.isDirectory()) {</span>
+<span class="fc" id="L3046">            throw new IOException(&quot;Destination '&quot; + destDir + &quot;' is not a directory&quot;);</span>
+        }
+<span class="fc" id="L3048">        moveFile(srcFile, new File(destDir, srcFile.getName()));</span>
+<span class="fc" id="L3049">    }</span>
+
+    /**
+     * Moves a file or directory to the destination directory.
+     * &lt;p&gt;
+     * When the destination is on another file system, do a &quot;copy and delete&quot;.
+     *
+     * @param src           the file or directory to be moved
+     * @param destDir       the destination directory
+     * @param createDestDir If {@code true} create the destination directory,
+     *                      otherwise if {@code false} throw an IOException
+     * @throws NullPointerException if source or destination is {@code null}
+     * @throws FileExistsException  if the directory or file exists in the destination directory
+     * @throws IOException          if source or destination is invalid
+     * @throws IOException          if an IO error occurs moving the file
+     * @since 1.4
+     */
+    public static void moveToDirectory(final File src, final File destDir, final boolean createDestDir)
+            throws IOException {
+<span class="pc bpc" id="L3068" title="1 of 2 branches missed.">        if (src == null) {</span>
+<span class="nc" id="L3069">            throw new NullPointerException(&quot;Source must not be null&quot;);</span>
+        }
+<span class="pc bpc" id="L3071" title="1 of 2 branches missed.">        if (destDir == null) {</span>
+<span class="nc" id="L3072">            throw new NullPointerException(&quot;Destination must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L3074" title="All 2 branches covered.">        if (!src.exists()) {</span>
+<span class="fc" id="L3075">            throw new FileNotFoundException(&quot;Source '&quot; + src + &quot;' does not exist&quot;);</span>
+        }
+<span class="fc bfc" id="L3077" title="All 2 branches covered.">        if (src.isDirectory()) {</span>
+<span class="fc" id="L3078">            moveDirectoryToDirectory(src, destDir, createDestDir);</span>
+<span class="fc" id="L3079">        } else {</span>
+<span class="fc" id="L3080">            moveFileToDirectory(src, destDir, createDestDir);</span>
+        }
+<span class="fc" id="L3082">    }</span>
+
+    /**
+     * Determines whether the specified file is a Symbolic Link rather than an actual file.
+     * &lt;p&gt;
+     * Will not return true if there is a Symbolic Link anywhere in the path,
+     * only if the specific file is.
+     * &lt;p&gt;
+     * When using jdk1.7, this method delegates to {@code boolean java.nio.file.Files.isSymbolicLink(Path path)}
+     *
+     * &lt;b&gt;Note:&lt;/b&gt; the current implementation always returns {@code false} if running on
+     * jkd1.6 and the system is detected as Windows using {@link FilenameUtils#isSystemWindows()}
+     * &lt;p&gt;
+     * For code that runs on Java 1.7 or later, use the following method instead:
+     * &lt;br&gt;
+     * {@code boolean java.nio.file.Files.isSymbolicLink(Path path)}
+     * @param file the file to check
+     * @return true if the file is a Symbolic Link
+     * @throws IOException if an IO error occurs while checking the file
+     * @since 2.0
+     */
+    public static boolean isSymlink(final File file) throws IOException {
+<span class="pc bpc" id="L3104" title="1 of 2 branches missed.">        if (file == null) {</span>
+<span class="nc" id="L3105">            throw new NullPointerException(&quot;File must not be null&quot;);</span>
+        }
+<span class="fc" id="L3107">        return Files.isSymbolicLink(file.toPath());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

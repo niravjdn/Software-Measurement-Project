@@ -1,0 +1,1792 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SystemUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Lang</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.lang3</a> &gt; <span class="el_source">SystemUtils.java</span></div><h1>SystemUtils.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.lang3;
+
+import java.io.File;
+
+/**
+ * &lt;p&gt;
+ * Helpers for {@code java.lang.System}.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * If a system property cannot be read due to security restrictions, the corresponding field in this class will be set
+ * to {@code null} and a message will be written to {@code System.err}.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * #ThreadSafe#
+ * &lt;/p&gt;
+ *
+ * @since 1.0
+ */
+public class SystemUtils {
+
+    /**
+     * The prefix String for all Windows OS.
+     */
+    private static final String OS_NAME_WINDOWS_PREFIX = &quot;Windows&quot;;
+
+    // System property constants
+    // -----------------------------------------------------------------------
+    // These MUST be declared first. Other constants depend on this.
+
+    /**
+     * The System property key for the user home directory.
+     */
+    private static final String USER_HOME_KEY = &quot;user.home&quot;;
+
+    /**
+     * The System property key for the user directory.
+     */
+    private static final String USER_DIR_KEY = &quot;user.dir&quot;;
+
+    /**
+     * The System property key for the Java IO temporary directory.
+     */
+    private static final String JAVA_IO_TMPDIR_KEY = &quot;java.io.tmpdir&quot;;
+
+    /**
+     * The System property key for the Java home directory.
+     */
+    private static final String JAVA_HOME_KEY = &quot;java.home&quot;;
+
+    /**
+     * &lt;p&gt;
+     * The {@code awt.toolkit} System Property.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Holds a class name, on Windows XP this is {@code sun.awt.windows.WToolkit}.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * &lt;b&gt;On platforms without a GUI, this value is {@code null}.&lt;/b&gt;
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since 2.1
+     */
+<span class="fc" id="L88">    public static final String AWT_TOOLKIT = getSystemProperty(&quot;awt.toolkit&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code file.encoding} System Property.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * File encoding, such as {@code Cp1252}.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     * @since Java 1.2
+     */
+<span class="fc" id="L110">    public static final String FILE_ENCODING = getSystemProperty(&quot;file.encoding&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code file.separator} System Property.
+     * The file separator is:
+     * &lt;/p&gt;
+     * &lt;ul&gt;
+     * &lt;li&gt;{@code &quot;/&quot;} on UNIX&lt;/li&gt;
+     * &lt;li&gt;{@code &quot;\&quot;} on Windows.&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @deprecated Use {@link File#separator}, since it is guaranteed to be a
+     *             string containing a single character and it does not require a privilege check.
+     * @since Java 1.1
+     */
+    @Deprecated
+<span class="fc" id="L137">    public static final String FILE_SEPARATOR = getSystemProperty(&quot;file.separator&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.awt.fonts} System Property.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since 2.1
+     */
+<span class="fc" id="L155">    public static final String JAVA_AWT_FONTS = getSystemProperty(&quot;java.awt.fonts&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.awt.graphicsenv} System Property.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since 2.1
+     */
+<span class="fc" id="L173">    public static final String JAVA_AWT_GRAPHICSENV = getSystemProperty(&quot;java.awt.graphicsenv&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.awt.headless} System Property. The value of this property is the String {@code &quot;true&quot;} or
+     * {@code &quot;false&quot;}.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @see #isJavaAwtHeadless()
+     * @since 2.1
+     * @since Java 1.4
+     */
+<span class="fc" id="L194">    public static final String JAVA_AWT_HEADLESS = getSystemProperty(&quot;java.awt.headless&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.awt.printerjob} System Property.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since 2.1
+     */
+<span class="fc" id="L212">    public static final String JAVA_AWT_PRINTERJOB = getSystemProperty(&quot;java.awt.printerjob&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.class.path} System Property. Java class path.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.1
+     */
+<span class="fc" id="L230">    public static final String JAVA_CLASS_PATH = getSystemProperty(&quot;java.class.path&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.class.version} System Property. Java class format version number.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.1
+     */
+<span class="fc" id="L248">    public static final String JAVA_CLASS_VERSION = getSystemProperty(&quot;java.class.version&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.compiler} System Property. Name of JIT compiler to use. First in JDK version 1.2. Not used in Sun
+     * JDKs after 1.2.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.2. Not used in Sun versions after 1.2.
+     */
+<span class="fc" id="L267">    public static final String JAVA_COMPILER = getSystemProperty(&quot;java.compiler&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.endorsed.dirs} System Property. Path of endorsed directory or directories.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.4
+     */
+<span class="fc" id="L285">    public static final String JAVA_ENDORSED_DIRS = getSystemProperty(&quot;java.endorsed.dirs&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.ext.dirs} System Property. Path of extension directory or directories.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.3
+     */
+<span class="fc" id="L303">    public static final String JAVA_EXT_DIRS = getSystemProperty(&quot;java.ext.dirs&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.home} System Property. Java installation directory.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.1
+     */
+<span class="fc" id="L321">    public static final String JAVA_HOME = getSystemProperty(JAVA_HOME_KEY);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.io.tmpdir} System Property. Default temp file path.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.2
+     */
+<span class="fc" id="L339">    public static final String JAVA_IO_TMPDIR = getSystemProperty(JAVA_IO_TMPDIR_KEY);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.library.path} System Property. List of paths to search when loading libraries.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.2
+     */
+<span class="fc" id="L357">    public static final String JAVA_LIBRARY_PATH = getSystemProperty(&quot;java.library.path&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.runtime.name} System Property. Java Runtime Environment name.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     * @since Java 1.3
+     */
+<span class="fc" id="L376">    public static final String JAVA_RUNTIME_NAME = getSystemProperty(&quot;java.runtime.name&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.runtime.version} System Property. Java Runtime Environment version.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     * @since Java 1.3
+     */
+<span class="fc" id="L395">    public static final String JAVA_RUNTIME_VERSION = getSystemProperty(&quot;java.runtime.version&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.specification.name} System Property. Java Runtime Environment specification name.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.2
+     */
+<span class="fc" id="L413">    public static final String JAVA_SPECIFICATION_NAME = getSystemProperty(&quot;java.specification.name&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.specification.vendor} System Property. Java Runtime Environment specification vendor.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.2
+     */
+<span class="fc" id="L431">    public static final String JAVA_SPECIFICATION_VENDOR = getSystemProperty(&quot;java.specification.vendor&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.specification.version} System Property. Java Runtime Environment specification version.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.3
+     */
+<span class="fc" id="L449">    public static final String JAVA_SPECIFICATION_VERSION = getSystemProperty(&quot;java.specification.version&quot;);</span>
+<span class="fc" id="L450">    private static final JavaVersion JAVA_SPECIFICATION_VERSION_AS_ENUM = JavaVersion.get(JAVA_SPECIFICATION_VERSION);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.util.prefs.PreferencesFactory} System Property. A class name.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since 2.1
+     * @since Java 1.4
+     */
+<span class="fc" id="L469">    public static final String JAVA_UTIL_PREFS_PREFERENCES_FACTORY =</span>
+<span class="fc" id="L470">        getSystemProperty(&quot;java.util.prefs.PreferencesFactory&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.vendor} System Property. Java vendor-specific string.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.1
+     */
+<span class="fc" id="L488">    public static final String JAVA_VENDOR = getSystemProperty(&quot;java.vendor&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.vendor.url} System Property. Java vendor URL.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.1
+     */
+<span class="fc" id="L506">    public static final String JAVA_VENDOR_URL = getSystemProperty(&quot;java.vendor.url&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.version} System Property. Java version number.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.1
+     */
+<span class="fc" id="L524">    public static final String JAVA_VERSION = getSystemProperty(&quot;java.version&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.vm.info} System Property. Java Virtual Machine implementation info.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     * @since Java 1.2
+     */
+<span class="fc" id="L543">    public static final String JAVA_VM_INFO = getSystemProperty(&quot;java.vm.info&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.vm.name} System Property. Java Virtual Machine implementation name.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.2
+     */
+<span class="fc" id="L561">    public static final String JAVA_VM_NAME = getSystemProperty(&quot;java.vm.name&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.vm.specification.name} System Property. Java Virtual Machine specification name.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.2
+     */
+<span class="fc" id="L579">    public static final String JAVA_VM_SPECIFICATION_NAME = getSystemProperty(&quot;java.vm.specification.name&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.vm.specification.vendor} System Property. Java Virtual Machine specification vendor.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.2
+     */
+<span class="fc" id="L597">    public static final String JAVA_VM_SPECIFICATION_VENDOR = getSystemProperty(&quot;java.vm.specification.vendor&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.vm.specification.version} System Property. Java Virtual Machine specification version.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.2
+     */
+<span class="fc" id="L615">    public static final String JAVA_VM_SPECIFICATION_VERSION = getSystemProperty(&quot;java.vm.specification.version&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.vm.vendor} System Property. Java Virtual Machine implementation vendor.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.2
+     */
+<span class="fc" id="L633">    public static final String JAVA_VM_VENDOR = getSystemProperty(&quot;java.vm.vendor&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code java.vm.version} System Property. Java Virtual Machine implementation version.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.2
+     */
+<span class="fc" id="L651">    public static final String JAVA_VM_VERSION = getSystemProperty(&quot;java.vm.version&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code line.separator} System Property. Line separator (&lt;code&gt;&amp;quot;\n&amp;quot;&lt;/code&gt; on UNIX).
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @deprecated Use {@link System#lineSeparator} instead, since it does not require a privilege check.
+     * @since Java 1.1
+     */
+    @Deprecated
+<span class="fc" id="L671">    public static final String LINE_SEPARATOR = getSystemProperty(&quot;line.separator&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code os.arch} System Property. Operating system architecture.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.1
+     */
+<span class="fc" id="L689">    public static final String OS_ARCH = getSystemProperty(&quot;os.arch&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code os.name} System Property. Operating system name.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.1
+     */
+<span class="fc" id="L707">    public static final String OS_NAME = getSystemProperty(&quot;os.name&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code os.version} System Property. Operating system version.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.1
+     */
+<span class="fc" id="L725">    public static final String OS_VERSION = getSystemProperty(&quot;os.version&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code path.separator} System Property. Path separator (&lt;code&gt;&amp;quot;:&amp;quot;&lt;/code&gt; on UNIX).
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @deprecated Use {@link File#pathSeparator}, since it is guaranteed to be a
+     *             string containing a single character and it does not require a privilege check.
+     * @since Java 1.1
+     */
+    @Deprecated
+<span class="fc" id="L746">    public static final String PATH_SEPARATOR = getSystemProperty(&quot;path.separator&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code user.country} or {@code user.region} System Property. User's country code, such as {@code GB}. First
+     * in Java version 1.2 as {@code user.region}. Renamed to {@code user.country} in 1.4
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     * @since Java 1.2
+     */
+<span class="pc bpc" id="L766" title="1 of 2 branches missed.">    public static final String USER_COUNTRY = getSystemProperty(&quot;user.country&quot;) == null ?</span>
+<span class="pc" id="L767">            getSystemProperty(&quot;user.region&quot;) : getSystemProperty(&quot;user.country&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code user.dir} System Property. User's current working directory.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.1
+     */
+<span class="fc" id="L785">    public static final String USER_DIR = getSystemProperty(USER_DIR_KEY);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code user.home} System Property. User's home directory.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.1
+     */
+<span class="fc" id="L803">    public static final String USER_HOME = getSystemProperty(USER_HOME_KEY);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code user.language} System Property. User's language code, such as {@code &quot;en&quot;}.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     * @since Java 1.2
+     */
+<span class="fc" id="L822">    public static final String USER_LANGUAGE = getSystemProperty(&quot;user.language&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code user.name} System Property. User's account name.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since Java 1.1
+     */
+<span class="fc" id="L840">    public static final String USER_NAME = getSystemProperty(&quot;user.name&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * The {@code user.timezone} System Property. For example: {@code &quot;America/Los_Angeles&quot;}.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Defaults to {@code null} if the runtime does not have security access to read this property or the property does
+     * not exist.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This value is initialized when the class is loaded. If {@link System#setProperty(String,String)} or
+     * {@link System#setProperties(java.util.Properties)} is called after this class is loaded, the value will be out of
+     * sync with that System property.
+     * &lt;/p&gt;
+     *
+     * @since 2.1
+     */
+<span class="fc" id="L858">    public static final String USER_TIMEZONE = getSystemProperty(&quot;user.timezone&quot;);</span>
+
+    // Java version checks
+    // -----------------------------------------------------------------------
+    // These MUST be declared after those above as they depend on the
+    // values being set up
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Java version 1.1 (also 1.1.x versions).
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@link #JAVA_VERSION} is {@code null}.
+     * &lt;/p&gt;
+     */
+<span class="fc" id="L873">    public static final boolean IS_JAVA_1_1 = getJavaVersionMatches(&quot;1.1&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Java version 1.2 (also 1.2.x versions).
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@link #JAVA_VERSION} is {@code null}.
+     * &lt;/p&gt;
+     */
+<span class="fc" id="L883">    public static final boolean IS_JAVA_1_2 = getJavaVersionMatches(&quot;1.2&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Java version 1.3 (also 1.3.x versions).
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@link #JAVA_VERSION} is {@code null}.
+     * &lt;/p&gt;
+     */
+<span class="fc" id="L893">    public static final boolean IS_JAVA_1_3 = getJavaVersionMatches(&quot;1.3&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Java version 1.4 (also 1.4.x versions).
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@link #JAVA_VERSION} is {@code null}.
+     * &lt;/p&gt;
+     */
+<span class="fc" id="L903">    public static final boolean IS_JAVA_1_4 = getJavaVersionMatches(&quot;1.4&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Java version 1.5 (also 1.5.x versions).
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@link #JAVA_VERSION} is {@code null}.
+     * &lt;/p&gt;
+     */
+<span class="fc" id="L913">    public static final boolean IS_JAVA_1_5 = getJavaVersionMatches(&quot;1.5&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Java version 1.6 (also 1.6.x versions).
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@link #JAVA_VERSION} is {@code null}.
+     * &lt;/p&gt;
+     */
+<span class="fc" id="L923">    public static final boolean IS_JAVA_1_6 = getJavaVersionMatches(&quot;1.6&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Java version 1.7 (also 1.7.x versions).
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@link #JAVA_VERSION} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.0
+     */
+<span class="fc" id="L935">    public static final boolean IS_JAVA_1_7 = getJavaVersionMatches(&quot;1.7&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Java version 1.8 (also 1.8.x versions).
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@link #JAVA_VERSION} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.3.2
+     */
+<span class="fc" id="L947">    public static final boolean IS_JAVA_1_8 = getJavaVersionMatches(&quot;1.8&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Java version 1.9 (also 1.9.x versions).
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@link #JAVA_VERSION} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.4
+     *
+     * @deprecated As of release 3.5, replaced by {@link #IS_JAVA_9}
+     */
+    @Deprecated
+<span class="fc" id="L962">    public static final boolean IS_JAVA_1_9 = getJavaVersionMatches(&quot;9&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Java version 9 (also 9.x versions).
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@link #JAVA_VERSION} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.5
+     */
+<span class="fc" id="L974">    public static final boolean IS_JAVA_9 = getJavaVersionMatches(&quot;9&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Java version 10 (also 10.x versions).
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@link #JAVA_VERSION} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.7
+     */
+<span class="fc" id="L986">    public static final boolean IS_JAVA_10 = getJavaVersionMatches(&quot;10&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Java version 11 (also 11.x versions).
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@link #JAVA_VERSION} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.8
+     */
+<span class="fc" id="L998">    public static final boolean IS_JAVA_11 = getJavaVersionMatches(&quot;11&quot;);</span>
+
+    // Operating system checks
+    // -----------------------------------------------------------------------
+    // These MUST be declared after those above as they depend on the
+    // values being set up
+    // OS names from http://www.vamphq.com/os.html
+    // Selected ones included - please advise dev@commons.apache.org
+    // if you want another added or a mistake corrected
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is AIX.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1018">    public static final boolean IS_OS_AIX = getOsMatchesName(&quot;AIX&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is HP-UX.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1030">    public static final boolean IS_OS_HP_UX = getOsMatchesName(&quot;HP-UX&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is IBM OS/400.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.3
+     */
+<span class="fc" id="L1042">    public static final boolean IS_OS_400 = getOsMatchesName(&quot;OS/400&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Irix.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1054">    public static final boolean IS_OS_IRIX = getOsMatchesName(&quot;Irix&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Linux.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="pc bpc" id="L1066" title="2 of 4 branches missed.">    public static final boolean IS_OS_LINUX = getOsMatchesName(&quot;Linux&quot;) || getOsMatchesName(&quot;LINUX&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Mac.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1078">    public static final boolean IS_OS_MAC = getOsMatchesName(&quot;Mac&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Mac.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1090">    public static final boolean IS_OS_MAC_OSX = getOsMatchesName(&quot;Mac OS X&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Mac OS X Cheetah.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.4
+     */
+<span class="fc" id="L1102">    public static final boolean IS_OS_MAC_OSX_CHEETAH = getOsMatches(&quot;Mac OS X&quot;, &quot;10.0&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Mac OS X Puma.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.4
+     */
+<span class="fc" id="L1114">    public static final boolean IS_OS_MAC_OSX_PUMA = getOsMatches(&quot;Mac OS X&quot;, &quot;10.1&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Mac OS X Jaguar.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.4
+     */
+<span class="fc" id="L1126">    public static final boolean IS_OS_MAC_OSX_JAGUAR = getOsMatches(&quot;Mac OS X&quot;, &quot;10.2&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Mac OS X Panther.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.4
+     */
+<span class="fc" id="L1138">    public static final boolean IS_OS_MAC_OSX_PANTHER = getOsMatches(&quot;Mac OS X&quot;, &quot;10.3&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Mac OS X Tiger.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.4
+     */
+<span class="fc" id="L1150">    public static final boolean IS_OS_MAC_OSX_TIGER = getOsMatches(&quot;Mac OS X&quot;, &quot;10.4&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Mac OS X Leopard.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.4
+     */
+<span class="fc" id="L1162">    public static final boolean IS_OS_MAC_OSX_LEOPARD = getOsMatches(&quot;Mac OS X&quot;, &quot;10.5&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Mac OS X Snow Leopard.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.4
+     */
+<span class="fc" id="L1174">    public static final boolean IS_OS_MAC_OSX_SNOW_LEOPARD = getOsMatches(&quot;Mac OS X&quot;, &quot;10.6&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Mac OS X Lion.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.4
+     */
+<span class="fc" id="L1186">    public static final boolean IS_OS_MAC_OSX_LION = getOsMatches(&quot;Mac OS X&quot;, &quot;10.7&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Mac OS X Mountain Lion.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.4
+     */
+<span class="fc" id="L1198">    public static final boolean IS_OS_MAC_OSX_MOUNTAIN_LION = getOsMatches(&quot;Mac OS X&quot;, &quot;10.8&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Mac OS X Mavericks.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.4
+     */
+<span class="fc" id="L1210">    public static final boolean IS_OS_MAC_OSX_MAVERICKS = getOsMatches(&quot;Mac OS X&quot;, &quot;10.9&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Mac OS X Yosemite.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.4
+     */
+<span class="fc" id="L1222">    public static final boolean IS_OS_MAC_OSX_YOSEMITE = getOsMatches(&quot;Mac OS X&quot;, &quot;10.10&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Mac OS X El Capitan.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.5
+     */
+<span class="fc" id="L1234">    public static final boolean IS_OS_MAC_OSX_EL_CAPITAN = getOsMatches(&quot;Mac OS X&quot;, &quot;10.11&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is FreeBSD.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.1
+     */
+<span class="fc" id="L1246">    public static final boolean IS_OS_FREE_BSD = getOsMatchesName(&quot;FreeBSD&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is OpenBSD.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.1
+     */
+<span class="fc" id="L1258">    public static final boolean IS_OS_OPEN_BSD = getOsMatchesName(&quot;OpenBSD&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is NetBSD.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.1
+     */
+<span class="fc" id="L1270">    public static final boolean IS_OS_NET_BSD = getOsMatchesName(&quot;NetBSD&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is OS/2.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1282">    public static final boolean IS_OS_OS2 = getOsMatchesName(&quot;OS/2&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Solaris.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1294">    public static final boolean IS_OS_SOLARIS = getOsMatchesName(&quot;Solaris&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is SunOS.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1306">    public static final boolean IS_OS_SUN_OS = getOsMatchesName(&quot;SunOS&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is a UNIX like system, as in any of AIX, HP-UX, Irix, Linux, MacOSX, Solaris or SUN OS.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.1
+     */
+<span class="pc bpc" id="L1318" title="5 of 10 branches missed.">    public static final boolean IS_OS_UNIX = IS_OS_AIX || IS_OS_HP_UX || IS_OS_IRIX || IS_OS_LINUX || IS_OS_MAC_OSX</span>
+<span class="nc bnc" id="L1319" title="All 10 branches missed.">            || IS_OS_SOLARIS || IS_OS_SUN_OS || IS_OS_FREE_BSD || IS_OS_OPEN_BSD || IS_OS_NET_BSD;</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Windows.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1331">    public static final boolean IS_OS_WINDOWS = getOsMatchesName(OS_NAME_WINDOWS_PREFIX);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Windows 2000.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1343">    public static final boolean IS_OS_WINDOWS_2000 = getOsMatchesName(OS_NAME_WINDOWS_PREFIX + &quot; 2000&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Windows 2003.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.1
+     */
+<span class="fc" id="L1355">    public static final boolean IS_OS_WINDOWS_2003 = getOsMatchesName(OS_NAME_WINDOWS_PREFIX + &quot; 2003&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Windows Server 2008.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.1
+     */
+<span class="fc" id="L1367">    public static final boolean IS_OS_WINDOWS_2008 = getOsMatchesName(OS_NAME_WINDOWS_PREFIX + &quot; Server 2008&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Windows Server 2012.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.4
+     */
+<span class="fc" id="L1379">    public static final boolean IS_OS_WINDOWS_2012 = getOsMatchesName(OS_NAME_WINDOWS_PREFIX + &quot; Server 2012&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Windows 95.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1391">    public static final boolean IS_OS_WINDOWS_95 = getOsMatchesName(OS_NAME_WINDOWS_PREFIX + &quot; 95&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Windows 98.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1403">    public static final boolean IS_OS_WINDOWS_98 = getOsMatchesName(OS_NAME_WINDOWS_PREFIX + &quot; 98&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Windows ME.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1415">    public static final boolean IS_OS_WINDOWS_ME = getOsMatchesName(OS_NAME_WINDOWS_PREFIX + &quot; Me&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Windows NT.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1427">    public static final boolean IS_OS_WINDOWS_NT = getOsMatchesName(OS_NAME_WINDOWS_PREFIX + &quot; NT&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Windows XP.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.0
+     */
+<span class="fc" id="L1439">    public static final boolean IS_OS_WINDOWS_XP = getOsMatchesName(OS_NAME_WINDOWS_PREFIX + &quot; XP&quot;);</span>
+
+    // -----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Windows Vista.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 2.4
+     */
+<span class="fc" id="L1452">    public static final boolean IS_OS_WINDOWS_VISTA = getOsMatchesName(OS_NAME_WINDOWS_PREFIX + &quot; Vista&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Windows 7.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.0
+     */
+<span class="fc" id="L1464">    public static final boolean IS_OS_WINDOWS_7 = getOsMatchesName(OS_NAME_WINDOWS_PREFIX + &quot; 7&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Windows 8.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.2
+     */
+<span class="fc" id="L1476">    public static final boolean IS_OS_WINDOWS_8 = getOsMatchesName(OS_NAME_WINDOWS_PREFIX + &quot; 8&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is Windows 10.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.5
+     */
+<span class="fc" id="L1488">    public static final boolean IS_OS_WINDOWS_10 = getOsMatchesName(OS_NAME_WINDOWS_PREFIX + &quot; 10&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Is {@code true} if this is z/OS.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The field will return {@code false} if {@code OS_NAME} is {@code null}.
+     * &lt;/p&gt;
+     *
+     * @since 3.5
+     */
+    // Values on a z/OS system I tested (Gary Gregory - 2016-03-12)
+    // os.arch = s390x
+    // os.encoding = ISO8859_1
+    // os.name = z/OS
+    // os.version = 02.02.00
+<span class="fc" id="L1505">    public static final boolean IS_OS_ZOS = getOsMatchesName(&quot;z/OS&quot;);</span>
+
+    /**
+     * &lt;p&gt;
+     * Gets the Java home directory as a {@code File}.
+     * &lt;/p&gt;
+     *
+     * @return a directory
+     * @throws SecurityException if a security manager exists and its {@code checkPropertyAccess} method doesn't allow
+     * access to the specified system property.
+     * @see System#getProperty(String)
+     * @since 2.1
+     */
+    public static File getJavaHome() {
+<span class="fc" id="L1519">        return new File(System.getProperty(JAVA_HOME_KEY));</span>
+    }
+
+    /**
+     * Gets the host name from an environment variable.
+     *
+     * &lt;p&gt;
+     * If you want to know what the network stack says is the host name, you should use {@code InetAddress.getLocalHost().getHostName()}.
+     * &lt;/p&gt;
+     *
+     * @return the host name.
+     * @since 3.6
+     */
+    public static String getHostName() {
+<span class="pc bpc" id="L1533" title="1 of 2 branches missed.">        return IS_OS_WINDOWS ? System.getenv(&quot;COMPUTERNAME&quot;) : System.getenv(&quot;HOSTNAME&quot;);</span>
+    }
+
+    /**
+     * &lt;p&gt;
+     * Gets the Java IO temporary directory as a {@code File}.
+     * &lt;/p&gt;
+     *
+     * @return a directory
+     * @throws SecurityException if a security manager exists and its {@code checkPropertyAccess} method doesn't allow
+     * access to the specified system property.
+     * @see System#getProperty(String)
+     * @since 2.1
+     */
+    public static File getJavaIoTmpDir() {
+<span class="fc" id="L1548">        return new File(System.getProperty(JAVA_IO_TMPDIR_KEY));</span>
+    }
+
+    /**
+     * &lt;p&gt;
+     * Decides if the Java version matches.
+     * &lt;/p&gt;
+     *
+     * @param versionPrefix the prefix for the java version
+     * @return true if matches, or false if not or can't determine
+     */
+    private static boolean getJavaVersionMatches(final String versionPrefix) {
+<span class="fc" id="L1560">        return isJavaVersionMatch(JAVA_SPECIFICATION_VERSION, versionPrefix);</span>
+    }
+
+    /**
+     * Decides if the operating system matches.
+     *
+     * @param osNamePrefix the prefix for the OS name
+     * @param osVersionPrefix the prefix for the version
+     * @return true if matches, or false if not or can't determine
+     */
+    private static boolean getOsMatches(final String osNamePrefix, final String osVersionPrefix) {
+<span class="fc" id="L1571">        return isOSMatch(OS_NAME, OS_VERSION, osNamePrefix, osVersionPrefix);</span>
+    }
+
+    /**
+     * Decides if the operating system matches.
+     *
+     * @param osNamePrefix the prefix for the OS name
+     * @return true if matches, or false if not or can't determine
+     */
+    private static boolean getOsMatchesName(final String osNamePrefix) {
+<span class="fc" id="L1581">        return isOSNameMatch(OS_NAME, osNamePrefix);</span>
+    }
+
+    // -----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;
+     * Gets a System property, defaulting to {@code null} if the property cannot be read.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * If a {@code SecurityException} is caught, the return value is {@code null} and a message is written to
+     * {@code System.err}.
+     * &lt;/p&gt;
+     *
+     * @param property the system property name
+     * @return the system property value or {@code null} if a security problem occurs
+     */
+    private static String getSystemProperty(final String property) {
+        try {
+<span class="fc" id="L1599">            return System.getProperty(property);</span>
+<span class="nc" id="L1600">        } catch (final SecurityException ex) {</span>
+            // we are not allowed to look at this property
+            // System.err.println(&quot;Caught a SecurityException reading the system property '&quot; + property
+            // + &quot;'; the SystemUtils property value will default to null.&quot;);
+<span class="nc" id="L1604">            return null;</span>
+        }
+    }
+
+    /**
+     * &lt;p&gt;
+     * Gets an environment variable, defaulting to {@code defaultValue} if the variable cannot be read.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * If a {@code SecurityException} is caught, the return value is {@code defaultValue} and a message is written to
+     * {@code System.err}.
+     * &lt;/p&gt;
+     *
+     * @param name
+     *            the environment variable name
+     * @param defaultValue
+     *            the default value
+     * @return the environment variable value or {@code defaultValue} if a security problem occurs
+     * @since 3.8
+     */
+    public static String getEnvironmentVariable(final String name, final String defaultValue) {
+        try {
+<span class="fc" id="L1626">            final String value = System.getenv(name);</span>
+<span class="fc bfc" id="L1627" title="All 2 branches covered.">            return value == null ? defaultValue : value;</span>
+<span class="nc" id="L1628">        } catch (final SecurityException ex) {</span>
+            // we are not allowed to look at this property
+            // System.err.println(&quot;Caught a SecurityException reading the environment variable '&quot; + name + &quot;'.&quot;);
+<span class="nc" id="L1631">            return defaultValue;</span>
+        }
+    }
+
+    /**
+     * &lt;p&gt;
+     * Gets the user directory as a {@code File}.
+     * &lt;/p&gt;
+     *
+     * @return a directory
+     * @throws SecurityException if a security manager exists and its {@code checkPropertyAccess} method doesn't allow
+     * access to the specified system property.
+     * @see System#getProperty(String)
+     * @since 2.1
+     */
+    public static File getUserDir() {
+<span class="fc" id="L1647">        return new File(System.getProperty(USER_DIR_KEY));</span>
+    }
+
+    /**
+     * &lt;p&gt;
+     * Gets the user home directory as a {@code File}.
+     * &lt;/p&gt;
+     *
+     * @return a directory
+     * @throws SecurityException if a security manager exists and its {@code checkPropertyAccess} method doesn't allow
+     * access to the specified system property.
+     * @see System#getProperty(String)
+     * @since 2.1
+     */
+    public static File getUserHome() {
+<span class="fc" id="L1662">        return new File(System.getProperty(USER_HOME_KEY));</span>
+    }
+
+    /**
+     * Returns whether the {@link #JAVA_AWT_HEADLESS} value is {@code true}.
+     *
+     * @return {@code true} if {@code JAVA_AWT_HEADLESS} is {@code &quot;true&quot;}, {@code false} otherwise.
+     * @see #JAVA_AWT_HEADLESS
+     * @since 2.1
+     * @since Java 1.4
+     */
+    public static boolean isJavaAwtHeadless() {
+<span class="fc" id="L1674">        return Boolean.TRUE.toString().equals(JAVA_AWT_HEADLESS);</span>
+    }
+
+    /**
+     * &lt;p&gt;
+     * Is the Java version at least the requested version.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Example input:
+     * &lt;/p&gt;
+     * &lt;ul&gt;
+     * &lt;li&gt;{@code 1.2f} to test for Java 1.2&lt;/li&gt;
+     * &lt;li&gt;{@code 1.31f} to test for Java 1.3.1&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * @param requiredVersion the required version, for example 1.31f
+     * @return {@code true} if the actual version is equal or greater than the required version
+     */
+    public static boolean isJavaVersionAtLeast(final JavaVersion requiredVersion) {
+<span class="fc" id="L1693">        return JAVA_SPECIFICATION_VERSION_AS_ENUM.atLeast(requiredVersion);</span>
+    }
+
+    /**
+     * &lt;p&gt;
+     * Decides if the Java version matches.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This method is package private instead of private to support unit test invocation.
+     * &lt;/p&gt;
+     *
+     * @param version the actual Java version
+     * @param versionPrefix the prefix for the expected Java version
+     * @return true if matches, or false if not or can't determine
+     */
+    static boolean isJavaVersionMatch(final String version, final String versionPrefix) {
+<span class="fc bfc" id="L1709" title="All 2 branches covered.">        if (version == null) {</span>
+<span class="fc" id="L1710">            return false;</span>
+        }
+<span class="fc" id="L1712">        return version.startsWith(versionPrefix);</span>
+    }
+
+    /**
+     * Decides if the operating system matches.
+     * &lt;p&gt;
+     * This method is package private instead of private to support unit test invocation.
+     * &lt;/p&gt;
+     *
+     * @param osName the actual OS name
+     * @param osVersion the actual OS version
+     * @param osNamePrefix the prefix for the expected OS name
+     * @param osVersionPrefix the prefix for the expected OS version
+     * @return true if matches, or false if not or can't determine
+     */
+    static boolean isOSMatch(final String osName, final String osVersion, final String osNamePrefix, final String osVersionPrefix) {
+<span class="pc bpc" id="L1728" title="1 of 4 branches missed.">        if (osName == null || osVersion == null) {</span>
+<span class="fc" id="L1729">            return false;</span>
+        }
+<span class="fc bfc" id="L1731" title="All 4 branches covered.">        return isOSNameMatch(osName, osNamePrefix) &amp;&amp; isOSVersionMatch(osVersion, osVersionPrefix);</span>
+    }
+
+    /**
+     * Decides if the operating system matches.
+     * &lt;p&gt;
+     * This method is package private instead of private to support unit test invocation.
+     * &lt;/p&gt;
+     *
+     * @param osName the actual OS name
+     * @param osNamePrefix the prefix for the expected OS name
+     * @return true if matches, or false if not or can't determine
+     */
+    static boolean isOSNameMatch(final String osName, final String osNamePrefix) {
+<span class="fc bfc" id="L1745" title="All 2 branches covered.">        if (osName == null) {</span>
+<span class="fc" id="L1746">            return false;</span>
+        }
+<span class="fc" id="L1748">        return osName.startsWith(osNamePrefix);</span>
+    }
+
+    /**
+     * Decides if the operating system version matches.
+     * &lt;p&gt;
+     * This method is package private instead of private to support unit test invocation.
+     * &lt;/p&gt;
+     *
+     * @param osVersion the actual OS version
+     * @param osVersionPrefix the prefix for the expected OS version
+     * @return true if matches, or false if not or can't determine
+     */
+    static boolean isOSVersionMatch(final String osVersion, final String osVersionPrefix) {
+<span class="fc bfc" id="L1762" title="All 2 branches covered.">        if (StringUtils.isEmpty(osVersion)) {</span>
+<span class="fc" id="L1763">            return false;</span>
+        }
+        // Compare parts of the version string instead of using String.startsWith(String) because otherwise
+        // osVersionPrefix 10.1 would also match osVersion 10.10
+<span class="fc" id="L1767">        final String[] versionPrefixParts = osVersionPrefix.split(&quot;\\.&quot;);</span>
+<span class="fc" id="L1768">        final String[] versionParts = osVersion.split(&quot;\\.&quot;);</span>
+<span class="fc bfc" id="L1769" title="All 2 branches covered.">        for (int i = 0; i &lt; Math.min(versionPrefixParts.length, versionParts.length); i++) {</span>
+<span class="fc bfc" id="L1770" title="All 2 branches covered.">            if (!versionPrefixParts[i].equals(versionParts[i])) {</span>
+<span class="fc" id="L1771">                return false;</span>
+            }
+        }
+<span class="fc" id="L1774">        return true;</span>
+    }
+
+    // -----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;
+     * SystemUtils instances should NOT be constructed in standard programming. Instead, the class should be used as
+     * {@code SystemUtils.FILE_SEPARATOR}.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * This constructor is public to permit tools that require a JavaBean instance to operate.
+     * &lt;/p&gt;
+     */
+    public SystemUtils() {
+<span class="fc" id="L1788">        super();</span>
+<span class="fc" id="L1789">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

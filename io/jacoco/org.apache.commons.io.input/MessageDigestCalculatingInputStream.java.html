@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MessageDigestCalculatingInputStream.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons IO</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.io.input</a> &gt; <span class="el_source">MessageDigestCalculatingInputStream.java</span></div><h1>MessageDigestCalculatingInputStream.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.io.input;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
+
+/**
+ * This class is an example for using an {@link ObservableInputStream}. It
+ * creates its own {@link org.apache.commons.io.input.ObservableInputStream.Observer},
+ * which calculates a checksum using a MessageDigest, for example an MD5 sum.
+ * &lt;em&gt;Note&lt;/em&gt;: Neither {@link ObservableInputStream}, nor {@link MessageDigest},
+ * are thread safe. So is {@link MessageDigestCalculatingInputStream}.
+ */
+public class MessageDigestCalculatingInputStream extends ObservableInputStream {
+
+    /**
+     * Maintains the message digest.
+     */
+    public static class MessageDigestMaintainingObserver extends Observer {
+        private final MessageDigest md;
+
+        /**
+         * Creates an MessageDigestMaintainingObserver for the given MessageDigest.
+         * @param pMd the message digest to use
+         */
+<span class="fc" id="L44">        public MessageDigestMaintainingObserver(final MessageDigest pMd) {</span>
+<span class="fc" id="L45">            md = pMd;</span>
+<span class="fc" id="L46">        }</span>
+
+        @Override
+        void data(final int pByte) throws IOException {
+<span class="nc" id="L50">            md.update((byte) pByte);</span>
+<span class="nc" id="L51">        }</span>
+
+        @Override
+        void data(final byte[] pBuffer, final int pOffset, final int pLength) throws IOException {
+<span class="fc" id="L55">            md.update(pBuffer, pOffset, pLength);</span>
+<span class="fc" id="L56">        }</span>
+    }
+
+    private final MessageDigest messageDigest;
+
+    /** Creates a new instance, which calculates a signature on the given stream,
+     * using the given {@link MessageDigest}.
+     * @param pStream the stream to calculate the message digest for
+     * @param pDigest the message digest to use
+     */
+    public MessageDigestCalculatingInputStream(final InputStream pStream, final MessageDigest pDigest) {
+<span class="fc" id="L67">        super(pStream);</span>
+<span class="fc" id="L68">        messageDigest = pDigest;</span>
+<span class="fc" id="L69">        add(new MessageDigestMaintainingObserver(pDigest));</span>
+<span class="fc" id="L70">    }</span>
+
+    /** Creates a new instance, which calculates a signature on the given stream,
+     * using a {@link MessageDigest} with the given algorithm.
+     * @param pStream the stream to calculate the message digest for
+     * @param pAlgorithm the name of the algorithm to use
+     * @throws NoSuchAlgorithmException if no Provider supports a MessageDigestSpi implementation for the specified algorithm.
+     */
+    public MessageDigestCalculatingInputStream(final InputStream pStream, final String pAlgorithm) throws NoSuchAlgorithmException {
+<span class="nc" id="L79">        this(pStream, MessageDigest.getInstance(pAlgorithm));</span>
+<span class="nc" id="L80">    }</span>
+
+    /** Creates a new instance, which calculates a signature on the given stream,
+     * using a {@link MessageDigest} with the &quot;MD5&quot; algorithm.
+     * @param pStream the stream to calculate the message digest for
+     * @throws NoSuchAlgorithmException if no Provider supports a MessageDigestSpi implementation for the specified algorithm.
+     */
+    public MessageDigestCalculatingInputStream(final InputStream pStream) throws NoSuchAlgorithmException {
+<span class="fc" id="L88">        this(pStream, MessageDigest.getInstance(&quot;MD5&quot;));</span>
+<span class="fc" id="L89">    }</span>
+
+    /** Returns the {@link MessageDigest}, which is being used for generating the
+     * checksum.
+     * &lt;em&gt;Note&lt;/em&gt;: The checksum will only reflect the data, which has been read so far.
+     * This is probably not, what you expect. Make sure, that the complete data has been
+     * read, if that is what you want. The easiest way to do so is by invoking
+     * {@link #consume()}.
+     * @return the message digest used
+     */
+    public MessageDigest getMessageDigest() {
+<span class="fc" id="L100">        return messageDigest;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

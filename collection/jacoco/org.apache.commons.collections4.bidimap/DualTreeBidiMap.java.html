@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DualTreeBidiMap.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.bidimap</a> &gt; <span class="el_source">DualTreeBidiMap.java</span></div><h1>DualTreeBidiMap.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.bidimap;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
+import org.apache.commons.collections4.BidiMap;
+import org.apache.commons.collections4.OrderedBidiMap;
+import org.apache.commons.collections4.OrderedMap;
+import org.apache.commons.collections4.OrderedMapIterator;
+import org.apache.commons.collections4.ResettableIterator;
+import org.apache.commons.collections4.SortedBidiMap;
+import org.apache.commons.collections4.map.AbstractSortedMapDecorator;
+
+/**
+ * Implementation of {@link BidiMap} that uses two {@link TreeMap} instances.
+ * &lt;p&gt;
+ * The setValue() method on iterators will succeed only if the new value being set is
+ * not already in the bidimap.
+ * &lt;p&gt;
+ * When considering whether to use this class, the {@link TreeBidiMap} class should
+ * also be considered. It implements the interface using a dedicated design, and does
+ * not store each object twice, which can save on memory use.
+ * &lt;p&gt;
+ * NOTE: From Commons Collections 3.1, all subclasses will use {@link TreeMap}
+ * and the flawed &lt;code&gt;createMap&lt;/code&gt; method is ignored.
+ *
+ * @param &lt;K&gt; the type of the keys in this map
+ * @param &lt;V&gt; the type of the values in this map
+ * @since 3.0
+ */
+public class DualTreeBidiMap&lt;K, V&gt; extends AbstractDualBidiMap&lt;K, V&gt;
+        implements SortedBidiMap&lt;K, V&gt;, Serializable {
+
+    /** Ensure serialization compatibility */
+    private static final long serialVersionUID = 721969328361809L;
+
+    /** The key comparator to use */
+    private final Comparator&lt;? super K&gt; comparator;
+
+    /** The value comparator to use */
+    private final Comparator&lt;? super V&gt; valueComparator;
+
+    /**
+     * Creates an empty &lt;code&gt;DualTreeBidiMap&lt;/code&gt;
+     */
+    public DualTreeBidiMap() {
+<span class="fc" id="L72">        super(new TreeMap&lt;K, V&gt;(), new TreeMap&lt;V, K&gt;());</span>
+<span class="fc" id="L73">        this.comparator = null;</span>
+<span class="fc" id="L74">        this.valueComparator = null;</span>
+<span class="fc" id="L75">    }</span>
+
+    /**
+     * Constructs a &lt;code&gt;DualTreeBidiMap&lt;/code&gt; and copies the mappings from
+     * specified &lt;code&gt;Map&lt;/code&gt;.
+     *
+     * @param map  the map whose mappings are to be placed in this map
+     */
+    public DualTreeBidiMap(final Map&lt;? extends K, ? extends V&gt; map) {
+<span class="nc" id="L84">        super(new TreeMap&lt;K, V&gt;(), new TreeMap&lt;V, K&gt;());</span>
+<span class="nc" id="L85">        putAll(map);</span>
+<span class="nc" id="L86">        this.comparator = null;</span>
+<span class="nc" id="L87">        this.valueComparator = null;</span>
+<span class="nc" id="L88">    }</span>
+
+    /**
+     * Constructs a {@link DualTreeBidiMap} using the specified {@link Comparator}.
+     *
+     * @param keyComparator  the comparator
+     * @param valueComparator  the values comparator to use
+     */
+    public DualTreeBidiMap(final Comparator&lt;? super K&gt; keyComparator, final Comparator&lt;? super V&gt; valueComparator) {
+<span class="fc" id="L97">        super(new TreeMap&lt;K, V&gt;(keyComparator), new TreeMap&lt;V, K&gt;(valueComparator));</span>
+<span class="fc" id="L98">        this.comparator = keyComparator;</span>
+<span class="fc" id="L99">        this.valueComparator = valueComparator;</span>
+<span class="fc" id="L100">    }</span>
+
+    /**
+     * Constructs a {@link DualTreeBidiMap} that decorates the specified maps.
+     *
+     * @param normalMap  the normal direction map
+     * @param reverseMap  the reverse direction map
+     * @param inverseBidiMap  the inverse BidiMap
+     */
+    protected DualTreeBidiMap(final Map&lt;K, V&gt; normalMap, final Map&lt;V, K&gt; reverseMap,
+                              final BidiMap&lt;V, K&gt; inverseBidiMap) {
+<span class="fc" id="L111">        super(normalMap, reverseMap, inverseBidiMap);</span>
+<span class="fc" id="L112">        this.comparator = ((SortedMap&lt;K, V&gt;) normalMap).comparator();</span>
+<span class="fc" id="L113">        this.valueComparator = ((SortedMap&lt;V, K&gt;) reverseMap).comparator();</span>
+<span class="fc" id="L114">    }</span>
+
+    /**
+     * Creates a new instance of this object.
+     *
+     * @param normalMap  the normal direction map
+     * @param reverseMap  the reverse direction map
+     * @param inverseMap  the inverse BidiMap
+     * @return new bidi map
+     */
+    @Override
+    protected DualTreeBidiMap&lt;V, K&gt; createBidiMap(final Map&lt;V, K&gt; normalMap, final Map&lt;K, V&gt; reverseMap,
+                                                  final BidiMap&lt;K, V&gt; inverseMap) {
+<span class="fc" id="L127">        return new DualTreeBidiMap&lt;&gt;(normalMap, reverseMap, inverseMap);</span>
+    }
+
+    //-----------------------------------------------------------------------
+
+    @Override
+    public Comparator&lt;? super K&gt; comparator() {
+<span class="fc" id="L134">        return ((SortedMap&lt;K, V&gt;) normalMap).comparator();</span>
+    }
+
+    @Override
+    public Comparator&lt;? super V&gt; valueComparator() {
+<span class="fc" id="L139">        return ((SortedMap&lt;V, K&gt;) reverseMap).comparator();</span>
+    }
+
+    @Override
+    public K firstKey() {
+<span class="fc" id="L144">        return ((SortedMap&lt;K, V&gt;) normalMap).firstKey();</span>
+    }
+
+    @Override
+    public K lastKey() {
+<span class="fc" id="L149">        return ((SortedMap&lt;K, V&gt;) normalMap).lastKey();</span>
+    }
+
+    @Override
+    public K nextKey(final K key) {
+<span class="fc bfc" id="L154" title="All 2 branches covered.">        if (isEmpty()) {</span>
+<span class="fc" id="L155">            return null;</span>
+        }
+<span class="pc bpc" id="L157" title="1 of 2 branches missed.">        if (normalMap instanceof OrderedMap) {</span>
+<span class="nc" id="L158">            return ((OrderedMap&lt;K, ?&gt;) normalMap).nextKey(key);</span>
+        }
+<span class="fc" id="L160">        final SortedMap&lt;K, V&gt; sm = (SortedMap&lt;K, V&gt;) normalMap;</span>
+<span class="fc" id="L161">        final Iterator&lt;K&gt; it = sm.tailMap(key).keySet().iterator();</span>
+<span class="fc" id="L162">        it.next();</span>
+<span class="fc bfc" id="L163" title="All 2 branches covered.">        if (it.hasNext()) {</span>
+<span class="fc" id="L164">            return it.next();</span>
+        }
+<span class="fc" id="L166">        return null;</span>
+    }
+
+    @Override
+    public K previousKey(final K key) {
+<span class="fc bfc" id="L171" title="All 2 branches covered.">        if (isEmpty()) {</span>
+<span class="fc" id="L172">            return null;</span>
+        }
+<span class="pc bpc" id="L174" title="1 of 2 branches missed.">        if (normalMap instanceof OrderedMap) {</span>
+<span class="nc" id="L175">            return ((OrderedMap&lt;K, V&gt;) normalMap).previousKey(key);</span>
+        }
+<span class="fc" id="L177">        final SortedMap&lt;K, V&gt; sm = (SortedMap&lt;K, V&gt;) normalMap;</span>
+<span class="fc" id="L178">        final SortedMap&lt;K, V&gt; hm = sm.headMap(key);</span>
+<span class="fc bfc" id="L179" title="All 2 branches covered.">        if (hm.isEmpty()) {</span>
+<span class="fc" id="L180">            return null;</span>
+        }
+<span class="fc" id="L182">        return hm.lastKey();</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Obtains an ordered map iterator.
+     * &lt;p&gt;
+     * This implementation copies the elements to an ArrayList in order to
+     * provide the forward/backward behaviour.
+     *
+     * @return a new ordered map iterator
+     */
+    @Override
+    public OrderedMapIterator&lt;K, V&gt; mapIterator() {
+<span class="fc" id="L196">        return new BidiOrderedMapIterator&lt;&gt;(this);</span>
+    }
+
+    public SortedBidiMap&lt;V, K&gt; inverseSortedBidiMap() {
+<span class="nc" id="L200">        return inverseBidiMap();</span>
+    }
+
+    public OrderedBidiMap&lt;V, K&gt; inverseOrderedBidiMap() {
+<span class="nc" id="L204">        return inverseBidiMap();</span>
+    }
+
+    //-----------------------------------------------------------------------
+
+    @Override
+    public SortedMap&lt;K, V&gt; headMap(final K toKey) {
+<span class="fc" id="L211">        final SortedMap&lt;K, V&gt; sub = ((SortedMap&lt;K, V&gt;) normalMap).headMap(toKey);</span>
+<span class="fc" id="L212">        return new ViewMap&lt;&gt;(this, sub);</span>
+    }
+
+    @Override
+    public SortedMap&lt;K, V&gt; tailMap(final K fromKey) {
+<span class="fc" id="L217">        final SortedMap&lt;K, V&gt; sub = ((SortedMap&lt;K, V&gt;) normalMap).tailMap(fromKey);</span>
+<span class="fc" id="L218">        return new ViewMap&lt;&gt;(this, sub);</span>
+    }
+
+    @Override
+    public SortedMap&lt;K, V&gt; subMap(final K fromKey, final K toKey) {
+<span class="fc" id="L223">        final SortedMap&lt;K, V&gt; sub = ((SortedMap&lt;K, V&gt;) normalMap).subMap(fromKey, toKey);</span>
+<span class="fc" id="L224">        return new ViewMap&lt;&gt;(this, sub);</span>
+    }
+
+    @Override
+    public SortedBidiMap&lt;V, K&gt; inverseBidiMap() {
+<span class="fc" id="L229">        return (SortedBidiMap&lt;V, K&gt;) super.inverseBidiMap();</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Internal sorted map view.
+     */
+    protected static class ViewMap&lt;K, V&gt; extends AbstractSortedMapDecorator&lt;K, V&gt; {
+        /**
+         * Constructor.
+         * @param bidi  the parent bidi map
+         * @param sm  the subMap sorted map
+         */
+        protected ViewMap(final DualTreeBidiMap&lt;K, V&gt; bidi, final SortedMap&lt;K, V&gt; sm) {
+            // the implementation is not great here...
+            // use the normalMap as the filtered map, but reverseMap as the full map
+            // this forces containsValue and clear to be overridden
+<span class="fc" id="L246">            super(new DualTreeBidiMap&lt;&gt;(sm, bidi.reverseMap, bidi.inverseBidiMap));</span>
+<span class="fc" id="L247">        }</span>
+
+        @Override
+        public boolean containsValue(final Object value) {
+            // override as default implementation uses reverseMap
+<span class="fc" id="L252">            return decorated().normalMap.containsValue(value);</span>
+        }
+
+        @Override
+        public void clear() {
+            // override as default implementation uses reverseMap
+<span class="fc bfc" id="L258" title="All 2 branches covered.">            for (final Iterator&lt;K&gt; it = keySet().iterator(); it.hasNext();) {</span>
+<span class="fc" id="L259">                it.next();</span>
+<span class="fc" id="L260">                it.remove();</span>
+            }
+<span class="fc" id="L262">        }</span>
+
+        @Override
+        public SortedMap&lt;K, V&gt; headMap(final K toKey) {
+<span class="nc" id="L266">            return new ViewMap&lt;&gt;(decorated(), super.headMap(toKey));</span>
+        }
+
+        @Override
+        public SortedMap&lt;K, V&gt; tailMap(final K fromKey) {
+<span class="nc" id="L271">            return new ViewMap&lt;&gt;(decorated(), super.tailMap(fromKey));</span>
+        }
+
+        @Override
+        public SortedMap&lt;K, V&gt; subMap(final K fromKey, final K toKey) {
+<span class="nc" id="L276">            return new ViewMap&lt;&gt;(decorated(), super.subMap(fromKey, toKey));</span>
+        }
+
+        @Override
+        protected DualTreeBidiMap&lt;K, V&gt; decorated() {
+<span class="fc" id="L281">            return (DualTreeBidiMap&lt;K, V&gt;) super.decorated();</span>
+        }
+
+        @Override
+        public K previousKey(final K key) {
+<span class="nc" id="L286">            return decorated().previousKey(key);</span>
+        }
+
+        @Override
+        public K nextKey(final K key) {
+<span class="nc" id="L291">            return decorated().nextKey(key);</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Inner class MapIterator.
+     */
+    protected static class BidiOrderedMapIterator&lt;K, V&gt; implements OrderedMapIterator&lt;K, V&gt;, ResettableIterator&lt;K&gt; {
+
+        /** The parent map */
+        private final AbstractDualBidiMap&lt;K, V&gt; parent;
+
+        /** The iterator being decorated */
+        private ListIterator&lt;Map.Entry&lt;K, V&gt;&gt; iterator;
+
+        /** The last returned entry */
+<span class="fc" id="L308">        private Map.Entry&lt;K, V&gt; last = null;</span>
+
+        /**
+         * Constructor.
+         * @param parent  the parent map
+         */
+        protected BidiOrderedMapIterator(final AbstractDualBidiMap&lt;K, V&gt; parent) {
+<span class="fc" id="L315">            super();</span>
+<span class="fc" id="L316">            this.parent = parent;</span>
+<span class="fc" id="L317">            iterator = new ArrayList&lt;&gt;(parent.entrySet()).listIterator();</span>
+<span class="fc" id="L318">        }</span>
+
+        @Override
+        public boolean hasNext() {
+<span class="fc" id="L322">            return iterator.hasNext();</span>
+        }
+
+        @Override
+        public K next() {
+<span class="fc" id="L327">            last = iterator.next();</span>
+<span class="fc" id="L328">            return last.getKey();</span>
+        }
+
+        @Override
+        public boolean hasPrevious() {
+<span class="nc" id="L333">            return iterator.hasPrevious();</span>
+        }
+
+        @Override
+        public K previous() {
+<span class="nc" id="L338">            last = iterator.previous();</span>
+<span class="nc" id="L339">            return last.getKey();</span>
+        }
+
+        @Override
+        public void remove() {
+<span class="fc" id="L344">            iterator.remove();</span>
+<span class="fc" id="L345">            parent.remove(last.getKey());</span>
+<span class="fc" id="L346">            last = null;</span>
+<span class="fc" id="L347">        }</span>
+
+        @Override
+        public K getKey() {
+<span class="fc bfc" id="L351" title="All 2 branches covered.">            if (last == null) {</span>
+<span class="fc" id="L352">                throw new IllegalStateException(</span>
+                        &quot;Iterator getKey() can only be called after next() and before remove()&quot;);
+            }
+<span class="fc" id="L355">            return last.getKey();</span>
+        }
+
+        @Override
+        public V getValue() {
+<span class="fc bfc" id="L360" title="All 2 branches covered.">            if (last == null) {</span>
+<span class="fc" id="L361">                throw new IllegalStateException(</span>
+                        &quot;Iterator getValue() can only be called after next() and before remove()&quot;);
+            }
+<span class="fc" id="L364">            return last.getValue();</span>
+        }
+
+        @Override
+        public V setValue(final V value) {
+<span class="fc bfc" id="L369" title="All 2 branches covered.">            if (last == null) {</span>
+<span class="fc" id="L370">                throw new IllegalStateException(</span>
+                        &quot;Iterator setValue() can only be called after next() and before remove()&quot;);
+            }
+<span class="fc bfc" id="L373" title="All 2 branches covered.">            if (parent.reverseMap.containsKey(value) &amp;&amp;</span>
+<span class="fc bfc" id="L374" title="All 2 branches covered.">                parent.reverseMap.get(value) != last.getKey()) {</span>
+<span class="fc" id="L375">                throw new IllegalArgumentException(</span>
+                        &quot;Cannot use setValue() when the object being set is already in the map&quot;);
+            }
+<span class="fc" id="L378">            final V oldValue = parent.put(last.getKey(), value);</span>
+            // Map.Entry specifies that the behavior is undefined when the backing map
+            // has been modified (as we did with the put), so we also set the value
+            // (especially needed for IBM JDK)
+<span class="fc" id="L382">            last.setValue(value);</span>
+<span class="fc" id="L383">            return oldValue;</span>
+        }
+
+        @Override
+        public void reset() {
+<span class="nc" id="L388">            iterator = new ArrayList&lt;&gt;(parent.entrySet()).listIterator();</span>
+<span class="nc" id="L389">            last = null;</span>
+<span class="nc" id="L390">        }</span>
+
+        @Override
+        public String toString() {
+<span class="fc bfc" id="L394" title="All 2 branches covered.">            if (last != null) {</span>
+<span class="fc" id="L395">                return &quot;MapIterator[&quot; + getKey() + &quot;=&quot; + getValue() + &quot;]&quot;;</span>
+            }
+<span class="fc" id="L397">            return &quot;MapIterator[]&quot;;</span>
+        }
+    }
+
+    // Serialization
+    //-----------------------------------------------------------------------
+    private void writeObject(final ObjectOutputStream out) throws IOException {
+<span class="fc" id="L404">        out.defaultWriteObject();</span>
+<span class="fc" id="L405">        out.writeObject(normalMap);</span>
+<span class="fc" id="L406">    }</span>
+
+    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
+<span class="fc" id="L409">        in.defaultReadObject();</span>
+<span class="fc" id="L410">        normalMap = new TreeMap&lt;&gt;(comparator);</span>
+<span class="fc" id="L411">        reverseMap = new TreeMap&lt;&gt;(valueComparator);</span>
+        @SuppressWarnings(&quot;unchecked&quot;) // will fail at runtime if the stream is incorrect
+<span class="fc" id="L413">        final Map&lt;K, V&gt; map = (Map&lt;K, V&gt;) in.readObject();</span>
+<span class="fc" id="L414">        putAll(map);</span>
+<span class="fc" id="L415">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

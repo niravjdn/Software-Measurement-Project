@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ValidatingObjectInputStream.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons IO</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.io.serialization</a> &gt; <span class="el_source">ValidatingObjectInputStream.java</span></div><h1>ValidatingObjectInputStream.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * &quot;License&quot;); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.commons.io.serialization;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InvalidClassException;
+import java.io.ObjectInputStream;
+import java.io.ObjectStreamClass;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
+
+/**
+ * An &lt;code&gt;ObjectInputStream&lt;/code&gt; that's restricted to deserialize
+ * a limited set of classes.
+ *
+ * &lt;p&gt;
+ * Various accept/reject methods allow for specifying which classes
+ * can be deserialized.
+ * &lt;/p&gt;
+ *
+ * &lt;p&gt;
+ * Design inspired by &lt;a
+ * href=&quot;http://www.ibm.com/developerworks/library/se-lookahead/&quot;&gt;IBM
+ * DeveloperWorks Article&lt;/a&gt;.
+ * &lt;/p&gt;
+ */
+public class ValidatingObjectInputStream extends ObjectInputStream {
+<span class="fc" id="L46">    private final List&lt;ClassNameMatcher&gt; acceptMatchers = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L47">    private final List&lt;ClassNameMatcher&gt; rejectMatchers = new ArrayList&lt;&gt;();</span>
+
+    /**
+     * Constructs an object to deserialize the specified input stream.
+     * At least one accept method needs to be called to specify which
+     * classes can be deserialized, as by default no classes are
+     * accepted.
+     *
+     * @param input an input stream
+     * @throws IOException if an I/O error occurs while reading stream header
+     */
+    public ValidatingObjectInputStream(final InputStream input) throws IOException {
+<span class="fc" id="L59">        super(input);</span>
+<span class="fc" id="L60">    }</span>
+
+    /** Check that the classname conforms to requirements.
+     * @param name The class name
+     * @throws InvalidClassException when a non-accepted class is encountered
+     */
+    private void validateClassName(final String name) throws InvalidClassException {
+        // Reject has precedence over accept
+<span class="fc bfc" id="L68" title="All 2 branches covered.">        for (final ClassNameMatcher m : rejectMatchers) {</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">            if (m.matches(name)) {</span>
+<span class="nc" id="L70">                invalidClassNameFound(name);</span>
+            }
+        }
+
+<span class="fc" id="L74">        boolean ok = false;</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        for (final ClassNameMatcher m : acceptMatchers) {</span>
+<span class="fc bfc" id="L76" title="All 2 branches covered.">            if (m.matches(name)) {</span>
+<span class="fc" id="L77">                ok = true;</span>
+<span class="fc" id="L78">                break;</span>
+            }
+        }
+<span class="fc bfc" id="L81" title="All 2 branches covered.">        if (!ok) {</span>
+<span class="nc" id="L82">            invalidClassNameFound(name);</span>
+        }
+<span class="fc" id="L84">    }</span>
+
+    /**
+     * Called to throw &lt;code&gt;InvalidClassException&lt;/code&gt; if an invalid
+     * class name is found during deserialization. Can be overridden, for example
+     * to log those class names.
+     *
+     * @param className name of the invalid class
+     * @throws InvalidClassException if the specified class is not allowed
+     */
+    protected void invalidClassNameFound(final String className) throws InvalidClassException {
+<span class="fc" id="L95">        throw new InvalidClassException(&quot;Class name not accepted: &quot; + className);</span>
+    }
+
+    @Override
+    protected Class&lt;?&gt; resolveClass(final ObjectStreamClass osc) throws IOException, ClassNotFoundException {
+<span class="fc" id="L100">        validateClassName(osc.getName());</span>
+<span class="fc" id="L101">        return super.resolveClass(osc);</span>
+    }
+
+    /**
+     * Accept the specified classes for deserialization, unless they
+     * are otherwise rejected.
+     *
+     * @param classes Classes to accept
+     * @return this object
+     */
+    public ValidatingObjectInputStream accept(final Class&lt;?&gt;... classes) {
+<span class="fc bfc" id="L112" title="All 2 branches covered.">        for (final Class&lt;?&gt; c : classes) {</span>
+<span class="fc" id="L113">            acceptMatchers.add(new FullClassNameMatcher(c.getName()));</span>
+        }
+<span class="fc" id="L115">        return this;</span>
+    }
+
+    /**
+     * Reject the specified classes for deserialization, even if they
+     * are otherwise accepted.
+     *
+     * @param classes Classes to reject
+     * @return this object
+     */
+    public ValidatingObjectInputStream reject(final Class&lt;?&gt;... classes) {
+<span class="fc bfc" id="L126" title="All 2 branches covered.">        for (final Class&lt;?&gt; c : classes) {</span>
+<span class="fc" id="L127">            rejectMatchers.add(new FullClassNameMatcher(c.getName()));</span>
+        }
+<span class="fc" id="L129">        return this;</span>
+    }
+
+    /**
+     * Accept the wildcard specified classes for deserialization,
+     * unless they are otherwise rejected.
+     *
+     * @param patterns Wildcard filename patterns as defined by
+     *                  {@link org.apache.commons.io.FilenameUtils#wildcardMatch(String, String) FilenameUtils.wildcardMatch}
+     * @return this object
+     */
+    public ValidatingObjectInputStream accept(final String... patterns) {
+<span class="fc bfc" id="L141" title="All 2 branches covered.">        for (final String pattern : patterns) {</span>
+<span class="fc" id="L142">            acceptMatchers.add(new WildcardClassNameMatcher(pattern));</span>
+        }
+<span class="fc" id="L144">        return this;</span>
+    }
+
+    /**
+     * Reject the wildcard specified classes for deserialization,
+     * even if they are otherwise accepted.
+     *
+     * @param patterns Wildcard filename patterns as defined by
+     *                  {@link org.apache.commons.io.FilenameUtils#wildcardMatch(String, String) FilenameUtils.wildcardMatch}
+     * @return this object
+     */
+    public ValidatingObjectInputStream reject(final String... patterns) {
+<span class="fc bfc" id="L156" title="All 2 branches covered.">        for (final String pattern : patterns) {</span>
+<span class="fc" id="L157">            rejectMatchers.add(new WildcardClassNameMatcher(pattern));</span>
+        }
+<span class="fc" id="L159">        return this;</span>
+    }
+
+    /**
+     * Accept class names that match the supplied pattern for
+     * deserialization, unless they are otherwise rejected.
+     *
+     * @param pattern standard Java regexp
+     * @return this object
+     */
+    public ValidatingObjectInputStream accept(final Pattern pattern) {
+<span class="fc" id="L170">        acceptMatchers.add(new RegexpClassNameMatcher(pattern));</span>
+<span class="fc" id="L171">        return this;</span>
+    }
+
+    /**
+     * Reject class names that match the supplied pattern for
+     * deserialization, even if they are otherwise accepted.
+     *
+     * @param pattern standard Java regexp
+     * @return this object
+     */
+    public ValidatingObjectInputStream reject(final Pattern pattern) {
+<span class="fc" id="L182">        rejectMatchers.add(new RegexpClassNameMatcher(pattern));</span>
+<span class="fc" id="L183">        return this;</span>
+    }
+
+    /**
+     * Accept class names where the supplied ClassNameMatcher matches for
+     * deserialization, unless they are otherwise rejected.
+     *
+     * @param m the matcher to use
+     * @return this object
+     */
+    public ValidatingObjectInputStream accept(final ClassNameMatcher m) {
+<span class="fc" id="L194">        acceptMatchers.add(m);</span>
+<span class="fc" id="L195">        return this;</span>
+    }
+
+    /**
+     * Reject class names where the supplied ClassNameMatcher matches for
+     * deserialization, even if they are otherwise accepted.
+     *
+     * @param m the matcher to use
+     * @return this object
+     */
+    public ValidatingObjectInputStream reject(final ClassNameMatcher m) {
+<span class="fc" id="L206">        rejectMatchers.add(m);</span>
+<span class="fc" id="L207">        return this;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

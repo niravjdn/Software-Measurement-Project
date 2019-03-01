@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConfigurationMap.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2</a> &gt; <span class="el_source">ConfigurationMap.java</span></div><h1>ConfigurationMap.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.commons.configuration2;
+
+import java.util.AbstractMap;
+import java.util.AbstractSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * &lt;p&gt;The {@code ConfigurationMap} wraps a
+ * configuration-collection
+ * {@link org.apache.commons.configuration2.Configuration}
+ * instance to provide a {@code Map} interface.&lt;/p&gt;
+ *
+ * &lt;p&gt;&lt;em&gt;Note:&lt;/em&gt; This implementation is incomplete.&lt;/p&gt;
+ *
+ * @author &lt;a href=&quot;mailto:ricardo.gladwell@btinternet.com&quot;&gt;Ricardo Gladwell&lt;/a&gt;
+ * @version $Id$
+ * @since 1.0
+ */
+public class ConfigurationMap extends AbstractMap&lt;Object, Object&gt;
+{
+    /**
+     * The {@code Configuration} wrapped by this class.
+     */
+    private final Configuration configuration;
+
+    /**
+     * Creates a new instance of a {@code ConfigurationMap}
+     * that wraps the specified {@code Configuration}
+     * instance.
+     * @param configuration {@code Configuration}
+     * instance.
+     */
+    public ConfigurationMap(final Configuration configuration)
+<span class="fc" id="L53">    {</span>
+<span class="fc" id="L54">        this.configuration = configuration;</span>
+<span class="fc" id="L55">    }</span>
+
+    /**
+     * Returns the wrapped {@code Configuration} object.
+     *
+     * @return the wrapped configuration
+     * @since 1.2
+     */
+    public Configuration getConfiguration()
+    {
+<span class="fc" id="L65">        return configuration;</span>
+    }
+
+    /**
+     * Returns a set with the entries contained in this configuration-based map.
+     *
+     * @return a set with the contained entries
+     * @see java.util.Map#entrySet()
+     */
+    @Override
+    public Set&lt;Map.Entry&lt;Object, Object&gt;&gt; entrySet()
+    {
+<span class="fc" id="L77">        return new ConfigurationSet(configuration);</span>
+    }
+
+    /**
+     * Stores the value for the specified key. The value is stored in the
+     * underlying configuration.
+     *
+     * @param key the key (will be converted to a string)
+     * @param value the value
+     * @return the old value of this key or &lt;b&gt;null&lt;/b&gt; if it is new
+     * @see java.util.Map#put(java.lang.Object, java.lang.Object)
+     */
+    @Override
+    public Object put(final Object key, final Object value)
+    {
+<span class="fc" id="L92">        final String strKey = String.valueOf(key);</span>
+<span class="fc" id="L93">        final Object old = configuration.getProperty(strKey);</span>
+<span class="fc" id="L94">        configuration.setProperty(strKey, value);</span>
+<span class="fc" id="L95">        return old;</span>
+    }
+
+    /**
+     * Returns the value of the specified key. The key is converted to a string
+     * and then passed to the underlying configuration.
+     *
+     * @param key the key
+     * @return the value of this key
+     * @see java.util.Map#get(java.lang.Object)
+     */
+    @Override
+    public Object get(final Object key)
+    {
+<span class="fc" id="L109">        return configuration.getProperty(String.valueOf(key));</span>
+    }
+
+    /**
+     * Set of entries in the map.
+     */
+    static class ConfigurationSet extends AbstractSet&lt;Map.Entry&lt;Object, Object&gt;&gt;
+    {
+        /** The configuration mapped to this entry set. */
+        private final Configuration configuration;
+
+        /**
+         * A Map entry in the ConfigurationMap.
+         */
+        private final class Entry implements Map.Entry&lt;Object, Object&gt;
+        {
+            /** The key of the map entry. */
+            private final Object key;
+
+            private Entry(final Object key)
+<span class="fc" id="L129">            {</span>
+<span class="fc" id="L130">                this.key = key;</span>
+<span class="fc" id="L131">            }</span>
+
+            @Override
+            public Object getKey()
+            {
+<span class="fc" id="L136">                return key;</span>
+            }
+
+            @Override
+            public Object getValue()
+            {
+<span class="fc" id="L142">                return configuration.getProperty((String) key);</span>
+            }
+
+            @Override
+            public Object setValue(final Object value)
+            {
+<span class="nc" id="L148">                final Object old = getValue();</span>
+<span class="nc" id="L149">                configuration.setProperty((String) key, value);</span>
+<span class="nc" id="L150">                return old;</span>
+            }
+        }
+
+        /**
+         * Iterator over the entries in the ConfigurationMap.
+         */
+        private final class ConfigurationSetIterator implements Iterator&lt;Map.Entry&lt;Object, Object&gt;&gt;
+        {
+            /** An iterator over the keys in the configuration. */
+            private final Iterator&lt;String&gt; keys;
+
+            private ConfigurationSetIterator()
+<span class="fc" id="L163">            {</span>
+<span class="fc" id="L164">                keys = configuration.getKeys();</span>
+<span class="fc" id="L165">            }</span>
+
+            @Override
+            public boolean hasNext()
+            {
+<span class="fc" id="L170">                return keys.hasNext();</span>
+            }
+
+            @Override
+            public Map.Entry&lt;Object, Object&gt; next()
+            {
+<span class="fc" id="L176">                return new Entry(keys.next());</span>
+            }
+
+            @Override
+            public void remove()
+            {
+<span class="fc" id="L182">                keys.remove();</span>
+<span class="fc" id="L183">            }</span>
+        }
+
+        ConfigurationSet(final Configuration configuration)
+<span class="fc" id="L187">        {</span>
+<span class="fc" id="L188">            this.configuration = configuration;</span>
+<span class="fc" id="L189">        }</span>
+
+        /**
+         * @see java.util.Collection#size()
+         */
+        @Override
+        public int size()
+        {
+            // Ouch. Now _that_ one is expensive...
+<span class="fc" id="L198">            int count = 0;</span>
+<span class="fc bfc" id="L199" title="All 2 branches covered.">            for (final Iterator&lt;String&gt; iterator = configuration.getKeys(); iterator.hasNext();)</span>
+            {
+<span class="fc" id="L201">                iterator.next();</span>
+<span class="fc" id="L202">                count++;</span>
+            }
+<span class="fc" id="L204">            return count;</span>
+        }
+
+        /**
+         * @see java.util.Collection#iterator()
+         */
+        @Override
+        public Iterator&lt;Map.Entry&lt;Object, Object&gt;&gt; iterator()
+        {
+<span class="fc" id="L213">            return new ConfigurationSetIterator();</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

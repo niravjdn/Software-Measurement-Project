@@ -1,0 +1,813 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExceptionUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Lang</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.lang3.exception</a> &gt; <span class="el_source">ExceptionUtils.java</span></div><h1>ExceptionUtils.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.lang3.exception;
+
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.StringTokenizer;
+
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.ClassUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+
+/**
+ * &lt;p&gt;Provides utilities for manipulating and examining
+ * &lt;code&gt;Throwable&lt;/code&gt; objects.&lt;/p&gt;
+ *
+ * @since 1.0
+ */
+public class ExceptionUtils {
+
+    /**
+     * &lt;p&gt;Used when printing stack frames to denote the start of a
+     * wrapped exception.&lt;/p&gt;
+     *
+     * &lt;p&gt;Package private for accessibility by test suite.&lt;/p&gt;
+     */
+    static final String WRAPPED_MARKER = &quot; [wrapped] &quot;;
+
+    /**
+     * &lt;p&gt;The names of methods commonly used to access a wrapped exception.&lt;/p&gt;
+     */
+    // TODO: Remove in Lang 4.0
+<span class="fc" id="L54">    private static final String[] CAUSE_METHOD_NAMES = {</span>
+<span class="fc" id="L55">        &quot;getCause&quot;,</span>
+<span class="fc" id="L56">        &quot;getNextException&quot;,</span>
+<span class="fc" id="L57">        &quot;getTargetException&quot;,</span>
+<span class="fc" id="L58">        &quot;getException&quot;,</span>
+<span class="fc" id="L59">        &quot;getSourceException&quot;,</span>
+<span class="fc" id="L60">        &quot;getRootCause&quot;,</span>
+<span class="fc" id="L61">        &quot;getCausedByException&quot;,</span>
+<span class="fc" id="L62">        &quot;getNested&quot;,</span>
+<span class="fc" id="L63">        &quot;getLinkedException&quot;,</span>
+<span class="fc" id="L64">        &quot;getNestedException&quot;,</span>
+<span class="fc" id="L65">        &quot;getLinkedCause&quot;,</span>
+<span class="fc" id="L66">        &quot;getThrowable&quot;,</span>
+<span class="fc" id="L67">    };</span>
+
+    /**
+     * &lt;p&gt;
+     * Public constructor allows an instance of &lt;code&gt;ExceptionUtils&lt;/code&gt; to be created, although that is not
+     * normally necessary.
+     * &lt;/p&gt;
+     */
+    public ExceptionUtils() {
+<span class="fc" id="L76">        super();</span>
+<span class="fc" id="L77">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Returns the default names used when searching for the cause of an exception.&lt;/p&gt;
+     *
+     * &lt;p&gt;This may be modified and used in the overloaded getCause(Throwable, String[]) method.&lt;/p&gt;
+     *
+     * @return cloned array of the default method names
+     * @since 3.0
+     * @deprecated This feature will be removed in Lang 4.0
+     */
+    @Deprecated
+    public static String[] getDefaultCauseMethodNames() {
+<span class="nc" id="L91">        return ArrayUtils.clone(CAUSE_METHOD_NAMES);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Introspects the &lt;code&gt;Throwable&lt;/code&gt; to obtain the cause.&lt;/p&gt;
+     *
+     * &lt;p&gt;The method searches for methods with specific names that return a
+     * &lt;code&gt;Throwable&lt;/code&gt; object. This will pick up most wrapping exceptions,
+     * including those from JDK 1.4.
+     *
+     * &lt;p&gt;The default list searched for are:&lt;/p&gt;
+     * &lt;ul&gt;
+     *  &lt;li&gt;&lt;code&gt;getCause()&lt;/code&gt;&lt;/li&gt;
+     *  &lt;li&gt;&lt;code&gt;getNextException()&lt;/code&gt;&lt;/li&gt;
+     *  &lt;li&gt;&lt;code&gt;getTargetException()&lt;/code&gt;&lt;/li&gt;
+     *  &lt;li&gt;&lt;code&gt;getException()&lt;/code&gt;&lt;/li&gt;
+     *  &lt;li&gt;&lt;code&gt;getSourceException()&lt;/code&gt;&lt;/li&gt;
+     *  &lt;li&gt;&lt;code&gt;getRootCause()&lt;/code&gt;&lt;/li&gt;
+     *  &lt;li&gt;&lt;code&gt;getCausedByException()&lt;/code&gt;&lt;/li&gt;
+     *  &lt;li&gt;&lt;code&gt;getNested()&lt;/code&gt;&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * &lt;p&gt;If none of the above is found, returns &lt;code&gt;null&lt;/code&gt;.&lt;/p&gt;
+     *
+     * @param throwable  the throwable to introspect for a cause, may be null
+     * @return the cause of the &lt;code&gt;Throwable&lt;/code&gt;,
+     *  &lt;code&gt;null&lt;/code&gt; if none found or null throwable input
+     * @since 1.0
+     * @deprecated This feature will be removed in Lang 4.0, use {@link Throwable#getCause} instead
+     */
+    @Deprecated
+    public static Throwable getCause(final Throwable throwable) {
+<span class="fc" id="L124">        return getCause(throwable, null);</span>
+    }
+
+    /**
+     * &lt;p&gt;Introspects the &lt;code&gt;Throwable&lt;/code&gt; to obtain the cause.&lt;/p&gt;
+     *
+     * &lt;p&gt;A &lt;code&gt;null&lt;/code&gt; set of method names means use the default set.
+     * A &lt;code&gt;null&lt;/code&gt; in the set of method names will be ignored.&lt;/p&gt;
+     *
+     * @param throwable  the throwable to introspect for a cause, may be null
+     * @param methodNames  the method names, null treated as default set
+     * @return the cause of the &lt;code&gt;Throwable&lt;/code&gt;,
+     *  &lt;code&gt;null&lt;/code&gt; if none found or null throwable input
+     * @since 1.0
+     * @deprecated This feature will be removed in Lang 4.0, use {@link Throwable#getCause} instead
+     */
+    @Deprecated
+    public static Throwable getCause(final Throwable throwable, String[] methodNames) {
+<span class="fc bfc" id="L142" title="All 2 branches covered.">        if (throwable == null) {</span>
+<span class="fc" id="L143">            return null;</span>
+        }
+
+<span class="fc bfc" id="L146" title="All 2 branches covered.">        if (methodNames == null) {</span>
+<span class="fc" id="L147">            final Throwable cause = throwable.getCause();</span>
+<span class="fc bfc" id="L148" title="All 2 branches covered.">            if (cause != null) {</span>
+<span class="fc" id="L149">                return cause;</span>
+            }
+
+<span class="fc" id="L152">            methodNames = CAUSE_METHOD_NAMES;</span>
+        }
+
+<span class="fc bfc" id="L155" title="All 2 branches covered.">        for (final String methodName : methodNames) {</span>
+<span class="fc bfc" id="L156" title="All 2 branches covered.">            if (methodName != null) {</span>
+<span class="fc" id="L157">                final Throwable legacyCause = getCauseUsingMethodName(throwable, methodName);</span>
+<span class="fc bfc" id="L158" title="All 2 branches covered.">                if (legacyCause != null) {</span>
+<span class="fc" id="L159">                    return legacyCause;</span>
+                }
+            }
+        }
+
+<span class="fc" id="L164">        return null;</span>
+    }
+
+    /**
+     * &lt;p&gt;Introspects the &lt;code&gt;Throwable&lt;/code&gt; to obtain the root cause.&lt;/p&gt;
+     *
+     * &lt;p&gt;This method walks through the exception chain to the last element,
+     * &quot;root&quot; of the tree, using {@link Throwable#getCause()}, and
+     * returns that exception.&lt;/p&gt;
+     *
+     * &lt;p&gt;From version 2.2, this method handles recursive cause structures
+     * that might otherwise cause infinite loops. If the throwable parameter
+     * has a cause of itself, then null will be returned. If the throwable
+     * parameter cause chain loops, the last element in the chain before the
+     * loop is returned.&lt;/p&gt;
+     *
+     * @param throwable  the throwable to get the root cause for, may be null
+     * @return the root cause of the &lt;code&gt;Throwable&lt;/code&gt;,
+     *  &lt;code&gt;null&lt;/code&gt; if null throwable input
+     */
+    public static Throwable getRootCause(final Throwable throwable) {
+<span class="fc" id="L185">        final List&lt;Throwable&gt; list = getThrowableList(throwable);</span>
+<span class="fc bfc" id="L186" title="All 2 branches covered.">        return list.isEmpty() ? null : list.get(list.size() - 1);</span>
+    }
+
+    /**
+     * &lt;p&gt;Finds a &lt;code&gt;Throwable&lt;/code&gt; by method name.&lt;/p&gt;
+     *
+     * @param throwable  the exception to examine
+     * @param methodName  the name of the method to find and invoke
+     * @return the wrapped exception, or &lt;code&gt;null&lt;/code&gt; if not found
+     */
+    // TODO: Remove in Lang 4.0
+    private static Throwable getCauseUsingMethodName(final Throwable throwable, final String methodName) {
+<span class="fc" id="L198">        Method method = null;</span>
+        try {
+<span class="fc" id="L200">            method = throwable.getClass().getMethod(methodName);</span>
+<span class="fc" id="L201">        } catch (final NoSuchMethodException | SecurityException ignored) { // NOPMD</span>
+            // exception ignored
+        }
+
+<span class="fc bfc" id="L205" title="All 4 branches covered.">        if (method != null &amp;&amp; Throwable.class.isAssignableFrom(method.getReturnType())) {</span>
+            try {
+<span class="fc" id="L207">                return (Throwable) method.invoke(throwable);</span>
+<span class="nc" id="L208">            } catch (final IllegalAccessException | IllegalArgumentException | InvocationTargetException ignored) { // NOPMD</span>
+                // exception ignored
+            }
+        }
+<span class="fc" id="L212">        return null;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Counts the number of &lt;code&gt;Throwable&lt;/code&gt; objects in the
+     * exception chain.&lt;/p&gt;
+     *
+     * &lt;p&gt;A throwable without cause will return &lt;code&gt;1&lt;/code&gt;.
+     * A throwable with one cause will return &lt;code&gt;2&lt;/code&gt; and so on.
+     * A &lt;code&gt;null&lt;/code&gt; throwable will return &lt;code&gt;0&lt;/code&gt;.&lt;/p&gt;
+     *
+     * &lt;p&gt;From version 2.2, this method handles recursive cause structures
+     * that might otherwise cause infinite loops. The cause chain is
+     * processed until the end is reached, or until the next item in the
+     * chain is already in the result set.&lt;/p&gt;
+     *
+     * @param throwable  the throwable to inspect, may be null
+     * @return the count of throwables, zero if null input
+     */
+    public static int getThrowableCount(final Throwable throwable) {
+<span class="fc" id="L233">        return getThrowableList(throwable).size();</span>
+    }
+
+    /**
+     * &lt;p&gt;Returns the list of &lt;code&gt;Throwable&lt;/code&gt; objects in the
+     * exception chain.&lt;/p&gt;
+     *
+     * &lt;p&gt;A throwable without cause will return an array containing
+     * one element - the input throwable.
+     * A throwable with one cause will return an array containing
+     * two elements. - the input throwable and the cause throwable.
+     * A &lt;code&gt;null&lt;/code&gt; throwable will return an array of size zero.&lt;/p&gt;
+     *
+     * &lt;p&gt;From version 2.2, this method handles recursive cause structures
+     * that might otherwise cause infinite loops. The cause chain is
+     * processed until the end is reached, or until the next item in the
+     * chain is already in the result set.&lt;/p&gt;
+     *
+     * @see #getThrowableList(Throwable)
+     * @param throwable  the throwable to inspect, may be null
+     * @return the array of throwables, never null
+     */
+    public static Throwable[] getThrowables(final Throwable throwable) {
+<span class="fc" id="L256">        final List&lt;Throwable&gt; list = getThrowableList(throwable);</span>
+<span class="fc" id="L257">        return list.toArray(new Throwable[list.size()]);</span>
+    }
+
+    /**
+     * &lt;p&gt;Returns the list of &lt;code&gt;Throwable&lt;/code&gt; objects in the
+     * exception chain.&lt;/p&gt;
+     *
+     * &lt;p&gt;A throwable without cause will return a list containing
+     * one element - the input throwable.
+     * A throwable with one cause will return a list containing
+     * two elements. - the input throwable and the cause throwable.
+     * A &lt;code&gt;null&lt;/code&gt; throwable will return a list of size zero.&lt;/p&gt;
+     *
+     * &lt;p&gt;This method handles recursive cause structures that might
+     * otherwise cause infinite loops. The cause chain is processed until
+     * the end is reached, or until the next item in the chain is already
+     * in the result set.&lt;/p&gt;
+     *
+     * @param throwable  the throwable to inspect, may be null
+     * @return the list of throwables, never null
+     * @since 2.2
+     */
+    public static List&lt;Throwable&gt; getThrowableList(Throwable throwable) {
+<span class="fc" id="L280">        final List&lt;Throwable&gt; list = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L281" title="All 4 branches covered.">        while (throwable != null &amp;&amp; !list.contains(throwable)) {</span>
+<span class="fc" id="L282">            list.add(throwable);</span>
+<span class="fc" id="L283">            throwable = throwable.getCause();</span>
+        }
+<span class="fc" id="L285">        return list;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Returns the (zero based) index of the first &lt;code&gt;Throwable&lt;/code&gt;
+     * that matches the specified class (exactly) in the exception chain.
+     * Subclasses of the specified class do not match - see
+     * {@link #indexOfType(Throwable, Class)} for the opposite.&lt;/p&gt;
+     *
+     * &lt;p&gt;A &lt;code&gt;null&lt;/code&gt; throwable returns &lt;code&gt;-1&lt;/code&gt;.
+     * A &lt;code&gt;null&lt;/code&gt; type returns &lt;code&gt;-1&lt;/code&gt;.
+     * No match in the chain returns &lt;code&gt;-1&lt;/code&gt;.&lt;/p&gt;
+     *
+     * @param throwable  the throwable to inspect, may be null
+     * @param clazz  the class to search for, subclasses do not match, null returns -1
+     * @return the index into the throwable chain, -1 if no match or null input
+     */
+    public static int indexOfThrowable(final Throwable throwable, final Class&lt;?&gt; clazz) {
+<span class="fc" id="L304">        return indexOf(throwable, clazz, 0, false);</span>
+    }
+
+    /**
+     * &lt;p&gt;Returns the (zero based) index of the first &lt;code&gt;Throwable&lt;/code&gt;
+     * that matches the specified type in the exception chain from
+     * a specified index.
+     * Subclasses of the specified class do not match - see
+     * {@link #indexOfType(Throwable, Class, int)} for the opposite.&lt;/p&gt;
+     *
+     * &lt;p&gt;A &lt;code&gt;null&lt;/code&gt; throwable returns &lt;code&gt;-1&lt;/code&gt;.
+     * A &lt;code&gt;null&lt;/code&gt; type returns &lt;code&gt;-1&lt;/code&gt;.
+     * No match in the chain returns &lt;code&gt;-1&lt;/code&gt;.
+     * A negative start index is treated as zero.
+     * A start index greater than the number of throwables returns &lt;code&gt;-1&lt;/code&gt;.&lt;/p&gt;
+     *
+     * @param throwable  the throwable to inspect, may be null
+     * @param clazz  the class to search for, subclasses do not match, null returns -1
+     * @param fromIndex  the (zero based) index of the starting position,
+     *  negative treated as zero, larger than chain size returns -1
+     * @return the index into the throwable chain, -1 if no match or null input
+     */
+    public static int indexOfThrowable(final Throwable throwable, final Class&lt;?&gt; clazz, final int fromIndex) {
+<span class="fc" id="L327">        return indexOf(throwable, clazz, fromIndex, false);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Returns the (zero based) index of the first &lt;code&gt;Throwable&lt;/code&gt;
+     * that matches the specified class or subclass in the exception chain.
+     * Subclasses of the specified class do match - see
+     * {@link #indexOfThrowable(Throwable, Class)} for the opposite.&lt;/p&gt;
+     *
+     * &lt;p&gt;A &lt;code&gt;null&lt;/code&gt; throwable returns &lt;code&gt;-1&lt;/code&gt;.
+     * A &lt;code&gt;null&lt;/code&gt; type returns &lt;code&gt;-1&lt;/code&gt;.
+     * No match in the chain returns &lt;code&gt;-1&lt;/code&gt;.&lt;/p&gt;
+     *
+     * @param throwable  the throwable to inspect, may be null
+     * @param type  the type to search for, subclasses match, null returns -1
+     * @return the index into the throwable chain, -1 if no match or null input
+     * @since 2.1
+     */
+    public static int indexOfType(final Throwable throwable, final Class&lt;?&gt; type) {
+<span class="fc" id="L347">        return indexOf(throwable, type, 0, true);</span>
+    }
+
+    /**
+     * &lt;p&gt;Returns the (zero based) index of the first &lt;code&gt;Throwable&lt;/code&gt;
+     * that matches the specified type in the exception chain from
+     * a specified index.
+     * Subclasses of the specified class do match - see
+     * {@link #indexOfThrowable(Throwable, Class)} for the opposite.&lt;/p&gt;
+     *
+     * &lt;p&gt;A &lt;code&gt;null&lt;/code&gt; throwable returns &lt;code&gt;-1&lt;/code&gt;.
+     * A &lt;code&gt;null&lt;/code&gt; type returns &lt;code&gt;-1&lt;/code&gt;.
+     * No match in the chain returns &lt;code&gt;-1&lt;/code&gt;.
+     * A negative start index is treated as zero.
+     * A start index greater than the number of throwables returns &lt;code&gt;-1&lt;/code&gt;.&lt;/p&gt;
+     *
+     * @param throwable  the throwable to inspect, may be null
+     * @param type  the type to search for, subclasses match, null returns -1
+     * @param fromIndex  the (zero based) index of the starting position,
+     *  negative treated as zero, larger than chain size returns -1
+     * @return the index into the throwable chain, -1 if no match or null input
+     * @since 2.1
+     */
+    public static int indexOfType(final Throwable throwable, final Class&lt;?&gt; type, final int fromIndex) {
+<span class="fc" id="L371">        return indexOf(throwable, type, fromIndex, true);</span>
+    }
+
+    /**
+     * &lt;p&gt;Worker method for the &lt;code&gt;indexOfType&lt;/code&gt; methods.&lt;/p&gt;
+     *
+     * @param throwable  the throwable to inspect, may be null
+     * @param type  the type to search for, subclasses match, null returns -1
+     * @param fromIndex  the (zero based) index of the starting position,
+     *  negative treated as zero, larger than chain size returns -1
+     * @param subclass if &lt;code&gt;true&lt;/code&gt;, compares with {@link Class#isAssignableFrom(Class)}, otherwise compares
+     * using references
+     * @return index of the &lt;code&gt;type&lt;/code&gt; within throwables nested within the specified &lt;code&gt;throwable&lt;/code&gt;
+     */
+    private static int indexOf(final Throwable throwable, final Class&lt;?&gt; type, int fromIndex, final boolean subclass) {
+<span class="fc bfc" id="L386" title="All 4 branches covered.">        if (throwable == null || type == null) {</span>
+<span class="fc" id="L387">            return -1;</span>
+        }
+<span class="fc bfc" id="L389" title="All 2 branches covered.">        if (fromIndex &lt; 0) {</span>
+<span class="fc" id="L390">            fromIndex = 0;</span>
+        }
+<span class="fc" id="L392">        final Throwable[] throwables = getThrowables(throwable);</span>
+<span class="fc bfc" id="L393" title="All 2 branches covered.">        if (fromIndex &gt;= throwables.length) {</span>
+<span class="fc" id="L394">            return -1;</span>
+        }
+<span class="fc bfc" id="L396" title="All 2 branches covered.">        if (subclass) {</span>
+<span class="fc bfc" id="L397" title="All 2 branches covered.">            for (int i = fromIndex; i &lt; throwables.length; i++) {</span>
+<span class="fc bfc" id="L398" title="All 2 branches covered.">                if (type.isAssignableFrom(throwables[i].getClass())) {</span>
+<span class="fc" id="L399">                    return i;</span>
+                }
+            }
+<span class="fc" id="L402">        } else {</span>
+<span class="fc bfc" id="L403" title="All 2 branches covered.">            for (int i = fromIndex; i &lt; throwables.length; i++) {</span>
+<span class="fc bfc" id="L404" title="All 2 branches covered.">                if (type.equals(throwables[i].getClass())) {</span>
+<span class="fc" id="L405">                    return i;</span>
+                }
+            }
+        }
+<span class="fc" id="L409">        return -1;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Prints a compact stack trace for the root cause of a throwable
+     * to &lt;code&gt;System.err&lt;/code&gt;.&lt;/p&gt;
+     *
+     * &lt;p&gt;The compact stack trace starts with the root cause and prints
+     * stack frames up to the place where it was caught and wrapped.
+     * Then it prints the wrapped exception and continues with stack frames
+     * until the wrapper exception is caught and wrapped again, etc.&lt;/p&gt;
+     *
+     * &lt;p&gt;The output of this method is consistent across JDK versions.
+     * Note that this is the opposite order to the JDK1.4 display.&lt;/p&gt;
+     *
+     * &lt;p&gt;The method is equivalent to &lt;code&gt;printStackTrace&lt;/code&gt; for throwables
+     * that don't have nested causes.&lt;/p&gt;
+     *
+     * @param throwable  the throwable to output
+     * @since 2.0
+     */
+    public static void printRootCauseStackTrace(final Throwable throwable) {
+<span class="fc" id="L432">        printRootCauseStackTrace(throwable, System.err);</span>
+<span class="fc" id="L433">    }</span>
+
+    /**
+     * &lt;p&gt;Prints a compact stack trace for the root cause of a throwable.&lt;/p&gt;
+     *
+     * &lt;p&gt;The compact stack trace starts with the root cause and prints
+     * stack frames up to the place where it was caught and wrapped.
+     * Then it prints the wrapped exception and continues with stack frames
+     * until the wrapper exception is caught and wrapped again, etc.&lt;/p&gt;
+     *
+     * &lt;p&gt;The output of this method is consistent across JDK versions.
+     * Note that this is the opposite order to the JDK1.4 display.&lt;/p&gt;
+     *
+     * &lt;p&gt;The method is equivalent to &lt;code&gt;printStackTrace&lt;/code&gt; for throwables
+     * that don't have nested causes.&lt;/p&gt;
+     *
+     * @param throwable  the throwable to output, may be null
+     * @param stream  the stream to output to, may not be null
+     * @throws IllegalArgumentException if the stream is &lt;code&gt;null&lt;/code&gt;
+     * @since 2.0
+     */
+    public static void printRootCauseStackTrace(final Throwable throwable, final PrintStream stream) {
+<span class="fc bfc" id="L455" title="All 2 branches covered.">        if (throwable == null) {</span>
+<span class="fc" id="L456">            return;</span>
+        }
+<span class="fc bfc" id="L458" title="All 2 branches covered.">        Validate.isTrue(stream != null, &quot;The PrintStream must not be null&quot;);</span>
+<span class="fc" id="L459">        final String trace[] = getRootCauseStackTrace(throwable);</span>
+<span class="fc bfc" id="L460" title="All 2 branches covered.">        for (final String element : trace) {</span>
+<span class="fc" id="L461">            stream.println(element);</span>
+        }
+<span class="fc" id="L463">        stream.flush();</span>
+<span class="fc" id="L464">    }</span>
+
+    /**
+     * &lt;p&gt;Prints a compact stack trace for the root cause of a throwable.&lt;/p&gt;
+     *
+     * &lt;p&gt;The compact stack trace starts with the root cause and prints
+     * stack frames up to the place where it was caught and wrapped.
+     * Then it prints the wrapped exception and continues with stack frames
+     * until the wrapper exception is caught and wrapped again, etc.&lt;/p&gt;
+     *
+     * &lt;p&gt;The output of this method is consistent across JDK versions.
+     * Note that this is the opposite order to the JDK1.4 display.&lt;/p&gt;
+     *
+     * &lt;p&gt;The method is equivalent to &lt;code&gt;printStackTrace&lt;/code&gt; for throwables
+     * that don't have nested causes.&lt;/p&gt;
+     *
+     * @param throwable  the throwable to output, may be null
+     * @param writer  the writer to output to, may not be null
+     * @throws IllegalArgumentException if the writer is &lt;code&gt;null&lt;/code&gt;
+     * @since 2.0
+     */
+    public static void printRootCauseStackTrace(final Throwable throwable, final PrintWriter writer) {
+<span class="fc bfc" id="L486" title="All 2 branches covered.">        if (throwable == null) {</span>
+<span class="fc" id="L487">            return;</span>
+        }
+<span class="fc bfc" id="L489" title="All 2 branches covered.">        Validate.isTrue(writer != null, &quot;The PrintWriter must not be null&quot;);</span>
+<span class="fc" id="L490">        final String trace[] = getRootCauseStackTrace(throwable);</span>
+<span class="fc bfc" id="L491" title="All 2 branches covered.">        for (final String element : trace) {</span>
+<span class="fc" id="L492">            writer.println(element);</span>
+        }
+<span class="fc" id="L494">        writer.flush();</span>
+<span class="fc" id="L495">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Creates a compact stack trace for the root cause of the supplied
+     * &lt;code&gt;Throwable&lt;/code&gt;.&lt;/p&gt;
+     *
+     * &lt;p&gt;The output of this method is consistent across JDK versions.
+     * It consists of the root exception followed by each of its wrapping
+     * exceptions separated by '[wrapped]'. Note that this is the opposite
+     * order to the JDK1.4 display.&lt;/p&gt;
+     *
+     * @param throwable  the throwable to examine, may be null
+     * @return an array of stack trace frames, never null
+     * @since 2.0
+     */
+    public static String[] getRootCauseStackTrace(final Throwable throwable) {
+<span class="fc bfc" id="L512" title="All 2 branches covered.">        if (throwable == null) {</span>
+<span class="fc" id="L513">            return ArrayUtils.EMPTY_STRING_ARRAY;</span>
+        }
+<span class="fc" id="L515">        final Throwable throwables[] = getThrowables(throwable);</span>
+<span class="fc" id="L516">        final int count = throwables.length;</span>
+<span class="fc" id="L517">        final List&lt;String&gt; frames = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L518">        List&lt;String&gt; nextTrace = getStackFrameList(throwables[count - 1]);</span>
+<span class="fc bfc" id="L519" title="All 2 branches covered.">        for (int i = count; --i &gt;= 0;) {</span>
+<span class="fc" id="L520">            final List&lt;String&gt; trace = nextTrace;</span>
+<span class="fc bfc" id="L521" title="All 2 branches covered.">            if (i != 0) {</span>
+<span class="fc" id="L522">                nextTrace = getStackFrameList(throwables[i - 1]);</span>
+<span class="fc" id="L523">                removeCommonFrames(trace, nextTrace);</span>
+            }
+<span class="fc bfc" id="L525" title="All 2 branches covered.">            if (i == count - 1) {</span>
+<span class="fc" id="L526">                frames.add(throwables[i].toString());</span>
+<span class="fc" id="L527">            } else {</span>
+<span class="fc" id="L528">                frames.add(WRAPPED_MARKER + throwables[i].toString());</span>
+            }
+<span class="fc" id="L530">            frames.addAll(trace);</span>
+        }
+<span class="fc" id="L532">        return frames.toArray(new String[frames.size()]);</span>
+    }
+
+    /**
+     * &lt;p&gt;Removes common frames from the cause trace given the two stack traces.&lt;/p&gt;
+     *
+     * @param causeFrames  stack trace of a cause throwable
+     * @param wrapperFrames  stack trace of a wrapper throwable
+     * @throws IllegalArgumentException if either argument is null
+     * @since 2.0
+     */
+    public static void removeCommonFrames(final List&lt;String&gt; causeFrames, final List&lt;String&gt; wrapperFrames) {
+<span class="pc bpc" id="L544" title="1 of 4 branches missed.">        if (causeFrames == null || wrapperFrames == null) {</span>
+<span class="fc" id="L545">            throw new IllegalArgumentException(&quot;The List must not be null&quot;);</span>
+        }
+<span class="fc" id="L547">        int causeFrameIndex = causeFrames.size() - 1;</span>
+<span class="fc" id="L548">        int wrapperFrameIndex = wrapperFrames.size() - 1;</span>
+<span class="fc bfc" id="L549" title="All 4 branches covered.">        while (causeFrameIndex &gt;= 0 &amp;&amp; wrapperFrameIndex &gt;= 0) {</span>
+            // Remove the frame from the cause trace if it is the same
+            // as in the wrapper trace
+<span class="fc" id="L552">            final String causeFrame = causeFrames.get(causeFrameIndex);</span>
+<span class="fc" id="L553">            final String wrapperFrame = wrapperFrames.get(wrapperFrameIndex);</span>
+<span class="fc bfc" id="L554" title="All 2 branches covered.">            if (causeFrame.equals(wrapperFrame)) {</span>
+<span class="fc" id="L555">                causeFrames.remove(causeFrameIndex);</span>
+            }
+<span class="fc" id="L557">            causeFrameIndex--;</span>
+<span class="fc" id="L558">            wrapperFrameIndex--;</span>
+        }
+<span class="fc" id="L560">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Gets the stack trace from a Throwable as a String.&lt;/p&gt;
+     *
+     * &lt;p&gt;The result of this method vary by JDK version as this method
+     * uses {@link Throwable#printStackTrace(java.io.PrintWriter)}.
+     * On JDK1.3 and earlier, the cause exception will not be shown
+     * unless the specified throwable alters printStackTrace.&lt;/p&gt;
+     *
+     * @param throwable  the &lt;code&gt;Throwable&lt;/code&gt; to be examined
+     * @return the stack trace as generated by the exception's
+     *  &lt;code&gt;printStackTrace(PrintWriter)&lt;/code&gt; method
+     */
+    public static String getStackTrace(final Throwable throwable) {
+<span class="fc" id="L576">        final StringWriter sw = new StringWriter();</span>
+<span class="fc" id="L577">        final PrintWriter pw = new PrintWriter(sw, true);</span>
+<span class="fc" id="L578">        throwable.printStackTrace(pw);</span>
+<span class="fc" id="L579">        return sw.getBuffer().toString();</span>
+    }
+
+    /**
+     * &lt;p&gt;Captures the stack trace associated with the specified
+     * &lt;code&gt;Throwable&lt;/code&gt; object, decomposing it into a list of
+     * stack frames.&lt;/p&gt;
+     *
+     * &lt;p&gt;The result of this method vary by JDK version as this method
+     * uses {@link Throwable#printStackTrace(java.io.PrintWriter)}.
+     * On JDK1.3 and earlier, the cause exception will not be shown
+     * unless the specified throwable alters printStackTrace.&lt;/p&gt;
+     *
+     * @param throwable  the &lt;code&gt;Throwable&lt;/code&gt; to examine, may be null
+     * @return an array of strings describing each stack frame, never null
+     */
+    public static String[] getStackFrames(final Throwable throwable) {
+<span class="nc bnc" id="L596" title="All 2 branches missed.">        if (throwable == null) {</span>
+<span class="nc" id="L597">            return ArrayUtils.EMPTY_STRING_ARRAY;</span>
+        }
+<span class="nc" id="L599">        return getStackFrames(getStackTrace(throwable));</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Returns an array where each element is a line from the argument.&lt;/p&gt;
+     *
+     * &lt;p&gt;The end of line is determined by the value of {@link System#lineSeparator()}.&lt;/p&gt;
+     *
+     * @param stackTrace  a stack trace String
+     * @return an array where each element is a line from the argument
+     */
+    static String[] getStackFrames(final String stackTrace) {
+<span class="nc" id="L612">        final String linebreak = System.lineSeparator();</span>
+<span class="nc" id="L613">        final StringTokenizer frames = new StringTokenizer(stackTrace, linebreak);</span>
+<span class="nc" id="L614">        final List&lt;String&gt; list = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L615" title="All 2 branches missed.">        while (frames.hasMoreTokens()) {</span>
+<span class="nc" id="L616">            list.add(frames.nextToken());</span>
+        }
+<span class="nc" id="L618">        return list.toArray(new String[list.size()]);</span>
+    }
+
+    /**
+     * &lt;p&gt;Produces a &lt;code&gt;List&lt;/code&gt; of stack frames - the message
+     * is not included. Only the trace of the specified exception is
+     * returned, any caused by trace is stripped.&lt;/p&gt;
+     *
+     * &lt;p&gt;This works in most cases - it will only fail if the exception
+     * message contains a line that starts with:
+     * &lt;code&gt;&amp;quot;&amp;nbsp;&amp;nbsp;&amp;nbsp;at&amp;quot;.&lt;/code&gt;&lt;/p&gt;
+     *
+     * @param t is any throwable
+     * @return List of stack frames
+     */
+    static List&lt;String&gt; getStackFrameList(final Throwable t) {
+<span class="fc" id="L634">        final String stackTrace = getStackTrace(t);</span>
+<span class="fc" id="L635">        final String linebreak = System.lineSeparator();</span>
+<span class="fc" id="L636">        final StringTokenizer frames = new StringTokenizer(stackTrace, linebreak);</span>
+<span class="fc" id="L637">        final List&lt;String&gt; list = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L638">        boolean traceStarted = false;</span>
+<span class="fc bfc" id="L639" title="All 2 branches covered.">        while (frames.hasMoreTokens()) {</span>
+<span class="fc" id="L640">            final String token = frames.nextToken();</span>
+            // Determine if the line starts with &lt;whitespace&gt;at
+<span class="fc" id="L642">            final int at = token.indexOf(&quot;at&quot;);</span>
+<span class="pc bpc" id="L643" title="1 of 4 branches missed.">            if (at != -1 &amp;&amp; token.substring(0, at).trim().isEmpty()) {</span>
+<span class="fc" id="L644">                traceStarted = true;</span>
+<span class="fc" id="L645">                list.add(token);</span>
+<span class="fc bfc" id="L646" title="All 2 branches covered.">            } else if (traceStarted) {</span>
+<span class="fc" id="L647">                break;</span>
+            }
+        }
+<span class="fc" id="L650">        return list;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets a short message summarising the exception.
+     * &lt;p&gt;
+     * The message returned is of the form
+     * {ClassNameWithoutPackage}: {ThrowableMessage}
+     *
+     * @param th  the throwable to get a message for, null returns empty string
+     * @return the message, non-null
+     * @since 2.2
+     */
+    public static String getMessage(final Throwable th) {
+<span class="fc bfc" id="L665" title="All 2 branches covered.">        if (th == null) {</span>
+<span class="fc" id="L666">            return StringUtils.EMPTY;</span>
+        }
+<span class="fc" id="L668">        final String clsName = ClassUtils.getShortClassName(th, null);</span>
+<span class="fc" id="L669">        final String msg = th.getMessage();</span>
+<span class="fc" id="L670">        return clsName + &quot;: &quot; + StringUtils.defaultString(msg);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets a short message summarising the root cause exception.
+     * &lt;p&gt;
+     * The message returned is of the form
+     * {ClassNameWithoutPackage}: {ThrowableMessage}
+     *
+     * @param th  the throwable to get a message for, null returns empty string
+     * @return the message, non-null
+     * @since 2.2
+     */
+    public static String getRootCauseMessage(final Throwable th) {
+<span class="fc" id="L685">        Throwable root = getRootCause(th);</span>
+<span class="fc bfc" id="L686" title="All 2 branches covered.">        root = root == null ? th : root;</span>
+<span class="fc" id="L687">        return getMessage(root);</span>
+    }
+
+    /**
+     * Throw a checked exception without adding the exception to the throws
+     * clause of the calling method. This method prevents throws clause
+     * pollution and reduces the clutter of &quot;Caused by&quot; exceptions in the
+     * stacktrace.
+     * &lt;p&gt;
+     * The use of this technique may be controversial, but exceedingly useful to
+     * library developers.
+     * &lt;code&gt;
+     *  public int propagateExample { // note that there is no throws clause
+     *      try {
+     *          return invocation(); // throws IOException
+     *      } catch (Exception e) {
+     *          return ExceptionUtils.rethrow(e);  // propagates a checked exception
+     *      }
+     *  }
+     * &lt;/code&gt;
+     * &lt;p&gt;
+     * This is an alternative to the more conservative approach of wrapping the
+     * checked exception in a RuntimeException:
+     * &lt;code&gt;
+     *  public int wrapExample { // note that there is no throws clause
+     *      try {
+     *          return invocation(); // throws IOException
+     *      } catch (Error e) {
+     *          throw e;
+     *      } catch (RuntimeException e) {
+     *          throw e;  // wraps a checked exception
+     *      } catch (Exception e) {
+     *          throw new UndeclaredThrowableException(e);  // wraps a checked exception
+     *      }
+     *  }
+     * &lt;/code&gt;
+     * &lt;p&gt;
+     * One downside to using this approach is that the java compiler will not
+     * allow invoking code to specify a checked exception in a catch clause
+     * unless there is some code path within the try block that has invoked a
+     * method declared with that checked exception. If the invoking site wishes
+     * to catch the shaded checked exception, it must either invoke the shaded
+     * code through a method re-declaring the desired checked exception, or
+     * catch Exception and use the instanceof operator. Either of these
+     * techniques are required when interacting with non-java jvm code such as
+     * Jython, Scala, or Groovy, since these languages do not consider any
+     * exceptions as checked.
+     *
+     * @param throwable
+     *            The throwable to rethrow.
+     * @param &lt;R&gt; The type of the returned value.
+     * @return Never actually returned, this generic type matches any type
+     *         which the calling site requires. &quot;Returning&quot; the results of this
+     *         method, as done in the propagateExample above, will satisfy the
+     *         java compiler requirement that all code paths return a value.
+     * @since 3.5
+     * @see #wrapAndThrow(Throwable)
+     */
+    public static &lt;R&gt; R rethrow(final Throwable throwable) {
+        // claim that the typeErasure invocation throws a RuntimeException
+<span class="nc" id="L747">        return ExceptionUtils.&lt;R, RuntimeException&gt; typeErasure(throwable);</span>
+    }
+
+    /**
+     * Claim a Throwable is another Exception type using type erasure. This
+     * hides a checked exception from the java compiler, allowing a checked
+     * exception to be thrown without having the exception in the method's throw
+     * clause.
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    private static &lt;R, T extends Throwable&gt; R typeErasure(final Throwable throwable) throws T {
+<span class="fc" id="L758">        throw (T) throwable;</span>
+    }
+
+    /**
+     * Throw a checked exception without adding the exception to the throws
+     * clause of the calling method. For checked exceptions, this method throws
+     * an UndeclaredThrowableException wrapping the checked exception. For
+     * Errors and RuntimeExceptions, the original exception is rethrown.
+     * &lt;p&gt;
+     * The downside to using this approach is that invoking code which needs to
+     * handle specific checked exceptions must sniff up the exception chain to
+     * determine if the caught exception was caused by the checked exception.
+     *
+     * @param throwable
+     *            The throwable to rethrow.
+     * @param &lt;R&gt; The type of the returned value.
+     * @return Never actually returned, this generic type matches any type
+     *         which the calling site requires. &quot;Returning&quot; the results of this
+     *         method will satisfy the java compiler requirement that all code
+     *         paths return a value.
+     * @since 3.5
+     * @see #rethrow(Throwable)
+     * @see #hasCause(Throwable, Class)
+     */
+    public static &lt;R&gt; R wrapAndThrow(final Throwable throwable) {
+<span class="fc bfc" id="L783" title="All 2 branches covered.">        if (throwable instanceof RuntimeException) {</span>
+<span class="fc" id="L784">            throw (RuntimeException) throwable;</span>
+        }
+<span class="fc bfc" id="L786" title="All 2 branches covered.">        if (throwable instanceof Error) {</span>
+<span class="fc" id="L787">            throw (Error) throwable;</span>
+        }
+<span class="fc" id="L789">        throw new UndeclaredThrowableException(throwable);</span>
+    }
+
+    /**
+     * Does the throwable's causal chain have an immediate or wrapped exception
+     * of the given type?
+     *
+     * @param chain
+     *            The root of a Throwable causal chain.
+     * @param type
+     *            The exception type to test.
+     * @return true, if chain is an instance of type or is an
+     *         UndeclaredThrowableException wrapping a cause.
+     * @since 3.5
+     * @see #wrapAndThrow(Throwable)
+     */
+    public static boolean hasCause(Throwable chain,
+            final Class&lt;? extends Throwable&gt; type) {
+<span class="fc bfc" id="L807" title="All 2 branches covered.">        if (chain instanceof UndeclaredThrowableException) {</span>
+<span class="fc" id="L808">            chain = chain.getCause();</span>
+        }
+<span class="fc" id="L810">        return type.isInstance(chain);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

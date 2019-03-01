@@ -1,0 +1,1546 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IteratorUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4</a> &gt; <span class="el_source">IteratorUtils.java</span></div><h1>IteratorUtils.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4;
+
+import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Dictionary;
+import java.util.Enumeration;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+
+import org.apache.commons.collections4.functors.EqualPredicate;
+import org.apache.commons.collections4.iterators.ArrayIterator;
+import org.apache.commons.collections4.iterators.ArrayListIterator;
+import org.apache.commons.collections4.iterators.BoundedIterator;
+import org.apache.commons.collections4.iterators.CollatingIterator;
+import org.apache.commons.collections4.iterators.EmptyIterator;
+import org.apache.commons.collections4.iterators.EmptyListIterator;
+import org.apache.commons.collections4.iterators.EmptyMapIterator;
+import org.apache.commons.collections4.iterators.EmptyOrderedIterator;
+import org.apache.commons.collections4.iterators.EmptyOrderedMapIterator;
+import org.apache.commons.collections4.iterators.EnumerationIterator;
+import org.apache.commons.collections4.iterators.FilterIterator;
+import org.apache.commons.collections4.iterators.FilterListIterator;
+import org.apache.commons.collections4.iterators.IteratorChain;
+import org.apache.commons.collections4.iterators.IteratorEnumeration;
+import org.apache.commons.collections4.iterators.IteratorIterable;
+import org.apache.commons.collections4.iterators.ListIteratorWrapper;
+import org.apache.commons.collections4.iterators.LoopingIterator;
+import org.apache.commons.collections4.iterators.LoopingListIterator;
+import org.apache.commons.collections4.iterators.NodeListIterator;
+import org.apache.commons.collections4.iterators.ObjectArrayIterator;
+import org.apache.commons.collections4.iterators.ObjectArrayListIterator;
+import org.apache.commons.collections4.iterators.ObjectGraphIterator;
+import org.apache.commons.collections4.iterators.PeekingIterator;
+import org.apache.commons.collections4.iterators.PushbackIterator;
+import org.apache.commons.collections4.iterators.SingletonIterator;
+import org.apache.commons.collections4.iterators.SingletonListIterator;
+import org.apache.commons.collections4.iterators.SkippingIterator;
+import org.apache.commons.collections4.iterators.TransformIterator;
+import org.apache.commons.collections4.iterators.UnmodifiableIterator;
+import org.apache.commons.collections4.iterators.UnmodifiableListIterator;
+import org.apache.commons.collections4.iterators.UnmodifiableMapIterator;
+import org.apache.commons.collections4.iterators.ZippingIterator;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+/**
+ * Provides static utility methods and decorators for {@link Iterator}
+ * instances. The implementations are provided in the iterators subpackage.
+ *
+ * @since 2.1
+ */
+public class IteratorUtils {
+    // validation is done in this class in certain cases because the
+    // public classes allow invalid states
+
+    /**
+     * An iterator over no elements.
+     */
+    @SuppressWarnings(&quot;rawtypes&quot;)
+<span class="fc" id="L82">    public static final ResettableIterator EMPTY_ITERATOR = EmptyIterator.RESETTABLE_INSTANCE;</span>
+
+    /**
+     * A list iterator over no elements.
+     */
+    @SuppressWarnings(&quot;rawtypes&quot;)
+<span class="fc" id="L88">    public static final ResettableListIterator EMPTY_LIST_ITERATOR = EmptyListIterator.RESETTABLE_INSTANCE;</span>
+
+    /**
+     * An ordered iterator over no elements.
+     */
+    @SuppressWarnings(&quot;rawtypes&quot;)
+<span class="fc" id="L94">    public static final OrderedIterator EMPTY_ORDERED_ITERATOR = EmptyOrderedIterator.INSTANCE;</span>
+
+    /**
+     * A map iterator over no elements.
+     */
+    @SuppressWarnings(&quot;rawtypes&quot;)
+<span class="fc" id="L100">    public static final MapIterator EMPTY_MAP_ITERATOR = EmptyMapIterator.INSTANCE;</span>
+
+    /**
+     * An ordered map iterator over no elements.
+     */
+    @SuppressWarnings(&quot;rawtypes&quot;)
+<span class="fc" id="L106">    public static final OrderedMapIterator EMPTY_ORDERED_MAP_ITERATOR = EmptyOrderedMapIterator.INSTANCE;</span>
+
+    /**
+     * Default prefix used while converting an Iterator to its String representation.
+     */
+    private static final String DEFAULT_TOSTRING_PREFIX = &quot;[&quot;;
+
+    /**
+     * Default suffix used while converting an Iterator to its String representation.
+     */
+    private static final String DEFAULT_TOSTRING_SUFFIX = &quot;]&quot;;
+
+    /**
+     * Default delimiter used to delimit elements while converting an Iterator
+     * to its String representation.
+     */
+    private static final String DEFAULT_TOSTRING_DELIMITER = &quot;, &quot;;
+
+    /**
+     * IteratorUtils is not normally instantiated.
+     */
+    private IteratorUtils() {}
+
+    // Empty
+    //-----------------------------------------------------------------------
+    /**
+     * Gets an empty iterator.
+     * &lt;p&gt;
+     * This iterator is a valid iterator object that will iterate over nothing.
+     *
+     * @param &lt;E&gt; the element type
+     * @return an iterator over nothing
+     */
+    public static &lt;E&gt; ResettableIterator&lt;E&gt; emptyIterator() {
+<span class="fc" id="L140">        return EmptyIterator.&lt;E&gt;resettableEmptyIterator();</span>
+    }
+
+    /**
+     * Gets an empty list iterator.
+     * &lt;p&gt;
+     * This iterator is a valid list iterator object that will iterate
+     * over nothing.
+     *
+     * @param &lt;E&gt; the element type
+     * @return a list iterator over nothing
+     */
+    public static &lt;E&gt; ResettableListIterator&lt;E&gt; emptyListIterator() {
+<span class="fc" id="L153">        return EmptyListIterator.&lt;E&gt;resettableEmptyListIterator();</span>
+    }
+
+    /**
+     * Gets an empty ordered iterator.
+     * &lt;p&gt;
+     * This iterator is a valid iterator object that will iterate
+     * over nothing.
+     *
+     * @param &lt;E&gt; the element type
+     * @return an ordered iterator over nothing
+     */
+    public static &lt;E&gt; OrderedIterator&lt;E&gt; emptyOrderedIterator() {
+<span class="fc" id="L166">        return EmptyOrderedIterator.&lt;E&gt;emptyOrderedIterator();</span>
+    }
+
+    /**
+     * Gets an empty map iterator.
+     * &lt;p&gt;
+     * This iterator is a valid map iterator object that will iterate
+     * over nothing.
+     *
+     * @param &lt;K&gt; the key type
+     * @param &lt;V&gt; the value type
+     * @return a map iterator over nothing
+     */
+    public static &lt;K, V&gt; MapIterator&lt;K, V&gt; emptyMapIterator() {
+<span class="fc" id="L180">        return EmptyMapIterator.&lt;K, V&gt;emptyMapIterator();</span>
+    }
+
+    /**
+     * Gets an empty ordered map iterator.
+     * &lt;p&gt;
+     * This iterator is a valid map iterator object that will iterate
+     * over nothing.
+     *
+     * @param &lt;K&gt; the key type
+     * @param &lt;V&gt; the value type
+     * @return a map iterator over nothing
+     */
+    public static &lt;K, V&gt; OrderedMapIterator&lt;K, V&gt; emptyOrderedMapIterator() {
+<span class="fc" id="L194">        return EmptyOrderedMapIterator.&lt;K, V&gt;emptyOrderedMapIterator();</span>
+    }
+
+    // Singleton
+    //-----------------------------------------------------------------------
+    /**
+     * Gets a singleton iterator.
+     * &lt;p&gt;
+     * This iterator is a valid iterator object that will iterate over
+     * the specified object.
+     *
+     * @param &lt;E&gt; the element type
+     * @param object  the single object over which to iterate
+     * @return a singleton iterator over the object
+     */
+    public static &lt;E&gt; ResettableIterator&lt;E&gt; singletonIterator(final E object) {
+<span class="nc" id="L210">        return new SingletonIterator&lt;&gt;(object);</span>
+    }
+
+    /**
+     * Gets a singleton list iterator.
+     * &lt;p&gt;
+     * This iterator is a valid list iterator object that will iterate over
+     * the specified object.
+     *
+     * @param &lt;E&gt; the element type
+     * @param object  the single object over which to iterate
+     * @return a singleton list iterator over the object
+     */
+    public static &lt;E&gt; ListIterator&lt;E&gt; singletonListIterator(final E object) {
+<span class="nc" id="L224">        return new SingletonListIterator&lt;&gt;(object);</span>
+    }
+
+    // Arrays
+    //-----------------------------------------------------------------------
+    /**
+     * Gets an iterator over an object array.
+     *
+     * @param &lt;E&gt; the element type
+     * @param array  the array over which to iterate
+     * @return an iterator over the array
+     * @throws NullPointerException if array is null
+     */
+    public static &lt;E&gt; ResettableIterator&lt;E&gt; arrayIterator(final E... array) {
+<span class="fc" id="L238">        return new ObjectArrayIterator&lt;&gt;(array);</span>
+    }
+
+    /**
+     * Gets an iterator over an object or primitive array.
+     * &lt;p&gt;
+     * This method will handle primitive arrays as well as object arrays.
+     * The primitives will be wrapped in the appropriate wrapper class.
+     *
+     * @param &lt;E&gt; the element type
+     * @param array  the array over which to iterate
+     * @return an iterator over the array
+     * @throws IllegalArgumentException if the array is not an array
+     * @throws NullPointerException if array is null
+     */
+    public static &lt;E&gt; ResettableIterator&lt;E&gt; arrayIterator(final Object array) {
+<span class="fc" id="L254">        return new ArrayIterator&lt;&gt;(array);</span>
+    }
+
+    /**
+     * Gets an iterator over the end part of an object array.
+     *
+     * @param &lt;E&gt; the element type
+     * @param array  the array over which to iterate
+     * @param start  the index to start iterating at
+     * @return an iterator over part of the array
+     * @throws IndexOutOfBoundsException if start is less than zero or greater
+     *   than the length of the array
+     * @throws NullPointerException if array is null
+     */
+    public static &lt;E&gt; ResettableIterator&lt;E&gt; arrayIterator(final E[] array, final int start) {
+<span class="fc" id="L269">        return new ObjectArrayIterator&lt;&gt;(array, start);</span>
+    }
+
+    /**
+     * Gets an iterator over the end part of an object or primitive array.
+     * &lt;p&gt;
+     * This method will handle primitive arrays as well as object arrays.
+     * The primitives will be wrapped in the appropriate wrapper class.
+     *
+     * @param &lt;E&gt; the element type
+     * @param array  the array over which to iterate
+     * @param start  the index to start iterating at
+     * @return an iterator over part of the array
+     * @throws IllegalArgumentException if the array is not an array
+     * @throws IndexOutOfBoundsException if start is less than zero or greater
+     *   than the length of the array
+     * @throws NullPointerException if array is null
+     */
+    public static &lt;E&gt; ResettableIterator&lt;E&gt; arrayIterator(final Object array, final int start) {
+<span class="fc" id="L288">        return new ArrayIterator&lt;&gt;(array, start);</span>
+    }
+
+    /**
+     * Gets an iterator over part of an object array.
+     *
+     * @param &lt;E&gt; the element type
+     * @param array  the array over which to iterate
+     * @param start  the index to start iterating at
+     * @param end  the index to finish iterating at
+     * @return an iterator over part of the array
+     * @throws IndexOutOfBoundsException if array bounds are invalid
+     * @throws IllegalArgumentException if end is before start
+     * @throws NullPointerException if array is null
+     */
+    public static &lt;E&gt; ResettableIterator&lt;E&gt; arrayIterator(final E[] array, final int start, final int end) {
+<span class="fc" id="L304">        return new ObjectArrayIterator&lt;&gt;(array, start, end);</span>
+    }
+
+    /**
+     * Gets an iterator over part of an object or primitive array.
+     * &lt;p&gt;
+     * This method will handle primitive arrays as well as object arrays.
+     * The primitives will be wrapped in the appropriate wrapper class.
+     *
+     * @param &lt;E&gt; the element type
+     * @param array  the array over which to iterate
+     * @param start  the index to start iterating at
+     * @param end  the index to finish iterating at
+     * @return an iterator over part of the array
+     * @throws IllegalArgumentException if the array is not an array or end is before start
+     * @throws IndexOutOfBoundsException if array bounds are invalid
+     * @throws NullPointerException if array is null
+     */
+    public static &lt;E&gt; ResettableIterator&lt;E&gt; arrayIterator(final Object array, final int start, final int end) {
+<span class="fc" id="L323">        return new ArrayIterator&lt;&gt;(array, start, end);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets a list iterator over an object array.
+     *
+     * @param &lt;E&gt; the element type
+     * @param array  the array over which to iterate
+     * @return a list iterator over the array
+     * @throws NullPointerException if array is null
+     */
+    public static &lt;E&gt; ResettableListIterator&lt;E&gt; arrayListIterator(final E... array) {
+<span class="fc" id="L336">        return new ObjectArrayListIterator&lt;&gt;(array);</span>
+    }
+
+    /**
+     * Gets a list iterator over an object or primitive array.
+     * &lt;p&gt;
+     * This method will handle primitive arrays as well as object arrays.
+     * The primitives will be wrapped in the appropriate wrapper class.
+     *
+     * @param &lt;E&gt; the element type
+     * @param array  the array over which to iterate
+     * @return a list iterator over the array
+     * @throws IllegalArgumentException if the array is not an array
+     * @throws NullPointerException if array is null
+     */
+    public static &lt;E&gt; ResettableListIterator&lt;E&gt; arrayListIterator(final Object array) {
+<span class="fc" id="L352">        return new ArrayListIterator&lt;&gt;(array);</span>
+    }
+
+    /**
+     * Gets a list iterator over the end part of an object array.
+     *
+     * @param &lt;E&gt; the element type
+     * @param array  the array over which to iterate
+     * @param start  the index to start iterating at
+     * @return a list iterator over part of the array
+     * @throws IndexOutOfBoundsException if start is less than zero
+     * @throws NullPointerException if array is null
+     */
+    public static &lt;E&gt; ResettableListIterator&lt;E&gt; arrayListIterator(final E[] array, final int start) {
+<span class="fc" id="L366">        return new ObjectArrayListIterator&lt;&gt;(array, start);</span>
+    }
+
+    /**
+     * Gets a list iterator over the end part of an object or primitive array.
+     * &lt;p&gt;
+     * This method will handle primitive arrays as well as object arrays.
+     * The primitives will be wrapped in the appropriate wrapper class.
+     *
+     * @param &lt;E&gt; the element type
+     * @param array  the array over which to iterate
+     * @param start  the index to start iterating at
+     * @return a list iterator over part of the array
+     * @throws IllegalArgumentException if the array is not an array
+     * @throws IndexOutOfBoundsException if start is less than zero
+     * @throws NullPointerException if array is null
+     */
+    public static &lt;E&gt; ResettableListIterator&lt;E&gt; arrayListIterator(final Object array, final int start) {
+<span class="fc" id="L384">        return new ArrayListIterator&lt;&gt;(array, start);</span>
+    }
+
+    /**
+     * Gets a list iterator over part of an object array.
+     *
+     * @param &lt;E&gt; the element type
+     * @param array  the array over which to iterate
+     * @param start  the index to start iterating at
+     * @param end  the index to finish iterating at
+     * @return a list iterator over part of the array
+     * @throws IndexOutOfBoundsException if array bounds are invalid
+     * @throws IllegalArgumentException if end is before start
+     * @throws NullPointerException if array is null
+     */
+    public static &lt;E&gt; ResettableListIterator&lt;E&gt; arrayListIterator(final E[] array, final int start, final int end) {
+<span class="fc" id="L400">        return new ObjectArrayListIterator&lt;&gt;(array, start, end);</span>
+    }
+
+    /**
+     * Gets a list iterator over part of an object or primitive array.
+     * &lt;p&gt;
+     * This method will handle primitive arrays as well as object arrays.
+     * The primitives will be wrapped in the appropriate wrapper class.
+     *
+     * @param &lt;E&gt; the element type
+     * @param array  the array over which to iterate
+     * @param start  the index to start iterating at
+     * @param end  the index to finish iterating at
+     * @return a list iterator over part of the array
+     * @throws IllegalArgumentException if the array is not an array or end is before start
+     * @throws IndexOutOfBoundsException if array bounds are invalid
+     * @throws NullPointerException if array is null
+     */
+    public static &lt;E&gt; ResettableListIterator&lt;E&gt; arrayListIterator(final Object array, final int start, final int end) {
+<span class="fc" id="L419">        return new ArrayListIterator&lt;&gt;(array, start, end);</span>
+    }
+
+    // Bounded
+    //-----------------------------------------------------------------------
+    /**
+     * Decorates the specified iterator to return at most the given number
+     * of elements.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to decorate
+     * @param max  the maximum number of elements returned by this iterator
+     * @return a new bounded iterator
+     * @throws NullPointerException if the iterator is null
+     * @throws IllegalArgumentException if max is negative
+     * @since 4.1
+     */
+    public static &lt;E&gt; BoundedIterator&lt;E&gt; boundedIterator(final Iterator&lt;? extends E&gt; iterator, final long max) {
+<span class="fc" id="L437">        return boundedIterator(iterator, 0, max);</span>
+    }
+
+    /**
+     * Decorates the specified iterator to return at most the given number
+     * of elements, skipping all elements until the iterator reaches the
+     * position at {@code offset}.
+     * &lt;p&gt;
+     * The iterator is immediately advanced until it reaches the position at
+     * {@code offset}, incurring O(n) time.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to decorate
+     * @param offset  the index of the first element of the decorated iterator to return
+     * @param max  the maximum number of elements returned by this iterator
+     * @return a new bounded iterator
+     * @throws NullPointerException if the iterator is null
+     * @throws IllegalArgumentException if either offset or max is negative
+     * @since 4.1
+     */
+    public static &lt;E&gt; BoundedIterator&lt;E&gt; boundedIterator(final Iterator&lt;? extends E&gt; iterator,
+                                                         final long offset, final long max) {
+<span class="fc" id="L459">        return new BoundedIterator&lt;&gt;(iterator, offset, max);</span>
+    }
+
+    // Unmodifiable
+    //-----------------------------------------------------------------------
+    /**
+     * Gets an immutable version of an {@link Iterator}. The returned object
+     * will always throw an {@link UnsupportedOperationException} for
+     * the {@link Iterator#remove} method.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to make immutable
+     * @return an immutable version of the iterator
+     */
+    public static &lt;E&gt; Iterator&lt;E&gt; unmodifiableIterator(final Iterator&lt;E&gt; iterator) {
+<span class="fc" id="L474">        return UnmodifiableIterator.unmodifiableIterator(iterator);</span>
+    }
+
+    /**
+     * Gets an immutable version of a {@link ListIterator}. The returned object
+     * will always throw an {@link UnsupportedOperationException} for
+     * the {@link Iterator#remove}, {@link ListIterator#add} and
+     * {@link ListIterator#set} methods.
+     *
+     * @param &lt;E&gt; the element type
+     * @param listIterator  the iterator to make immutable
+     * @return an immutable version of the iterator
+     */
+    public static &lt;E&gt; ListIterator&lt;E&gt; unmodifiableListIterator(final ListIterator&lt;E&gt; listIterator) {
+<span class="fc" id="L488">        return UnmodifiableListIterator.umodifiableListIterator(listIterator);</span>
+    }
+
+    /**
+     * Gets an immutable version of a {@link MapIterator}. The returned object
+     * will always throw an {@link UnsupportedOperationException} for
+     * the {@link Iterator#remove}, {@link MapIterator#setValue(Object)} methods.
+     *
+     * @param &lt;K&gt; the key type
+     * @param &lt;V&gt; the value type
+     * @param mapIterator  the iterator to make immutable
+     * @return an immutable version of the iterator
+     */
+    public static &lt;K, V&gt; MapIterator&lt;K, V&gt; unmodifiableMapIterator(final MapIterator&lt;K, V&gt; mapIterator) {
+<span class="nc" id="L502">        return UnmodifiableMapIterator.unmodifiableMapIterator(mapIterator);</span>
+    }
+
+    // Chained
+    //-----------------------------------------------------------------------
+
+    /**
+     * Gets an iterator that iterates through two {@link Iterator}s
+     * one after another.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator1  the first iterator to use, not null
+     * @param iterator2  the second iterator to use, not null
+     * @return a combination iterator over the iterators
+     * @throws NullPointerException if either iterator is null
+     */
+    public static &lt;E&gt; Iterator&lt;E&gt; chainedIterator(final Iterator&lt;? extends E&gt; iterator1,
+                                                  final Iterator&lt;? extends E&gt; iterator2) {
+        // keep a version with two iterators to avoid the following warning in client code (Java 5 &amp; 6)
+        // &quot;A generic array of E is created for a varargs parameter&quot;
+<span class="fc" id="L522">        return new IteratorChain&lt;&gt;(iterator1, iterator2);</span>
+    }
+
+    /**
+     * Gets an iterator that iterates through an array of {@link Iterator}s
+     * one after another.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterators  the iterators to use, not null or empty or contain nulls
+     * @return a combination iterator over the iterators
+     * @throws NullPointerException if iterators array is null or contains a null
+     */
+    public static &lt;E&gt; Iterator&lt;E&gt; chainedIterator(final Iterator&lt;? extends E&gt;... iterators) {
+<span class="nc" id="L535">        return new IteratorChain&lt;&gt;(iterators);</span>
+    }
+
+    /**
+     * Gets an iterator that iterates through a collections of {@link Iterator}s
+     * one after another.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterators  the iterators to use, not null or empty or contain nulls
+     * @return a combination iterator over the iterators
+     * @throws NullPointerException if iterators collection is null or contains a null
+     * @throws ClassCastException if the iterators collection contains the wrong object type
+     */
+    public static &lt;E&gt; Iterator&lt;E&gt; chainedIterator(final Collection&lt;Iterator&lt;? extends E&gt;&gt; iterators) {
+<span class="nc" id="L549">        return new IteratorChain&lt;&gt;(iterators);</span>
+    }
+
+    // Collated
+    //-----------------------------------------------------------------------
+    /**
+     * Gets an iterator that provides an ordered iteration over the elements
+     * contained in a collection of ordered {@link Iterator}s.
+     * &lt;p&gt;
+     * Given two ordered {@link Iterator}s &lt;code&gt;A&lt;/code&gt; and &lt;code&gt;B&lt;/code&gt;,
+     * the {@link Iterator#next()} method will return the lesser of
+     * &lt;code&gt;A.next()&lt;/code&gt; and &lt;code&gt;B.next()&lt;/code&gt;.
+     * &lt;p&gt;
+     * The comparator is optional. If null is specified then natural order is used.
+     *
+     * @param &lt;E&gt; the element type
+     * @param comparator  the comparator to use, may be null for natural order
+     * @param iterator1  the first iterators to use, not null
+     * @param iterator2  the first iterators to use, not null
+     * @return a combination iterator over the iterators
+     * @throws NullPointerException if either iterator is null
+     */
+    public static &lt;E&gt; Iterator&lt;E&gt; collatedIterator(final Comparator&lt;? super E&gt; comparator,
+                                                   final Iterator&lt;? extends E&gt; iterator1,
+                                                   final Iterator&lt;? extends E&gt; iterator2) {
+        @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc bfc" id="L575" title="All 2 branches covered.">        final Comparator&lt;E&gt; comp =</span>
+            comparator == null ? ComparatorUtils.NATURAL_COMPARATOR : (Comparator&lt;E&gt;) comparator;
+<span class="fc" id="L577">        return new CollatingIterator&lt;&gt;(comp, iterator1, iterator2);</span>
+    }
+
+    /**
+     * Gets an iterator that provides an ordered iteration over the elements
+     * contained in an array of {@link Iterator}s.
+     * &lt;p&gt;
+     * Given two ordered {@link Iterator}s &lt;code&gt;A&lt;/code&gt; and &lt;code&gt;B&lt;/code&gt;,
+     * the {@link Iterator#next()} method will return the lesser of
+     * &lt;code&gt;A.next()&lt;/code&gt; and &lt;code&gt;B.next()&lt;/code&gt; and so on.
+     * &lt;p&gt;
+     * The comparator is optional. If null is specified then natural order is used.
+     *
+     * @param &lt;E&gt; the element type
+     * @param comparator  the comparator to use, may be null for natural order
+     * @param iterators  the iterators to use, not null or empty or contain nulls
+     * @return a combination iterator over the iterators
+     * @throws NullPointerException if iterators array is null or contains a null value
+     */
+    public static &lt;E&gt; Iterator&lt;E&gt; collatedIterator(final Comparator&lt;? super E&gt; comparator,
+                                                   final Iterator&lt;? extends E&gt;... iterators) {
+        @SuppressWarnings(&quot;unchecked&quot;)
+<span class="nc bnc" id="L599" title="All 2 branches missed.">        final Comparator&lt;E&gt; comp =</span>
+            comparator == null ? ComparatorUtils.NATURAL_COMPARATOR : (Comparator&lt;E&gt;) comparator;
+<span class="nc" id="L601">        return new CollatingIterator&lt;&gt;(comp, iterators);</span>
+    }
+
+    /**
+     * Gets an iterator that provides an ordered iteration over the elements
+     * contained in a collection of {@link Iterator}s.
+     * &lt;p&gt;
+     * Given two ordered {@link Iterator}s &lt;code&gt;A&lt;/code&gt; and &lt;code&gt;B&lt;/code&gt;,
+     * the {@link Iterator#next()} method will return the lesser of
+     * &lt;code&gt;A.next()&lt;/code&gt; and &lt;code&gt;B.next()&lt;/code&gt; and so on.
+     * &lt;p&gt;
+     * The comparator is optional. If null is specified then natural order is used.
+     *
+     * @param &lt;E&gt; the element type
+     * @param comparator  the comparator to use, may be null for natural order
+     * @param iterators  the iterators to use, not null or empty or contain nulls
+     * @return a combination iterator over the iterators
+     * @throws NullPointerException if iterators collection is null or contains a null
+     * @throws ClassCastException if the iterators collection contains the wrong object type
+     */
+    public static &lt;E&gt; Iterator&lt;E&gt; collatedIterator(final Comparator&lt;? super E&gt; comparator,
+                                                   final Collection&lt;Iterator&lt;? extends E&gt;&gt; iterators) {
+        @SuppressWarnings(&quot;unchecked&quot;)
+<span class="nc bnc" id="L624" title="All 2 branches missed.">        final Comparator&lt;E&gt; comp =</span>
+            comparator == null ? ComparatorUtils.NATURAL_COMPARATOR : (Comparator&lt;E&gt;) comparator;
+<span class="nc" id="L626">        return new CollatingIterator&lt;&gt;(comp, iterators);</span>
+    }
+
+    // Object Graph
+    //-----------------------------------------------------------------------
+    /**
+     * Gets an iterator that operates over an object graph.
+     * &lt;p&gt;
+     * This iterator can extract multiple objects from a complex tree-like object graph.
+     * The iteration starts from a single root object.
+     * It uses a &lt;code&gt;Transformer&lt;/code&gt; to extract the iterators and elements.
+     * Its main benefit is that no intermediate &lt;code&gt;List&lt;/code&gt; is created.
+     * &lt;p&gt;
+     * For example, consider an object graph:
+     * &lt;pre&gt;
+     *                 |- Branch -- Leaf
+     *                 |         \- Leaf
+     *         |- Tree |         /- Leaf
+     *         |       |- Branch -- Leaf
+     *  Forest |                 \- Leaf
+     *         |       |- Branch -- Leaf
+     *         |       |         \- Leaf
+     *         |- Tree |         /- Leaf
+     *                 |- Branch -- Leaf
+     *                 |- Branch -- Leaf&lt;/pre&gt;
+     * The following &lt;code&gt;Transformer&lt;/code&gt;, used in this class, will extract all
+     * the Leaf objects without creating a combined intermediate list:
+     * &lt;pre&gt;
+     * public Object transform(Object input) {
+     *   if (input instanceof Forest) {
+     *     return ((Forest) input).treeIterator();
+     *   }
+     *   if (input instanceof Tree) {
+     *     return ((Tree) input).branchIterator();
+     *   }
+     *   if (input instanceof Branch) {
+     *     return ((Branch) input).leafIterator();
+     *   }
+     *   if (input instanceof Leaf) {
+     *     return input;
+     *   }
+     *   throw new ClassCastException();
+     * }&lt;/pre&gt;
+     * &lt;p&gt;
+     * Internally, iteration starts from the root object. When next is called,
+     * the transformer is called to examine the object. The transformer will return
+     * either an iterator or an object. If the object is an Iterator, the next element
+     * from that iterator is obtained and the process repeats. If the element is an object
+     * it is returned.
+     * &lt;p&gt;
+     * Under many circumstances, linking Iterators together in this manner is
+     * more efficient (and convenient) than using nested for loops to extract a list.
+     *
+     * @param &lt;E&gt; the element type
+     * @param root  the root object to start iterating from, null results in an empty iterator
+     * @param transformer  the transformer to use, see above, null uses no effect transformer
+     * @return a new object graph iterator
+     * @since 3.1
+     */
+    public static &lt;E&gt; Iterator&lt;E&gt; objectGraphIterator(final E root,
+            final Transformer&lt;? super E, ? extends E&gt; transformer) {
+<span class="nc" id="L687">        return new ObjectGraphIterator&lt;&gt;(root, transformer);</span>
+    }
+
+    // Transformed
+    //-----------------------------------------------------------------------
+    /**
+     * Gets an iterator that transforms the elements of another iterator.
+     * &lt;p&gt;
+     * The transformation occurs during the next() method and the underlying
+     * iterator is unaffected by the transformation.
+     *
+     * @param &lt;I&gt; the input type
+     * @param &lt;O&gt; the output type
+     * @param iterator  the iterator to use, not null
+     * @param transform  the transform to use, not null
+     * @return a new transforming iterator
+     * @throws NullPointerException if either parameter is null
+     */
+    public static &lt;I, O&gt; Iterator&lt;O&gt; transformedIterator(final Iterator&lt;? extends I&gt; iterator,
+            final Transformer&lt;? super I, ? extends O&gt; transform) {
+
+<span class="pc bpc" id="L708" title="1 of 2 branches missed.">        if (iterator == null) {</span>
+<span class="nc" id="L709">            throw new NullPointerException(&quot;Iterator must not be null&quot;);</span>
+        }
+<span class="pc bpc" id="L711" title="1 of 2 branches missed.">        if (transform == null) {</span>
+<span class="nc" id="L712">            throw new NullPointerException(&quot;Transformer must not be null&quot;);</span>
+        }
+<span class="fc" id="L714">        return new TransformIterator&lt;&gt;(iterator, transform);</span>
+    }
+
+    // Filtered
+    //-----------------------------------------------------------------------
+    /**
+     * Gets an iterator that filters another iterator.
+     * &lt;p&gt;
+     * The returned iterator will only return objects that match the specified
+     * filtering predicate.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to use, not null
+     * @param predicate  the predicate to use as a filter, not null
+     * @return a new filtered iterator
+     * @throws NullPointerException if either parameter is null
+     */
+    public static &lt;E&gt; Iterator&lt;E&gt; filteredIterator(final Iterator&lt;? extends E&gt; iterator,
+                                                   final Predicate&lt;? super E&gt; predicate) {
+<span class="pc bpc" id="L733" title="1 of 2 branches missed.">        if (iterator == null) {</span>
+<span class="nc" id="L734">            throw new NullPointerException(&quot;Iterator must not be null&quot;);</span>
+        }
+<span class="pc bpc" id="L736" title="1 of 2 branches missed.">        if (predicate == null) {</span>
+<span class="nc" id="L737">            throw new NullPointerException(&quot;Predicate must not be null&quot;);</span>
+        }
+<span class="fc" id="L739">        return new FilterIterator&lt;&gt;(iterator, predicate);</span>
+    }
+
+    /**
+     * Gets a list iterator that filters another list iterator.
+     * &lt;p&gt;
+     * The returned iterator will only return objects that match the specified
+     * filtering predicate.
+     *
+     * @param &lt;E&gt; the element type
+     * @param listIterator  the list iterator to use, not null
+     * @param predicate  the predicate to use as a filter, not null
+     * @return a new filtered iterator
+     * @throws NullPointerException if either parameter is null
+     */
+    public static &lt;E&gt; ListIterator&lt;E&gt; filteredListIterator(final ListIterator&lt;? extends E&gt; listIterator,
+            final Predicate&lt;? super E&gt; predicate) {
+
+<span class="nc bnc" id="L757" title="All 2 branches missed.">        if (listIterator == null) {</span>
+<span class="nc" id="L758">            throw new NullPointerException(&quot;ListIterator must not be null&quot;);</span>
+        }
+<span class="nc bnc" id="L760" title="All 2 branches missed.">        if (predicate == null) {</span>
+<span class="nc" id="L761">            throw new NullPointerException(&quot;Predicate must not be null&quot;);</span>
+        }
+<span class="nc" id="L763">        return new FilterListIterator&lt;&gt;(listIterator, predicate);</span>
+    }
+
+    // Looping
+    //-----------------------------------------------------------------------
+    /**
+     * Gets an iterator that loops continuously over the supplied collection.
+     * &lt;p&gt;
+     * The iterator will only stop looping if the remove method is called
+     * enough times to empty the collection, or if the collection is empty
+     * to start with.
+     *
+     * @param &lt;E&gt; the element type
+     * @param coll  the collection to iterate over, not null
+     * @return a new looping iterator
+     * @throws NullPointerException if the collection is null
+     */
+    public static &lt;E&gt; ResettableIterator&lt;E&gt; loopingIterator(final Collection&lt;? extends E&gt; coll) {
+<span class="nc bnc" id="L781" title="All 2 branches missed.">        if (coll == null) {</span>
+<span class="nc" id="L782">            throw new NullPointerException(&quot;Collection must not be null&quot;);</span>
+        }
+<span class="nc" id="L784">        return new LoopingIterator&lt;&gt;(coll);</span>
+    }
+
+    /**
+     * Gets an iterator that loops continuously over the supplied list.
+     * &lt;p&gt;
+     * The iterator will only stop looping if the remove method is called
+     * enough times to empty the list, or if the list is empty to start with.
+     *
+     * @param &lt;E&gt; the element type
+     * @param list  the list to iterate over, not null
+     * @return a new looping iterator
+     * @throws NullPointerException if the list is null
+     * @since 3.2
+     */
+    public static &lt;E&gt; ResettableListIterator&lt;E&gt; loopingListIterator(final List&lt;E&gt; list) {
+<span class="nc bnc" id="L800" title="All 2 branches missed.">        if (list == null) {</span>
+<span class="nc" id="L801">            throw new NullPointerException(&quot;List must not be null&quot;);</span>
+        }
+<span class="nc" id="L803">        return new LoopingListIterator&lt;&gt;(list);</span>
+    }
+
+    // org.w3c.dom.NodeList iterators
+    //-----------------------------------------------------------------------
+    /**
+     * Gets an {@link Iterator} that wraps the specified {@link NodeList}.
+     * The returned {@link Iterator} can be used for a single iteration.
+     *
+     * @param nodeList  the node list to use, may not be null
+     * @return a new, single use {@link Iterator}
+     * @throws NullPointerException if nodeList is null
+     * @since 4.0
+     */
+    public static NodeListIterator nodeListIterator(final NodeList nodeList) {
+<span class="pc bpc" id="L818" title="1 of 2 branches missed.">        if (nodeList == null) {</span>
+<span class="nc" id="L819">            throw new NullPointerException(&quot;NodeList must not be null&quot;);</span>
+        }
+<span class="fc" id="L821">        return new NodeListIterator(nodeList);</span>
+    }
+
+    /**
+     * Gets an {@link Iterator} that wraps the specified node's childNodes.
+     * The returned {@link Iterator} can be used for a single iteration.
+     * &lt;p&gt;
+     * Convenience method, allows easy iteration over NodeLists:
+     * &lt;pre&gt;
+     *   Iterator&amp;lt;Node&amp;gt; iterator = IteratorUtils.nodeListIterator(node);
+     *   for(Node childNode : IteratorUtils.asIterable(iterator)) {
+     *     ...
+     *   }
+     * &lt;/pre&gt;
+     *
+     * @param node  the node to use, may not be null
+     * @return a new, single use {@link Iterator}
+     * @throws NullPointerException if node is null
+     * @since 4.0
+     */
+    public static NodeListIterator nodeListIterator(final Node node) {
+<span class="pc bpc" id="L842" title="1 of 2 branches missed.">        if (node == null) {</span>
+<span class="nc" id="L843">            throw new NullPointerException(&quot;Node must not be null&quot;);</span>
+        }
+<span class="fc" id="L845">        return new NodeListIterator(node);</span>
+    }
+
+    // Peeking
+    //-----------------------------------------------------------------------
+
+    /**
+     * Gets an iterator that supports one-element lookahead.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to decorate, not null
+     * @return a peeking iterator
+     * @throws NullPointerException if the iterator is null
+     * @since 4.0
+     */
+    public static &lt;E&gt; Iterator&lt;E&gt; peekingIterator(final Iterator&lt;? extends E&gt; iterator) {
+<span class="nc" id="L861">        return PeekingIterator.peekingIterator(iterator);</span>
+    }
+
+    // Pushback
+    //-----------------------------------------------------------------------
+
+    /**
+     * Gets an iterator that supports pushback of elements.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to decorate, not null
+     * @return a pushback iterator
+     * @throws NullPointerException if the iterator is null
+     * @since 4.0
+     */
+    public static &lt;E&gt; Iterator&lt;E&gt; pushbackIterator(final Iterator&lt;? extends E&gt; iterator) {
+<span class="nc" id="L877">        return PushbackIterator.pushbackIterator(iterator);</span>
+    }
+
+    // Skipping
+    //-----------------------------------------------------------------------
+    /**
+     * Decorates the specified iterator to skip the first N elements.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to decorate
+     * @param offset  the first number of elements to skip
+     * @return a new skipping iterator
+     * @throws NullPointerException if the iterator is null
+     * @throws IllegalArgumentException if offset is negative
+     * @since 4.1
+     */
+    public static &lt;E&gt; SkippingIterator&lt;E&gt; skippingIterator(final Iterator&lt;E&gt; iterator, final long offset) {
+<span class="fc" id="L894">        return new SkippingIterator&lt;&gt;(iterator, offset);</span>
+    }
+
+    // Zipping
+    //-----------------------------------------------------------------------
+    /**
+     * Returns an iterator that interleaves elements from the decorated iterators.
+     *
+     * @param &lt;E&gt; the element type
+     * @param a  the first iterator to interleave
+     * @param b  the second iterator to interleave
+     * @return an iterator, interleaving the decorated iterators
+     * @throws NullPointerException if any iterator is null
+     * @since 4.1
+     */
+    public static &lt;E&gt; ZippingIterator&lt;E&gt; zippingIterator(final Iterator&lt;? extends E&gt; a,
+                                                         final Iterator&lt;? extends E&gt; b) {
+<span class="fc" id="L911">        return new ZippingIterator&lt;&gt;(a, b);</span>
+    }
+
+    /**
+     * Returns an iterator that interleaves elements from the decorated iterators.
+     *
+     * @param &lt;E&gt; the element type
+     * @param a  the first iterator to interleave
+     * @param b  the second iterator to interleave
+     * @param c  the third iterator to interleave
+     * @return an iterator, interleaving the decorated iterators
+     * @throws NullPointerException if any iterator is null
+     * @since 4.1
+     */
+    public static &lt;E&gt; ZippingIterator&lt;E&gt; zippingIterator(final Iterator&lt;? extends E&gt; a,
+                                                         final Iterator&lt;? extends E&gt; b,
+                                                         final Iterator&lt;? extends E&gt; c) {
+<span class="nc" id="L928">        return new ZippingIterator&lt;&gt;(a, b, c);</span>
+    }
+
+    /**
+     * Returns an iterator that interleaves elements from the decorated iterators.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterators  the array of iterators to interleave
+     * @return an iterator, interleaving the decorated iterators
+     * @throws NullPointerException if any iterator is null
+     * @since 4.1
+     */
+    public static &lt;E&gt; ZippingIterator&lt;E&gt; zippingIterator(final Iterator&lt;? extends E&gt;... iterators) {
+<span class="fc" id="L941">        return new ZippingIterator&lt;&gt;(iterators);</span>
+    }
+
+    // Views
+    //-----------------------------------------------------------------------
+    /**
+     * Gets an iterator that provides an iterator view of the given enumeration.
+     *
+     * @param &lt;E&gt; the element type
+     * @param enumeration  the enumeration to use, may not be null
+     * @return a new iterator
+     * @throws NullPointerException if enumeration is null
+     */
+    public static &lt;E&gt; Iterator&lt;E&gt; asIterator(final Enumeration&lt;? extends E&gt; enumeration) {
+<span class="nc bnc" id="L955" title="All 2 branches missed.">        if (enumeration == null) {</span>
+<span class="nc" id="L956">            throw new NullPointerException(&quot;Enumeration must not be null&quot;);</span>
+        }
+<span class="nc" id="L958">        return new EnumerationIterator&lt;&gt;(enumeration);</span>
+    }
+
+    /**
+     * Gets an iterator that provides an iterator view of the given enumeration
+     * that will remove elements from the specified collection.
+     *
+     * @param &lt;E&gt; the element type
+     * @param enumeration  the enumeration to use, may not be null
+     * @param removeCollection  the collection to remove elements from, may not be null
+     * @return a new iterator
+     * @throws NullPointerException if enumeration or removeCollection is null
+     */
+    public static &lt;E&gt; Iterator&lt;E&gt; asIterator(final Enumeration&lt;? extends E&gt; enumeration,
+                                             final Collection&lt;? super E&gt; removeCollection) {
+<span class="nc bnc" id="L973" title="All 2 branches missed.">        if (enumeration == null) {</span>
+<span class="nc" id="L974">            throw new NullPointerException(&quot;Enumeration must not be null&quot;);</span>
+        }
+<span class="nc bnc" id="L976" title="All 2 branches missed.">        if (removeCollection == null) {</span>
+<span class="nc" id="L977">            throw new NullPointerException(&quot;Collection must not be null&quot;);</span>
+        }
+<span class="nc" id="L979">        return new EnumerationIterator&lt;&gt;(enumeration, removeCollection);</span>
+    }
+
+    /**
+     * Gets an enumeration that wraps an iterator.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to use, may not be null
+     * @return a new enumeration
+     * @throws NullPointerException if iterator is null
+     */
+    public static &lt;E&gt; Enumeration&lt;E&gt; asEnumeration(final Iterator&lt;? extends E&gt; iterator) {
+<span class="pc bpc" id="L991" title="1 of 2 branches missed.">        if (iterator == null) {</span>
+<span class="nc" id="L992">            throw new NullPointerException(&quot;Iterator must not be null&quot;);</span>
+        }
+<span class="fc" id="L994">        return new IteratorEnumeration&lt;&gt;(iterator);</span>
+    }
+
+    /**
+     * Gets an {@link Iterable} that wraps an iterator.  The returned {@link Iterable} can be
+     * used for a single iteration.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to use, may not be null
+     * @return a new, single use {@link Iterable}
+     * @throws NullPointerException if iterator is null
+     */
+    public static &lt;E&gt; Iterable&lt;E&gt; asIterable(final Iterator&lt;? extends E&gt; iterator) {
+<span class="fc bfc" id="L1007" title="All 2 branches covered.">        if (iterator == null) {</span>
+<span class="fc" id="L1008">            throw new NullPointerException(&quot;Iterator must not be null&quot;);</span>
+        }
+<span class="fc" id="L1010">        return new IteratorIterable&lt;&gt;(iterator, false);</span>
+    }
+
+    /**
+     * Gets an iterable that wraps an iterator.  The returned iterable can be
+     * used for multiple iterations.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to use, may not be null
+     * @return a new, multiple use iterable
+     * @throws NullPointerException if iterator is null
+     */
+    public static &lt;E&gt; Iterable&lt;E&gt; asMultipleUseIterable(final Iterator&lt;? extends E&gt; iterator) {
+<span class="fc bfc" id="L1023" title="All 2 branches covered.">        if (iterator == null) {</span>
+<span class="fc" id="L1024">            throw new NullPointerException(&quot;Iterator must not be null&quot;);</span>
+        }
+<span class="fc" id="L1026">        return new IteratorIterable&lt;&gt;(iterator, true);</span>
+    }
+
+    /**
+     * Gets a list iterator based on a simple iterator.
+     * &lt;p&gt;
+     * As the wrapped Iterator is traversed, a LinkedList of its values is
+     * cached, permitting all required operations of ListIterator.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to use, may not be null
+     * @return a new iterator
+     * @throws NullPointerException if iterator parameter is null
+     */
+    public static &lt;E&gt; ListIterator&lt;E&gt; toListIterator(final Iterator&lt;? extends E&gt; iterator) {
+<span class="fc bfc" id="L1041" title="All 2 branches covered.">        if (iterator == null) {</span>
+<span class="fc" id="L1042">            throw new NullPointerException(&quot;Iterator must not be null&quot;);</span>
+        }
+<span class="fc" id="L1044">        return new ListIteratorWrapper&lt;&gt;(iterator);</span>
+    }
+
+    /**
+     * Gets an array based on an iterator.
+     * &lt;p&gt;
+     * As the wrapped Iterator is traversed, an ArrayList of its values is
+     * created. At the end, this is converted to an array.
+     *
+     * @param iterator  the iterator to use, not null
+     * @return an array of the iterator contents
+     * @throws NullPointerException if iterator parameter is null
+     */
+    public static Object[] toArray(final Iterator&lt;?&gt; iterator) {
+<span class="fc bfc" id="L1058" title="All 2 branches covered.">        if (iterator == null) {</span>
+<span class="fc" id="L1059">            throw new NullPointerException(&quot;Iterator must not be null&quot;);</span>
+        }
+<span class="fc" id="L1061">        final List&lt;?&gt; list = toList(iterator, 100);</span>
+<span class="fc" id="L1062">        return list.toArray();</span>
+    }
+
+    /**
+     * Gets an array based on an iterator.
+     * &lt;p&gt;
+     * As the wrapped Iterator is traversed, an ArrayList of its values is
+     * created. At the end, this is converted to an array.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to use, not null
+     * @param arrayClass  the class of array to create
+     * @return an array of the iterator contents
+     * @throws NullPointerException if iterator parameter or arrayClass is null
+     * @throws ArrayStoreException if the arrayClass is invalid
+     */
+    public static &lt;E&gt; E[] toArray(final Iterator&lt;? extends E&gt; iterator, final Class&lt;E&gt; arrayClass) {
+<span class="fc bfc" id="L1079" title="All 2 branches covered.">        if (iterator == null) {</span>
+<span class="fc" id="L1080">            throw new NullPointerException(&quot;Iterator must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L1082" title="All 2 branches covered.">        if (arrayClass == null) {</span>
+<span class="fc" id="L1083">            throw new NullPointerException(&quot;Array class must not be null&quot;);</span>
+        }
+<span class="fc" id="L1085">        final List&lt;E&gt; list = toList(iterator, 100);</span>
+        @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L1087">        final E[] array = (E[]) Array.newInstance(arrayClass, list.size());</span>
+<span class="fc" id="L1088">        return list.toArray(array);</span>
+    }
+
+    /**
+     * Gets a list based on an iterator.
+     * &lt;p&gt;
+     * As the wrapped Iterator is traversed, an ArrayList of its values is
+     * created. At the end, the list is returned.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to use, not null
+     * @return a list of the iterator contents
+     * @throws NullPointerException if iterator parameter is null
+     */
+    public static &lt;E&gt; List&lt;E&gt; toList(final Iterator&lt;? extends E&gt; iterator) {
+<span class="fc" id="L1103">        return toList(iterator, 10);</span>
+    }
+
+    /**
+     * Gets a list based on an iterator.
+     * &lt;p&gt;
+     * As the wrapped Iterator is traversed, an ArrayList of its values is
+     * created. At the end, the list is returned.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to use, not null
+     * @param estimatedSize  the initial size of the ArrayList
+     * @return a list of the iterator contents
+     * @throws NullPointerException if iterator parameter is null
+     * @throws IllegalArgumentException if the size is less than 1
+     */
+    public static &lt;E&gt; List&lt;E&gt; toList(final Iterator&lt;? extends E&gt; iterator, final int estimatedSize) {
+<span class="pc bpc" id="L1120" title="1 of 2 branches missed.">        if (iterator == null) {</span>
+<span class="nc" id="L1121">            throw new NullPointerException(&quot;Iterator must not be null&quot;);</span>
+        }
+<span class="pc bpc" id="L1123" title="1 of 2 branches missed.">        if (estimatedSize &lt; 1) {</span>
+<span class="nc" id="L1124">            throw new IllegalArgumentException(&quot;Estimated size must be greater than 0&quot;);</span>
+        }
+<span class="fc" id="L1126">        final List&lt;E&gt; list = new ArrayList&lt;&gt;(estimatedSize);</span>
+<span class="fc bfc" id="L1127" title="All 2 branches covered.">        while (iterator.hasNext()) {</span>
+<span class="fc" id="L1128">            list.add(iterator.next());</span>
+        }
+<span class="fc" id="L1130">        return list;</span>
+    }
+
+    /**
+     * Gets a suitable Iterator for the given object.
+     * &lt;p&gt;
+     * This method can handle objects as follows
+     * &lt;ul&gt;
+     * &lt;li&gt;null - empty iterator
+     * &lt;li&gt;Iterator - returned directly
+     * &lt;li&gt;Enumeration - wrapped
+     * &lt;li&gt;Collection - iterator from collection returned
+     * &lt;li&gt;Map - values iterator returned
+     * &lt;li&gt;Dictionary - values (elements) enumeration returned as iterator
+     * &lt;li&gt;array - iterator over array returned
+     * &lt;li&gt;object with iterator() public method accessed by reflection
+     * &lt;li&gt;object - singleton iterator
+     * &lt;li&gt;NodeList - iterator over the list
+     * &lt;li&gt;Node - iterator over the child nodes
+     * &lt;/ul&gt;
+     *
+     * @param obj  the object to convert to an iterator
+     * @return a suitable iterator, never null
+     */
+    public static Iterator&lt;?&gt; getIterator(final Object obj) {
+<span class="fc bfc" id="L1155" title="All 2 branches covered.">        if (obj == null) {</span>
+<span class="fc" id="L1156">            return emptyIterator();</span>
+        }
+<span class="fc bfc" id="L1158" title="All 2 branches covered.">        if (obj instanceof Iterator) {</span>
+<span class="fc" id="L1159">            return (Iterator&lt;?&gt;) obj;</span>
+        }
+<span class="fc bfc" id="L1161" title="All 2 branches covered.">        if (obj instanceof Iterable) {</span>
+<span class="fc" id="L1162">            return ((Iterable&lt;?&gt;) obj).iterator();</span>
+        }
+<span class="fc bfc" id="L1164" title="All 2 branches covered.">        if (obj instanceof Object[]) {</span>
+<span class="fc" id="L1165">            return new ObjectArrayIterator&lt;&gt;((Object[]) obj);</span>
+        }
+<span class="fc bfc" id="L1167" title="All 2 branches covered.">        if (obj instanceof Enumeration) {</span>
+<span class="fc" id="L1168">            return new EnumerationIterator&lt;&gt;((Enumeration&lt;?&gt;) obj);</span>
+        }
+<span class="fc bfc" id="L1170" title="All 2 branches covered.">        if (obj instanceof Map) {</span>
+<span class="fc" id="L1171">            return ((Map&lt;?, ?&gt;) obj).values().iterator();</span>
+        }
+<span class="pc bpc" id="L1173" title="1 of 2 branches missed.">        if (obj instanceof NodeList) {</span>
+<span class="fc" id="L1174">            return new NodeListIterator((NodeList) obj);</span>
+        }
+<span class="nc bnc" id="L1176" title="All 2 branches missed.">        if (obj instanceof Node) {</span>
+<span class="nc" id="L1177">            return new NodeListIterator((Node) obj);</span>
+        }
+<span class="nc bnc" id="L1179" title="All 2 branches missed.">        if (obj instanceof Dictionary) {</span>
+<span class="nc" id="L1180">            return new EnumerationIterator&lt;&gt;(((Dictionary&lt;?, ?&gt;) obj).elements());</span>
+<span class="nc bnc" id="L1181" title="All 2 branches missed.">        } else if (obj.getClass().isArray()) {</span>
+<span class="nc" id="L1182">            return new ArrayIterator&lt;&gt;(obj);</span>
+        }
+        try {
+<span class="nc" id="L1185">            final Method method = obj.getClass().getMethod(&quot;iterator&quot;, (Class[]) null);</span>
+<span class="nc bnc" id="L1186" title="All 2 branches missed.">            if (Iterator.class.isAssignableFrom(method.getReturnType())) {</span>
+<span class="nc" id="L1187">                final Iterator&lt;?&gt; it = (Iterator&lt;?&gt;) method.invoke(obj, (Object[]) null);</span>
+<span class="nc bnc" id="L1188" title="All 2 branches missed.">                if (it != null) {</span>
+<span class="nc" id="L1189">                    return it;</span>
+                }
+            }
+<span class="nc" id="L1192">        } catch (final RuntimeException e) { // NOPMD</span>
+            // ignore
+<span class="nc" id="L1194">        } catch (final NoSuchMethodException e) { // NOPMD</span>
+            // ignore
+<span class="nc" id="L1196">        } catch (final IllegalAccessException e) { // NOPMD</span>
+            // ignore
+<span class="nc" id="L1198">        } catch (final InvocationTargetException e) { // NOPMD</span>
+            // ignore
+<span class="nc" id="L1200">        }</span>
+<span class="nc" id="L1201">        return singletonIterator(obj);</span>
+    }
+
+    // Utility methods
+    //-----------------------------------------------------------------------
+
+    /**
+     * Applies the closure to each element of the provided iterator.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to use, may be null
+     * @param closure  the closure to apply to each element, may not be null
+     * @throws NullPointerException if closure is null
+     * @since 4.1
+     */
+    public static &lt;E&gt; void forEach(final Iterator&lt;E&gt; iterator, final Closure&lt;? super E&gt; closure) {
+<span class="fc bfc" id="L1217" title="All 2 branches covered.">        if (closure == null) {</span>
+<span class="fc" id="L1218">            throw new NullPointerException(&quot;Closure must not be null&quot;);</span>
+        }
+
+<span class="fc bfc" id="L1221" title="All 2 branches covered.">        if (iterator != null) {</span>
+<span class="fc bfc" id="L1222" title="All 2 branches covered.">            while (iterator.hasNext()) {</span>
+<span class="fc" id="L1223">                final E element = iterator.next();</span>
+<span class="fc" id="L1224">                closure.execute(element);</span>
+<span class="fc" id="L1225">            }</span>
+        }
+<span class="fc" id="L1227">    }</span>
+
+    /**
+     * Executes the given closure on each but the last element in the iterator.
+     * &lt;p&gt;
+     * If the input iterator is null no change is made.
+     *
+     * @param &lt;E&gt; the type of object the {@link Iterator} contains
+     * @param iterator  the iterator to get the input from, may be null
+     * @param closure  the closure to perform, may not be null
+     * @return the last element in the iterator, or null if iterator is null or empty
+     * @throws NullPointerException if closure is null
+     * @since 4.1
+     */
+    public static &lt;E&gt; E forEachButLast(final Iterator&lt;E&gt; iterator, final Closure&lt;? super E&gt; closure) {
+<span class="fc bfc" id="L1242" title="All 2 branches covered.">        if (closure == null) {</span>
+<span class="fc" id="L1243">            throw new NullPointerException(&quot;Closure must not be null.&quot;);</span>
+        }
+<span class="fc bfc" id="L1245" title="All 2 branches covered.">        if (iterator != null) {</span>
+<span class="fc bfc" id="L1246" title="All 2 branches covered.">            while (iterator.hasNext()) {</span>
+<span class="fc" id="L1247">                final E element = iterator.next();</span>
+<span class="fc bfc" id="L1248" title="All 2 branches covered.">                if (iterator.hasNext()) {</span>
+<span class="fc" id="L1249">                    closure.execute(element);</span>
+                } else {
+<span class="fc" id="L1251">                    return element;</span>
+                }
+<span class="fc" id="L1253">            }</span>
+        }
+<span class="fc" id="L1255">        return null;</span>
+    }
+
+    /**
+     * Finds the first element in the given iterator which matches the given predicate.
+     * &lt;p&gt;
+     * A &lt;code&gt;null&lt;/code&gt; or empty iterator returns null.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to search, may be null
+     * @param predicate  the predicate to use, may not be null
+     * @return the first element of the iterator which matches the predicate or null if none could be found
+     * @throws NullPointerException if predicate is null
+     * @since 4.1
+     */
+    public static &lt;E&gt; E find(final Iterator&lt;E&gt; iterator, final Predicate&lt;? super E&gt; predicate) {
+<span class="fc bfc" id="L1271" title="All 2 branches covered.">        if (predicate == null) {</span>
+<span class="fc" id="L1272">            throw new NullPointerException(&quot;Predicate must not be null&quot;);</span>
+        }
+
+<span class="fc bfc" id="L1275" title="All 2 branches covered.">        if (iterator != null) {</span>
+<span class="fc bfc" id="L1276" title="All 2 branches covered.">            while (iterator.hasNext()) {</span>
+<span class="fc" id="L1277">                final E element = iterator.next();</span>
+<span class="fc bfc" id="L1278" title="All 2 branches covered.">                if (predicate.evaluate(element)) {</span>
+<span class="fc" id="L1279">                    return element;</span>
+                }
+<span class="fc" id="L1281">            }</span>
+        }
+<span class="fc" id="L1283">        return null;</span>
+    }
+
+    /**
+     * Returns the index of the first element in the specified iterator that
+     * matches the given predicate.
+     * &lt;p&gt;
+     * A &lt;code&gt;null&lt;/code&gt; or empty iterator returns -1.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to search, may be null
+     * @param predicate  the predicate to use, may not be null
+     * @return the index of the first element which matches the predicate or -1 if none matches
+     * @throws NullPointerException if predicate is null
+     * @since 4.1
+     */
+    public static &lt;E&gt; int indexOf(final Iterator&lt;E&gt; iterator, final Predicate&lt;? super E&gt; predicate) {
+<span class="fc bfc" id="L1300" title="All 2 branches covered.">        if (predicate == null) {</span>
+<span class="fc" id="L1301">            throw new NullPointerException(&quot;Predicate must not be null&quot;);</span>
+        }
+
+<span class="fc bfc" id="L1304" title="All 2 branches covered.">        if (iterator != null) {</span>
+<span class="fc bfc" id="L1305" title="All 2 branches covered.">            for(int index = 0; iterator.hasNext(); index++) {</span>
+<span class="fc" id="L1306">                final E element = iterator.next();</span>
+<span class="fc bfc" id="L1307" title="All 2 branches covered.">                if (predicate.evaluate(element)) {</span>
+<span class="fc" id="L1308">                    return index;</span>
+                }
+            }
+        }
+<span class="fc" id="L1312">        return -1;</span>
+    }
+
+    /**
+     * Answers true if a predicate is true for any element of the iterator.
+     * &lt;p&gt;
+     * A &lt;code&gt;null&lt;/code&gt; or empty iterator returns false.
+     *
+     * @param &lt;E&gt; the type of object the {@link Iterator} contains
+     * @param iterator  the {@link Iterator} to use, may be null
+     * @param predicate  the predicate to use, may not be null
+     * @return true if any element of the collection matches the predicate, false otherwise
+     * @throws NullPointerException if predicate is null
+     * @since 4.1
+     */
+    public static &lt;E&gt; boolean matchesAny(final Iterator&lt;E&gt; iterator, final Predicate&lt;? super E&gt; predicate) {
+<span class="fc bfc" id="L1328" title="All 2 branches covered.">        return indexOf(iterator, predicate) != -1;</span>
+    }
+
+    /**
+     * Answers true if a predicate is true for every element of an iterator.
+     * &lt;p&gt;
+     * A &lt;code&gt;null&lt;/code&gt; or empty iterator returns true.
+     *
+     * @param &lt;E&gt; the type of object the {@link Iterator} contains
+     * @param iterator  the {@link Iterator} to use, may be null
+     * @param predicate  the predicate to use, may not be null
+     * @return true if every element of the collection matches the predicate or if the
+     *   collection is empty, false otherwise
+     * @throws NullPointerException if predicate is null
+     * @since 4.1
+     */
+    public static &lt;E&gt; boolean matchesAll(final Iterator&lt;E&gt; iterator, final Predicate&lt;? super E&gt; predicate) {
+<span class="fc bfc" id="L1345" title="All 2 branches covered.">        if (predicate == null) {</span>
+<span class="fc" id="L1346">            throw new NullPointerException(&quot;Predicate must not be null&quot;);</span>
+        }
+
+<span class="pc bpc" id="L1349" title="1 of 2 branches missed.">        if (iterator != null) {</span>
+<span class="fc bfc" id="L1350" title="All 2 branches covered.">            while (iterator.hasNext()) {</span>
+<span class="fc" id="L1351">                final E element = iterator.next();</span>
+<span class="fc bfc" id="L1352" title="All 2 branches covered.">                if (!predicate.evaluate(element)) {</span>
+<span class="fc" id="L1353">                    return false;</span>
+                }
+<span class="fc" id="L1355">            }</span>
+        }
+<span class="fc" id="L1357">        return true;</span>
+    }
+
+    /**
+     * Checks if the given iterator is empty.
+     * &lt;p&gt;
+     * A &lt;code&gt;null&lt;/code&gt; or empty iterator returns true.
+     *
+     * @param iterator  the {@link Iterator} to use, may be null
+     * @return true if the iterator is exhausted or null, false otherwise
+     * @since 4.1
+     */
+    public static boolean isEmpty(final Iterator&lt;?&gt; iterator) {
+<span class="pc bpc" id="L1370" title="1 of 4 branches missed.">        return iterator == null || !iterator.hasNext();</span>
+    }
+
+    /**
+     * Checks if the object is contained in the given iterator.
+     * &lt;p&gt;
+     * A &lt;code&gt;null&lt;/code&gt; or empty iterator returns false.
+     *
+     * @param &lt;E&gt; the type of object the {@link Iterator} contains
+     * @param iterator  the iterator to check, may be null
+     * @param object  the object to check
+     * @return true if the object is contained in the iterator, false otherwise
+     * @since 4.1
+     */
+    public static &lt;E&gt; boolean contains(final Iterator&lt;E&gt; iterator, final Object object) {
+<span class="fc" id="L1385">        return matchesAny(iterator, EqualPredicate.equalPredicate(object));</span>
+    }
+
+    /**
+     * Returns the &lt;code&gt;index&lt;/code&gt;-th value in {@link Iterator}, throwing
+     * &lt;code&gt;IndexOutOfBoundsException&lt;/code&gt; if there is no such element.
+     * &lt;p&gt;
+     * The Iterator is advanced to &lt;code&gt;index&lt;/code&gt; (or to the end, if
+     * &lt;code&gt;index&lt;/code&gt; exceeds the number of entries) as a side effect of this method.
+     *
+     * @param &lt;E&gt; the type of object in the {@link Iterator}
+     * @param iterator  the iterator to get a value from
+     * @param index  the index to get
+     * @return the object at the specified index
+     * @throws IndexOutOfBoundsException if the index is invalid
+     * @since 4.1
+     */
+    public static &lt;E&gt; E get(final Iterator&lt;E&gt; iterator, final int index) {
+<span class="fc" id="L1403">        int i = index;</span>
+<span class="fc" id="L1404">        CollectionUtils.checkIndexBounds(i);</span>
+<span class="fc bfc" id="L1405" title="All 2 branches covered.">        while (iterator.hasNext()) {</span>
+<span class="fc" id="L1406">            i--;</span>
+<span class="fc bfc" id="L1407" title="All 2 branches covered.">            if (i == -1) {</span>
+<span class="fc" id="L1408">                return iterator.next();</span>
+            }
+<span class="fc" id="L1410">            iterator.next();</span>
+        }
+<span class="fc" id="L1412">        throw new IndexOutOfBoundsException(&quot;Entry does not exist: &quot; + i);</span>
+    }
+
+    /**
+     * Shortcut for {@code get(iterator, 0)}.
+     * &lt;p&gt;
+     * Returns the &lt;code&gt;first&lt;/code&gt; value in {@link Iterator}, throwing
+     * &lt;code&gt;IndexOutOfBoundsException&lt;/code&gt; if there is no such element.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The Iterator is advanced to &lt;code&gt;0&lt;/code&gt; (or to the end, if
+     * &lt;code&gt;0&lt;/code&gt; exceeds the number of entries) as a side effect of this method.
+     * &lt;/p&gt;
+     * @param &lt;E&gt; the type of object in the {@link Iterator}
+     * @param iterator the iterator to get a value from
+     * @return the first object
+     * @throws IndexOutOfBoundsException if the request is invalid
+     * @since 4.2
+     */
+    public static &lt;E&gt; E first(final Iterator&lt;E&gt; iterator) {
+<span class="fc" id="L1432">        return get(iterator, 0);</span>
+    }
+
+    /**
+     * Returns the number of elements contained in the given iterator.
+     * &lt;p&gt;
+     * A &lt;code&gt;null&lt;/code&gt; or empty iterator returns {@code 0}.
+     *
+     * @param iterator  the iterator to check, may be null
+     * @return the number of elements contained in the iterator
+     * @since 4.1
+     */
+    public static int size(final Iterator&lt;?&gt; iterator) {
+<span class="fc" id="L1445">        int size = 0;</span>
+<span class="pc bpc" id="L1446" title="1 of 2 branches missed.">        if (iterator != null) {</span>
+<span class="fc bfc" id="L1447" title="All 2 branches covered.">            while (iterator.hasNext()) {</span>
+<span class="fc" id="L1448">                iterator.next();</span>
+<span class="fc" id="L1449">                size++;</span>
+            }
+        }
+<span class="fc" id="L1452">        return size;</span>
+    }
+
+    /**
+     * Returns a string representation of the elements of the specified iterator.
+     * &lt;p&gt;
+     * The string representation consists of a list of the iterator's elements,
+     * enclosed in square brackets ({@code &quot;[]&quot;}). Adjacent elements are separated
+     * by the characters {@code &quot;, &quot;} (a comma followed by a space). Elements are
+     * converted to strings as by {@code String.valueOf(Object)}.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to convert to a string, may be null
+     * @return a string representation of {@code iterator}
+     * @since 4.1
+     */
+    public static &lt;E&gt; String toString(final Iterator&lt;E&gt; iterator) {
+<span class="fc" id="L1469">        return toString(iterator, TransformerUtils.stringValueTransformer(),</span>
+                        DEFAULT_TOSTRING_DELIMITER, DEFAULT_TOSTRING_PREFIX,
+                        DEFAULT_TOSTRING_SUFFIX);
+    }
+
+    /**
+     * Returns a string representation of the elements of the specified iterator.
+     * &lt;p&gt;
+     * The string representation consists of a list of the iterable's elements,
+     * enclosed in square brackets ({@code &quot;[]&quot;}). Adjacent elements are separated
+     * by the characters {@code &quot;, &quot;} (a comma followed by a space). Elements are
+     * converted to strings as by using the provided {@code transformer}.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to convert to a string, may be null
+     * @param transformer  the transformer used to get a string representation of an element
+     * @return a string representation of {@code iterator}
+     * @throws NullPointerException if {@code transformer} is null
+     * @since 4.1
+     */
+    public static &lt;E&gt; String toString(final Iterator&lt;E&gt; iterator,
+                                      final Transformer&lt;? super E, String&gt; transformer) {
+<span class="fc" id="L1491">        return toString(iterator, transformer, DEFAULT_TOSTRING_DELIMITER,</span>
+                        DEFAULT_TOSTRING_PREFIX, DEFAULT_TOSTRING_SUFFIX);
+    }
+
+    /**
+     * Returns a string representation of the elements of the specified iterator.
+     * &lt;p&gt;
+     * The string representation consists of a list of the iterator's elements,
+     * enclosed by the provided {@code prefix} and {@code suffix}. Adjacent elements
+     * are separated by the provided {@code delimiter}. Elements are converted to
+     * strings as by using the provided {@code transformer}.
+     *
+     * @param &lt;E&gt; the element type
+     * @param iterator  the iterator to convert to a string, may be null
+     * @param transformer  the transformer used to get a string representation of an element
+     * @param delimiter  the string to delimit elements
+     * @param prefix  the prefix, prepended to the string representation
+     * @param suffix  the suffix, appended to the string representation
+     * @return a string representation of {@code iterator}
+     * @throws NullPointerException if either transformer, delimiter, prefix or suffix is null
+     * @since 4.1
+     */
+    public static &lt;E&gt; String toString(final Iterator&lt;E&gt; iterator,
+                                      final Transformer&lt;? super E, String&gt; transformer,
+                                      final String delimiter,
+                                      final String prefix,
+                                      final String suffix) {
+<span class="fc bfc" id="L1518" title="All 2 branches covered.">        if (transformer == null) {</span>
+<span class="fc" id="L1519">            throw new NullPointerException(&quot;transformer may not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L1521" title="All 2 branches covered.">        if (delimiter == null) {</span>
+<span class="fc" id="L1522">            throw new NullPointerException(&quot;delimiter may not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L1524" title="All 2 branches covered.">        if (prefix == null) {</span>
+<span class="fc" id="L1525">            throw new NullPointerException(&quot;prefix may not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L1527" title="All 2 branches covered.">        if (suffix == null) {</span>
+<span class="fc" id="L1528">            throw new NullPointerException(&quot;suffix may not be null&quot;);</span>
+        }
+<span class="fc" id="L1530">        final StringBuilder stringBuilder = new StringBuilder(prefix);</span>
+<span class="pc bpc" id="L1531" title="1 of 2 branches missed.">        if (iterator != null) {</span>
+<span class="fc bfc" id="L1532" title="All 2 branches covered.">            while (iterator.hasNext()) {</span>
+<span class="fc" id="L1533">                final E element = iterator.next();</span>
+<span class="fc" id="L1534">                stringBuilder.append(transformer.transform(element));</span>
+<span class="fc" id="L1535">                stringBuilder.append(delimiter);</span>
+<span class="fc" id="L1536">            }</span>
+<span class="fc bfc" id="L1537" title="All 2 branches covered.">            if(stringBuilder.length() &gt; prefix.length()) {</span>
+<span class="fc" id="L1538">                stringBuilder.setLength(stringBuilder.length() - delimiter.length());</span>
+            }
+        }
+<span class="fc" id="L1541">        stringBuilder.append(suffix);</span>
+<span class="fc" id="L1542">        return stringBuilder.toString();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

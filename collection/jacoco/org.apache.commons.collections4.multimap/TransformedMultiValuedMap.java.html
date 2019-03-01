@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TransformedMultiValuedMap.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.multimap</a> &gt; <span class="el_source">TransformedMultiValuedMap.java</span></div><h1>TransformedMultiValuedMap.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.multimap;
+
+import java.util.Iterator;
+import java.util.Map;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.FluentIterable;
+import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.Transformer;
+
+/**
+ * Decorates another &lt;code&gt;MultiValuedMap&lt;/code&gt; to transform objects that are added.
+ * &lt;p&gt;
+ * This class affects the MultiValuedMap put methods. Thus objects must be
+ * removed or searched for using their transformed form. For example, if the
+ * transformation converts Strings to Integers, you must use the Integer form to
+ * remove objects.
+ * &lt;p&gt;
+ * &lt;strong&gt;Note that TransformedMultiValuedMap is not synchronized and is not thread-safe.&lt;/strong&gt;
+ *
+ * @param &lt;K&gt; the type of the keys in this map
+ * @param &lt;V&gt; the type of the values in this map
+ * @since 4.1
+ */
+public class TransformedMultiValuedMap&lt;K, V&gt; extends AbstractMultiValuedMapDecorator&lt;K, V&gt; {
+
+    /** Serialization Version */
+    private static final long serialVersionUID = 20150612L;
+
+    /** The key transformer */
+    private final Transformer&lt;? super K, ? extends K&gt; keyTransformer;
+
+    /** The value transformer */
+    private final Transformer&lt;? super V, ? extends V&gt; valueTransformer;
+
+    /**
+     * Factory method to create a transforming MultiValuedMap.
+     * &lt;p&gt;
+     * If there are any elements already in the map being decorated, they are
+     * NOT transformed. Contrast this with
+     * {@link #transformedMap(MultiValuedMap, Transformer, Transformer)}.
+     *
+     * @param &lt;K&gt; the key type
+     * @param &lt;V&gt; the value type
+     * @param map  the MultiValuedMap to decorate, may not be null
+     * @param keyTransformer  the transformer to use for key conversion, null means no conversion
+     * @param valueTransformer  the transformer to use for value conversion, null means no conversion
+     * @return a new transformed MultiValuedMap
+     * @throws NullPointerException if map is null
+     */
+    public static &lt;K, V&gt; TransformedMultiValuedMap&lt;K, V&gt; transformingMap(final MultiValuedMap&lt;K, V&gt; map,
+            final Transformer&lt;? super K, ? extends K&gt; keyTransformer,
+            final Transformer&lt;? super V, ? extends V&gt; valueTransformer) {
+<span class="fc" id="L70">        return new TransformedMultiValuedMap&lt;&gt;(map, keyTransformer, valueTransformer);</span>
+    }
+
+    /**
+     * Factory method to create a transforming MultiValuedMap that will
+     * transform existing contents of the specified map.
+     * &lt;p&gt;
+     * If there are any elements already in the map being decorated, they will
+     * be transformed by this method. Contrast this with
+     * {@link #transformingMap(MultiValuedMap, Transformer, Transformer)}.
+     *
+     * @param &lt;K&gt; the key type
+     * @param &lt;V&gt; the value type
+     * @param map  the MultiValuedMap to decorate, may not be null
+     * @param keyTransformer  the transformer to use for key conversion, null means no conversion
+     * @param valueTransformer  the transformer to use for value conversion, null means no conversion
+     * @return a new transformed MultiValuedMap
+     * @throws NullPointerException if map is null
+     */
+    public static &lt;K, V&gt; TransformedMultiValuedMap&lt;K, V&gt; transformedMap(final MultiValuedMap&lt;K, V&gt; map,
+            final Transformer&lt;? super K, ? extends K&gt; keyTransformer,
+            final Transformer&lt;? super V, ? extends V&gt; valueTransformer) {
+<span class="fc" id="L92">        final TransformedMultiValuedMap&lt;K, V&gt; decorated =</span>
+                new TransformedMultiValuedMap&lt;&gt;(map, keyTransformer, valueTransformer);
+<span class="pc bpc" id="L94" title="1 of 2 branches missed.">        if (!map.isEmpty()) {</span>
+<span class="fc" id="L95">            final MultiValuedMap&lt;K, V&gt; mapCopy = new ArrayListValuedHashMap&lt;&gt;(map);</span>
+<span class="fc" id="L96">            decorated.clear();</span>
+<span class="fc" id="L97">            decorated.putAll(mapCopy);</span>
+        }
+<span class="fc" id="L99">        return decorated;</span>
+    }
+
+    // -----------------------------------------------------------------------
+    /**
+     * Constructor that wraps (not copies).
+     * &lt;p&gt;
+     * If there are any elements already in the collection being decorated, they
+     * are NOT transformed.
+     *
+     * @param map  the MultiValuedMap to decorate, may not be null
+     * @param keyTransformer  the transformer to use for key conversion, null means no conversion
+     * @param valueTransformer  the transformer to use for value conversion, null means no conversion
+     * @throws NullPointerException if map is null
+     */
+    protected TransformedMultiValuedMap(final MultiValuedMap&lt;K, V&gt; map,
+            final Transformer&lt;? super K, ? extends K&gt; keyTransformer,
+            final Transformer&lt;? super V, ? extends V&gt; valueTransformer) {
+<span class="fc" id="L117">        super(map);</span>
+<span class="fc" id="L118">        this.keyTransformer = keyTransformer;</span>
+<span class="fc" id="L119">        this.valueTransformer = valueTransformer;</span>
+<span class="fc" id="L120">    }</span>
+
+    /**
+     * Transforms a key.
+     * &lt;p&gt;
+     * The transformer itself may throw an exception if necessary.
+     *
+     * @param object  the object to transform
+     * @return the transformed object
+     */
+    protected K transformKey(final K object) {
+<span class="fc bfc" id="L131" title="All 2 branches covered.">        if (keyTransformer == null) {</span>
+<span class="fc" id="L132">            return object;</span>
+        }
+<span class="fc" id="L134">        return keyTransformer.transform(object);</span>
+    }
+
+    /**
+     * Transforms a value.
+     * &lt;p&gt;
+     * The transformer itself may throw an exception if necessary.
+     *
+     * @param object  the object to transform
+     * @return the transformed object
+     */
+    protected V transformValue(final V object) {
+<span class="fc bfc" id="L146" title="All 2 branches covered.">        if (valueTransformer == null) {</span>
+<span class="fc" id="L147">            return object;</span>
+        }
+<span class="fc" id="L149">        return valueTransformer.transform(object);</span>
+    }
+
+    @Override
+    public boolean put(final K key, final V value) {
+<span class="fc" id="L154">        return decorated().put(transformKey(key), transformValue(value));</span>
+    }
+
+    @Override
+    public boolean putAll(final K key, final Iterable&lt;? extends V&gt; values) {
+<span class="fc bfc" id="L159" title="All 2 branches covered.">        if (values == null) {</span>
+<span class="fc" id="L160">            throw new NullPointerException(&quot;Values must not be null.&quot;);</span>
+        }
+
+<span class="fc" id="L163">        final Iterable&lt;V&gt; transformedValues = FluentIterable.of(values).transform(valueTransformer);</span>
+<span class="fc" id="L164">        final Iterator&lt;? extends V&gt; it = transformedValues.iterator();</span>
+<span class="pc bpc" id="L165" title="1 of 4 branches missed.">        return it.hasNext() &amp;&amp; CollectionUtils.addAll(decorated().get(transformKey(key)), it);</span>
+    }
+
+    @Override
+    public boolean putAll(final Map&lt;? extends K, ? extends V&gt; map) {
+<span class="pc bpc" id="L170" title="1 of 2 branches missed.">        if (map == null) {</span>
+<span class="nc" id="L171">            throw new NullPointerException(&quot;Map must not be null.&quot;);</span>
+        }
+<span class="fc" id="L173">        boolean changed = false;</span>
+<span class="fc bfc" id="L174" title="All 2 branches covered.">        for (final Map.Entry&lt;? extends K, ? extends V&gt; entry : map.entrySet()) {</span>
+<span class="fc" id="L175">            changed |= put(entry.getKey(), entry.getValue());</span>
+<span class="fc" id="L176">        }</span>
+<span class="fc" id="L177">        return changed;</span>
+    }
+
+    @Override
+    public boolean putAll(final MultiValuedMap&lt;? extends K, ? extends V&gt; map) {
+<span class="pc bpc" id="L182" title="1 of 2 branches missed.">        if (map == null) {</span>
+<span class="nc" id="L183">            throw new NullPointerException(&quot;Map must not be null.&quot;);</span>
+        }
+<span class="fc" id="L185">        boolean changed = false;</span>
+<span class="fc bfc" id="L186" title="All 2 branches covered.">        for (final Map.Entry&lt;? extends K, ? extends V&gt; entry : map.entries()) {</span>
+<span class="fc" id="L187">            changed |= put(entry.getKey(), entry.getValue());</span>
+<span class="fc" id="L188">        }</span>
+<span class="fc" id="L189">        return changed;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultKeyValue.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.keyvalue</a> &gt; <span class="el_source">DefaultKeyValue.java</span></div><h1>DefaultKeyValue.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.keyvalue;
+
+import java.util.Map;
+
+import org.apache.commons.collections4.KeyValue;
+
+/**
+ * A mutable &lt;code&gt;KeyValue&lt;/code&gt; pair that does not implement
+ * {@link java.util.Map.Entry Map.Entry}.
+ * &lt;p&gt;
+ * Note that a &lt;code&gt;DefaultKeyValue&lt;/code&gt; instance may not contain
+ * itself as a key or value.
+ *
+ * @since 3.0
+ */
+public class DefaultKeyValue&lt;K, V&gt; extends AbstractKeyValue&lt;K, V&gt; {
+
+    /**
+     * Constructs a new pair with a null key and null value.
+     */
+    public DefaultKeyValue() {
+<span class="fc" id="L38">        super(null, null);</span>
+<span class="fc" id="L39">    }</span>
+
+    /**
+     * Constructs a new pair with the specified key and given value.
+     *
+     * @param key  the key for the entry, may be null
+     * @param value  the value for the entry, may be null
+     */
+    public DefaultKeyValue(final K key, final V value) {
+<span class="fc" id="L48">        super(key, value);</span>
+<span class="fc" id="L49">    }</span>
+
+    /**
+     * Constructs a new pair from the specified &lt;code&gt;KeyValue&lt;/code&gt;.
+     *
+     * @param pair  the pair to copy, must not be null
+     * @throws NullPointerException if the entry is null
+     */
+    public DefaultKeyValue(final KeyValue&lt;? extends K, ? extends V&gt; pair) {
+<span class="fc" id="L58">        super(pair.getKey(), pair.getValue());</span>
+<span class="fc" id="L59">    }</span>
+
+    /**
+     * Constructs a new pair from the specified &lt;code&gt;Map.Entry&lt;/code&gt;.
+     *
+     * @param entry  the entry to copy, must not be null
+     * @throws NullPointerException if the entry is null
+     */
+    public DefaultKeyValue(final Map.Entry&lt;? extends K, ? extends V&gt; entry) {
+<span class="fc" id="L68">        super(entry.getKey(), entry.getValue());</span>
+<span class="fc" id="L69">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Sets the key.
+     *
+     * @param key  the new key
+     * @return the old key
+     * @throws IllegalArgumentException if key is this object
+     */
+    @Override
+    public K setKey(final K key) {
+<span class="fc bfc" id="L81" title="All 2 branches covered.">        if (key == this) {</span>
+<span class="fc" id="L82">            throw new IllegalArgumentException(&quot;DefaultKeyValue may not contain itself as a key.&quot;);</span>
+        }
+
+<span class="fc" id="L85">        return super.setKey(key);</span>
+    }
+
+    /**
+     * Sets the value.
+     *
+     * @return the old value of the value
+     * @param value the new value
+     * @throws IllegalArgumentException if value is this object
+     */
+    @Override
+    public V setValue(final V value) {
+<span class="fc bfc" id="L97" title="All 2 branches covered.">        if (value == this) {</span>
+<span class="fc" id="L98">            throw new IllegalArgumentException(&quot;DefaultKeyValue may not contain itself as a value.&quot;);</span>
+        }
+
+<span class="fc" id="L101">        return super.setValue(value);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Returns a new &lt;code&gt;Map.Entry&lt;/code&gt; object with key and value from this pair.
+     *
+     * @return a MapEntry instance
+     */
+    public Map.Entry&lt;K, V&gt; toMapEntry() {
+<span class="fc" id="L111">        return new DefaultMapEntry&lt;&gt;(this);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Compares this &lt;code&gt;Map.Entry&lt;/code&gt; with another &lt;code&gt;Map.Entry&lt;/code&gt;.
+     * &lt;p&gt;
+     * Returns true if the compared object is also a &lt;code&gt;DefaultKeyValue&lt;/code&gt;,
+     * and its key and value are equal to this object's key and value.
+     *
+     * @param obj  the object to compare to
+     * @return true if equal key and value
+     */
+    @Override
+    public boolean equals(final Object obj) {
+<span class="fc bfc" id="L126" title="All 2 branches covered.">        if (obj == this) {</span>
+<span class="fc" id="L127">            return true;</span>
+        }
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">        if (obj instanceof DefaultKeyValue == false) {</span>
+<span class="nc" id="L130">            return false;</span>
+        }
+
+<span class="fc" id="L133">        final DefaultKeyValue&lt;?, ?&gt; other = (DefaultKeyValue&lt;?, ?&gt;) obj;</span>
+<span class="fc" id="L134">        return</span>
+<span class="pc bpc" id="L135" title="2 of 6 branches missed.">            (getKey() == null ? other.getKey() == null : getKey().equals(other.getKey())) &amp;&amp;</span>
+<span class="pc bpc" id="L136" title="2 of 6 branches missed.">            (getValue() == null ? other.getValue() == null : getValue().equals(other.getValue()));</span>
+    }
+
+    /**
+     * Gets a hashCode compatible with the equals method.
+     * &lt;p&gt;
+     * Implemented per API documentation of {@link java.util.Map.Entry#hashCode()},
+     * however subclasses may override this.
+     *
+     * @return a suitable hash code
+     */
+    @Override
+    public int hashCode() {
+<span class="fc bfc" id="L149" title="All 2 branches covered.">        return (getKey() == null ? 0 : getKey().hashCode()) ^</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">               (getValue() == null ? 0 : getValue().hashCode());</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

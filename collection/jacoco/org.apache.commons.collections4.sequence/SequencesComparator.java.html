@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SequencesComparator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.sequence</a> &gt; <span class="el_source">SequencesComparator.java</span></div><h1>SequencesComparator.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.sequence;
+
+import java.util.List;
+
+import org.apache.commons.collections4.Equator;
+import org.apache.commons.collections4.functors.DefaultEquator;
+
+/**
+ * This class allows to compare two objects sequences.
+ * &lt;p&gt;
+ * The two sequences can hold any object type, as only the &lt;code&gt;equals&lt;/code&gt;
+ * method is used to compare the elements of the sequences. It is guaranteed
+ * that the comparisons will always be done as &lt;code&gt;o1.equals(o2)&lt;/code&gt; where
+ * &lt;code&gt;o1&lt;/code&gt; belongs to the first sequence and &lt;code&gt;o2&lt;/code&gt; belongs to
+ * the second sequence. This can be important if subclassing is used for some
+ * elements in the first sequence and the &lt;code&gt;equals&lt;/code&gt; method is
+ * specialized.
+ * &lt;p&gt;
+ * Comparison can be seen from two points of view: either as giving the smallest
+ * modification allowing to transform the first sequence into the second one, or
+ * as giving the longest sequence which is a subsequence of both initial
+ * sequences. The &lt;code&gt;equals&lt;/code&gt; method is used to compare objects, so any
+ * object can be put into sequences. Modifications include deleting, inserting
+ * or keeping one object, starting from the beginning of the first sequence.
+ * &lt;p&gt;
+ * This class implements the comparison algorithm, which is the very efficient
+ * algorithm from Eugene W. Myers
+ * &lt;a href=&quot;http://www.cis.upenn.edu/~bcpierce/courses/dd/papers/diff.ps&quot;&gt;
+ * An O(ND) Difference Algorithm and Its Variations&lt;/a&gt;. This algorithm produces
+ * the shortest possible
+ * {@link EditScript edit script}
+ * containing all the
+ * {@link EditCommand commands}
+ * needed to transform the first sequence into the second one.
+ *
+ * @see EditScript
+ * @see EditCommand
+ * @see CommandVisitor
+ *
+ * @since 4.0
+ */
+public class SequencesComparator&lt;T&gt; {
+
+    /** First sequence. */
+    private final List&lt;T&gt; sequence1;
+
+    /** Second sequence. */
+    private final List&lt;T&gt; sequence2;
+
+    /** The equator used for testing object equality. */
+    private final Equator&lt;? super T&gt; equator;
+
+    /** Temporary variables. */
+    private final int[] vDown;
+    private final int[] vUp;
+
+    /**
+     * Simple constructor.
+     * &lt;p&gt;
+     * Creates a new instance of SequencesComparator using a {@link DefaultEquator}.
+     * &lt;p&gt;
+     * It is &lt;em&gt;guaranteed&lt;/em&gt; that the comparisons will always be done as
+     * &lt;code&gt;o1.equals(o2)&lt;/code&gt; where &lt;code&gt;o1&lt;/code&gt; belongs to the first
+     * sequence and &lt;code&gt;o2&lt;/code&gt; belongs to the second sequence. This can be
+     * important if subclassing is used for some elements in the first sequence
+     * and the &lt;code&gt;equals&lt;/code&gt; method is specialized.
+     *
+     * @param sequence1  first sequence to be compared
+     * @param sequence2  second sequence to be compared
+     */
+    public SequencesComparator(final List&lt;T&gt; sequence1, final List&lt;T&gt; sequence2) {
+<span class="fc" id="L88">        this(sequence1, sequence2, DefaultEquator.defaultEquator());</span>
+<span class="fc" id="L89">    }</span>
+
+    /**
+     * Simple constructor.
+     * &lt;p&gt;
+     * Creates a new instance of SequencesComparator with a custom {@link Equator}.
+     * &lt;p&gt;
+     * It is &lt;em&gt;guaranteed&lt;/em&gt; that the comparisons will always be done as
+     * &lt;code&gt;Equator.equate(o1, o2)&lt;/code&gt; where &lt;code&gt;o1&lt;/code&gt; belongs to the first
+     * sequence and &lt;code&gt;o2&lt;/code&gt; belongs to the second sequence.
+     *
+     * @param sequence1  first sequence to be compared
+     * @param sequence2  second sequence to be compared
+     * @param equator  the equator to use for testing object equality
+     */
+<span class="fc" id="L104">    public SequencesComparator(final List&lt;T&gt; sequence1, final List&lt;T&gt; sequence2, final Equator&lt;? super T&gt; equator) {</span>
+<span class="fc" id="L105">        this.sequence1 = sequence1;</span>
+<span class="fc" id="L106">        this.sequence2 = sequence2;</span>
+<span class="fc" id="L107">        this.equator = equator;</span>
+
+<span class="fc" id="L109">        final int size = sequence1.size() + sequence2.size() + 2;</span>
+<span class="fc" id="L110">        vDown = new int[size];</span>
+<span class="fc" id="L111">        vUp   = new int[size];</span>
+<span class="fc" id="L112">    }</span>
+
+    /**
+     * Get the {@link EditScript} object.
+     * &lt;p&gt;
+     * It is guaranteed that the objects embedded in the {@link InsertCommand
+     * insert commands} come from the second sequence and that the objects
+     * embedded in either the {@link DeleteCommand delete commands} or
+     * {@link KeepCommand keep commands} come from the first sequence. This can
+     * be important if subclassing is used for some elements in the first
+     * sequence and the &lt;code&gt;equals&lt;/code&gt; method is specialized.
+     *
+     * @return the edit script resulting from the comparison of the two
+     *         sequences
+     */
+    public EditScript&lt;T&gt; getScript() {
+<span class="fc" id="L128">        final EditScript&lt;T&gt; script = new EditScript&lt;&gt;();</span>
+<span class="fc" id="L129">        buildScript(0, sequence1.size(), 0, sequence2.size(), script);</span>
+<span class="fc" id="L130">        return script;</span>
+    }
+
+    /**
+     * Build a snake.
+     *
+     * @param start  the value of the start of the snake
+     * @param diag  the value of the diagonal of the snake
+     * @param end1  the value of the end of the first sequence to be compared
+     * @param end2  the value of the end of the second sequence to be compared
+     * @return the snake built
+     */
+    private Snake buildSnake(final int start, final int diag, final int end1, final int end2) {
+<span class="fc" id="L143">        int end = start;</span>
+<span class="fc bfc" id="L144" title="All 4 branches covered.">        while (end - diag &lt; end2</span>
+                &amp;&amp; end &lt; end1
+<span class="fc bfc" id="L146" title="All 2 branches covered.">                &amp;&amp; equator.equate(sequence1.get(end), sequence2.get(end - diag))) {</span>
+<span class="fc" id="L147">            ++end;</span>
+        }
+<span class="fc" id="L149">        return new Snake(start, end, diag);</span>
+    }
+
+    /**
+     * Get the middle snake corresponding to two subsequences of the
+     * main sequences.
+     * &lt;p&gt;
+     * The snake is found using the MYERS Algorithm (this algorithms has
+     * also been implemented in the GNU diff program). This algorithm is
+     * explained in Eugene Myers article:
+     * &lt;a href=&quot;http://www.cs.arizona.edu/people/gene/PAPERS/diff.ps&quot;&gt;
+     * An O(ND) Difference Algorithm and Its Variations&lt;/a&gt;.
+     *
+     * @param start1  the begin of the first sequence to be compared
+     * @param end1  the end of the first sequence to be compared
+     * @param start2  the begin of the second sequence to be compared
+     * @param end2  the end of the second sequence to be compared
+     * @return the middle snake
+     */
+    private Snake getMiddleSnake(final int start1, final int end1, final int start2, final int end2) {
+        // Myers Algorithm
+        // Initialisations
+<span class="fc" id="L171">        final int m = end1 - start1;</span>
+<span class="fc" id="L172">        final int n = end2 - start2;</span>
+<span class="fc bfc" id="L173" title="All 4 branches covered.">        if (m == 0 || n == 0) {</span>
+<span class="fc" id="L174">            return null;</span>
+        }
+
+<span class="fc" id="L177">        final int delta  = m - n;</span>
+<span class="fc" id="L178">        final int sum    = n + m;</span>
+<span class="fc bfc" id="L179" title="All 2 branches covered.">        final int offset = (sum % 2 == 0 ? sum : sum + 1) / 2;</span>
+<span class="fc" id="L180">        vDown[1+offset] = start1;</span>
+<span class="fc" id="L181">        vUp[1+offset]   = end1 + 1;</span>
+
+<span class="pc bpc" id="L183" title="1 of 2 branches missed.">        for (int d = 0; d &lt;= offset ; ++d) {</span>
+            // Down
+<span class="fc bfc" id="L185" title="All 2 branches covered.">            for (int k = -d; k &lt;= d; k += 2) {</span>
+                // First step
+
+<span class="fc" id="L188">                final int i = k + offset;</span>
+<span class="fc bfc" id="L189" title="All 6 branches covered.">                if (k == -d || k != d &amp;&amp; vDown[i-1] &lt; vDown[i+1]) {</span>
+<span class="fc" id="L190">                    vDown[i] = vDown[i+1];</span>
+                } else {
+<span class="fc" id="L192">                    vDown[i] = vDown[i-1] + 1;</span>
+                }
+
+<span class="fc" id="L195">                int x = vDown[i];</span>
+<span class="fc" id="L196">                int y = x - start1 + start2 - k;</span>
+
+<span class="fc bfc" id="L198" title="All 6 branches covered.">                while (x &lt; end1 &amp;&amp; y &lt; end2 &amp;&amp; equator.equate(sequence1.get(x), sequence2.get(y))) {</span>
+<span class="fc" id="L199">                    vDown[i] = ++x;</span>
+<span class="fc" id="L200">                    ++y;</span>
+                }
+                // Second step
+<span class="fc bfc" id="L203" title="All 6 branches covered.">                if (delta % 2 != 0 &amp;&amp; delta - d &lt;= k &amp;&amp; k &lt;= delta + d) {</span>
+<span class="fc bfc" id="L204" title="All 2 branches covered.">                    if (vUp[i-delta] &lt;= vDown[i]) { // NOPMD</span>
+<span class="fc" id="L205">                        return buildSnake(vUp[i-delta], k + start1 - start2, end1, end2);</span>
+                    }
+                }
+            }
+
+            // Up
+<span class="fc bfc" id="L211" title="All 2 branches covered.">            for (int k = delta - d; k &lt;= delta + d; k += 2) {</span>
+                // First step
+<span class="fc" id="L213">                final int i = k + offset - delta;</span>
+<span class="fc bfc" id="L214" title="All 6 branches covered.">                if (k == delta - d</span>
+                        || k != delta + d &amp;&amp; vUp[i+1] &lt;= vUp[i-1]) {
+<span class="fc" id="L216">                    vUp[i] = vUp[i+1] - 1;</span>
+                } else {
+<span class="fc" id="L218">                    vUp[i] = vUp[i-1];</span>
+                }
+
+<span class="fc" id="L221">                int x = vUp[i] - 1;</span>
+<span class="fc" id="L222">                int y = x - start1 + start2 - k;</span>
+<span class="fc bfc" id="L223" title="All 4 branches covered.">                while (x &gt;= start1 &amp;&amp; y &gt;= start2</span>
+<span class="fc bfc" id="L224" title="All 2 branches covered.">                        &amp;&amp; equator.equate(sequence1.get(x), sequence2.get(y))) {</span>
+<span class="fc" id="L225">                    vUp[i] = x--;</span>
+<span class="fc" id="L226">                    y--;</span>
+                }
+                // Second step
+<span class="fc bfc" id="L229" title="All 6 branches covered.">                if (delta % 2 == 0 &amp;&amp; -d &lt;= k &amp;&amp; k &lt;= d ) {</span>
+<span class="fc bfc" id="L230" title="All 2 branches covered.">                    if (vUp[i] &lt;= vDown[i + delta]) { // NOPMD</span>
+<span class="fc" id="L231">                        return buildSnake(vUp[i], k + start1 - start2, end1, end2);</span>
+                    }
+                }
+            }
+        }
+
+        // this should not happen
+<span class="nc" id="L238">        throw new RuntimeException(&quot;Internal Error&quot;);</span>
+    }
+
+
+    /**
+     * Build an edit script.
+     *
+     * @param start1  the begin of the first sequence to be compared
+     * @param end1  the end of the first sequence to be compared
+     * @param start2  the begin of the second sequence to be compared
+     * @param end2  the end of the second sequence to be compared
+     * @param script the edited script
+     */
+    private void buildScript(final int start1, final int end1, final int start2, final int end2,
+                             final EditScript&lt;T&gt; script) {
+
+<span class="fc" id="L254">        final Snake middle = getMiddleSnake(start1, end1, start2, end2);</span>
+
+<span class="fc bfc" id="L256" title="All 2 branches covered.">        if (middle == null</span>
+<span class="fc bfc" id="L257" title="All 4 branches covered.">                || middle.getStart() == end1 &amp;&amp; middle.getDiag() == end1 - end2</span>
+<span class="pc bpc" id="L258" title="1 of 4 branches missed.">                || middle.getEnd() == start1 &amp;&amp; middle.getDiag() == start1 - start2) {</span>
+
+<span class="fc" id="L260">            int i = start1;</span>
+<span class="fc" id="L261">            int j = start2;</span>
+<span class="fc bfc" id="L262" title="All 4 branches covered.">            while (i &lt; end1 || j &lt; end2) {</span>
+<span class="pc bpc" id="L263" title="1 of 6 branches missed.">                if (i &lt; end1 &amp;&amp; j &lt; end2 &amp;&amp; equator.equate(sequence1.get(i), sequence2.get(j))) {</span>
+<span class="fc" id="L264">                    script.append(new KeepCommand&lt;&gt;(sequence1.get(i)));</span>
+<span class="fc" id="L265">                    ++i;</span>
+<span class="fc" id="L266">                    ++j;</span>
+                } else {
+<span class="fc bfc" id="L268" title="All 2 branches covered.">                    if (end1 - start1 &gt; end2 - start2) {</span>
+<span class="fc" id="L269">                        script.append(new DeleteCommand&lt;&gt;(sequence1.get(i)));</span>
+<span class="fc" id="L270">                        ++i;</span>
+                    } else {
+<span class="fc" id="L272">                        script.append(new InsertCommand&lt;&gt;(sequence2.get(j)));</span>
+<span class="fc" id="L273">                        ++j;</span>
+                    }
+                }
+            }
+
+<span class="fc" id="L278">        } else {</span>
+
+<span class="fc" id="L280">            buildScript(start1, middle.getStart(),</span>
+<span class="fc" id="L281">                        start2, middle.getStart() - middle.getDiag(),</span>
+                        script);
+<span class="fc bfc" id="L283" title="All 2 branches covered.">            for (int i = middle.getStart(); i &lt; middle.getEnd(); ++i) {</span>
+<span class="fc" id="L284">                script.append(new KeepCommand&lt;&gt;(sequence1.get(i)));</span>
+            }
+<span class="fc" id="L286">            buildScript(middle.getEnd(), end1,</span>
+<span class="fc" id="L287">                        middle.getEnd() - middle.getDiag(), end2,</span>
+                        script);
+        }
+<span class="fc" id="L290">    }</span>
+
+    /**
+     * This class is a simple placeholder to hold the end part of a path
+     * under construction in a {@link SequencesComparator SequencesComparator}.
+     */
+    private static class Snake {
+
+        /** Start index. */
+        private final int start;
+
+        /** End index. */
+        private final int end;
+
+        /** Diagonal number. */
+        private final int diag;
+
+        /**
+         * Simple constructor. Creates a new instance of Snake with specified indices.
+         *
+         * @param start  start index of the snake
+         * @param end  end index of the snake
+         * @param diag  diagonal number
+         */
+<span class="fc" id="L314">        public Snake(final int start, final int end, final int diag) {</span>
+<span class="fc" id="L315">            this.start = start;</span>
+<span class="fc" id="L316">            this.end   = end;</span>
+<span class="fc" id="L317">            this.diag  = diag;</span>
+<span class="fc" id="L318">        }</span>
+
+        /**
+         * Get the start index of the snake.
+         *
+         * @return start index of the snake
+         */
+        public int getStart() {
+<span class="fc" id="L326">            return start;</span>
+        }
+
+        /**
+         * Get the end index of the snake.
+         *
+         * @return end index of the snake
+         */
+        public int getEnd() {
+<span class="fc" id="L335">            return end;</span>
+        }
+
+        /**
+         * Get the diagonal number of the snake.
+         *
+         * @return diagonal number of the snake
+         */
+        public int getDiag() {
+<span class="fc" id="L344">            return diag;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

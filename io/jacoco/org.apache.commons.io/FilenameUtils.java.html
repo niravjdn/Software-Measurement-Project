@@ -1,0 +1,1454 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FilenameUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons IO</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.io</a> &gt; <span class="el_source">FilenameUtils.java</span></div><h1>FilenameUtils.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.io;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Stack;
+
+/**
+ * General filename and filepath manipulation utilities.
+ * &lt;p&gt;
+ * When dealing with filenames you can hit problems when moving from a Windows
+ * based development machine to a Unix based production machine.
+ * This class aims to help avoid those problems.
+ * &lt;p&gt;
+ * &lt;b&gt;NOTE&lt;/b&gt;: You may be able to avoid using this class entirely simply by
+ * using JDK {@link java.io.File File} objects and the two argument constructor
+ * {@link java.io.File#File(java.io.File, java.lang.String) File(File,String)}.
+ * &lt;p&gt;
+ * Most methods on this class are designed to work the same on both Unix and Windows.
+ * Those that don't include 'System', 'Unix' or 'Windows' in their name.
+ * &lt;p&gt;
+ * Most methods recognise both separators (forward and back), and both
+ * sets of prefixes. See the javadoc of each method for details.
+ * &lt;p&gt;
+ * This class defines six components within a filename
+ * (example C:\dev\project\file.txt):
+ * &lt;ul&gt;
+ * &lt;li&gt;the prefix - C:\&lt;/li&gt;
+ * &lt;li&gt;the path - dev\project\&lt;/li&gt;
+ * &lt;li&gt;the full path - C:\dev\project\&lt;/li&gt;
+ * &lt;li&gt;the name - file.txt&lt;/li&gt;
+ * &lt;li&gt;the base name - file&lt;/li&gt;
+ * &lt;li&gt;the extension - txt&lt;/li&gt;
+ * &lt;/ul&gt;
+ * Note that this class works best if directory filenames end with a separator.
+ * If you omit the last separator, it is impossible to determine if the filename
+ * corresponds to a file or a directory. As a result, we have chosen to say
+ * it corresponds to a file.
+ * &lt;p&gt;
+ * This class only supports Unix and Windows style names.
+ * Prefixes are matched as follows:
+ * &lt;pre&gt;
+ * Windows:
+ * a\b\c.txt           --&amp;gt; &quot;&quot;          --&amp;gt; relative
+ * \a\b\c.txt          --&amp;gt; &quot;\&quot;         --&amp;gt; current drive absolute
+ * C:a\b\c.txt         --&amp;gt; &quot;C:&quot;        --&amp;gt; drive relative
+ * C:\a\b\c.txt        --&amp;gt; &quot;C:\&quot;       --&amp;gt; absolute
+ * \\server\a\b\c.txt  --&amp;gt; &quot;\\server\&quot; --&amp;gt; UNC
+ *
+ * Unix:
+ * a/b/c.txt           --&amp;gt; &quot;&quot;          --&amp;gt; relative
+ * /a/b/c.txt          --&amp;gt; &quot;/&quot;         --&amp;gt; absolute
+ * ~/a/b/c.txt         --&amp;gt; &quot;~/&quot;        --&amp;gt; current user
+ * ~                   --&amp;gt; &quot;~/&quot;        --&amp;gt; current user (slash added)
+ * ~user/a/b/c.txt     --&amp;gt; &quot;~user/&quot;    --&amp;gt; named user
+ * ~user               --&amp;gt; &quot;~user/&quot;    --&amp;gt; named user (slash added)
+ * &lt;/pre&gt;
+ * Both prefix styles are matched always, irrespective of the machine that you are
+ * currently running on.
+ * &lt;p&gt;
+ * Origin of code: Excalibur, Alexandria, Tomcat, Commons-Utils.
+ *
+ * @since 1.1
+ */
+public class FilenameUtils {
+
+    private static final int NOT_FOUND = -1;
+
+    /**
+     * The extension separator character.
+     * @since 1.4
+     */
+    public static final char EXTENSION_SEPARATOR = '.';
+
+    /**
+     * The extension separator String.
+     * @since 1.4
+     */
+<span class="fc" id="L96">    public static final String EXTENSION_SEPARATOR_STR = Character.toString(EXTENSION_SEPARATOR);</span>
+
+    /**
+     * The Unix separator character.
+     */
+    private static final char UNIX_SEPARATOR = '/';
+
+    /**
+     * The Windows separator character.
+     */
+    private static final char WINDOWS_SEPARATOR = '\\';
+
+    /**
+     * The system separator character.
+     */
+<span class="fc" id="L111">    private static final char SYSTEM_SEPARATOR = File.separatorChar;</span>
+
+    /**
+     * The separator character that is the opposite of the system separator.
+     */
+    private static final char OTHER_SEPARATOR;
+    static {
+<span class="pc bpc" id="L118" title="1 of 2 branches missed.">        if (isSystemWindows()) {</span>
+<span class="nc" id="L119">            OTHER_SEPARATOR = UNIX_SEPARATOR;</span>
+<span class="nc" id="L120">        } else {</span>
+<span class="fc" id="L121">            OTHER_SEPARATOR = WINDOWS_SEPARATOR;</span>
+        }
+<span class="fc" id="L123">    }</span>
+
+    /**
+     * Instances should NOT be constructed in standard programming.
+     */
+    public FilenameUtils() {
+<span class="nc" id="L129">        super();</span>
+<span class="nc" id="L130">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Determines if Windows file system is in use.
+     *
+     * @return true if the system is Windows
+     */
+    static boolean isSystemWindows() {
+<span class="pc bpc" id="L139" title="1 of 2 branches missed.">        return SYSTEM_SEPARATOR == WINDOWS_SEPARATOR;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Checks if the character is a separator.
+     *
+     * @param ch  the character to check
+     * @return true if it is a separator character
+     */
+    private static boolean isSeparator(final char ch) {
+<span class="fc bfc" id="L150" title="All 4 branches covered.">        return ch == UNIX_SEPARATOR || ch == WINDOWS_SEPARATOR;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Normalizes a path, removing double and single dot path steps.
+     * &lt;p&gt;
+     * This method normalizes a path to a standard format.
+     * The input may contain separators in either Unix or Windows format.
+     * The output will contain separators in the format of the system.
+     * &lt;p&gt;
+     * A trailing slash will be retained.
+     * A double slash will be merged to a single slash (but UNC names are handled).
+     * A single dot path segment will be removed.
+     * A double dot will cause that path segment and the one before to be removed.
+     * If the double dot has no parent path segment to work with, {@code null}
+     * is returned.
+     * &lt;p&gt;
+     * The output will be the same on both Unix and Windows except
+     * for the separator character.
+     * &lt;pre&gt;
+     * /foo//               --&amp;gt;   /foo/
+     * /foo/./              --&amp;gt;   /foo/
+     * /foo/../bar          --&amp;gt;   /bar
+     * /foo/../bar/         --&amp;gt;   /bar/
+     * /foo/../bar/../baz   --&amp;gt;   /baz
+     * //foo//./bar         --&amp;gt;   /foo/bar
+     * /../                 --&amp;gt;   null
+     * ../foo               --&amp;gt;   null
+     * foo/bar/..           --&amp;gt;   foo/
+     * foo/../../bar        --&amp;gt;   null
+     * foo/../bar           --&amp;gt;   bar
+     * //server/foo/../bar  --&amp;gt;   //server/bar
+     * //server/../bar      --&amp;gt;   null
+     * C:\foo\..\bar        --&amp;gt;   C:\bar
+     * C:\..\bar            --&amp;gt;   null
+     * ~/foo/../bar/        --&amp;gt;   ~/bar/
+     * ~/../bar             --&amp;gt;   null
+     * &lt;/pre&gt;
+     * (Note the file separator returned will be correct for Windows/Unix)
+     *
+     * @param filename  the filename to normalize, null returns null
+     * @return the normalized filename, or null if invalid. Null bytes inside string will be removed
+     */
+    public static String normalize(final String filename) {
+<span class="fc" id="L195">        return doNormalize(filename, SYSTEM_SEPARATOR, true);</span>
+    }
+    /**
+     * Normalizes a path, removing double and single dot path steps.
+     * &lt;p&gt;
+     * This method normalizes a path to a standard format.
+     * The input may contain separators in either Unix or Windows format.
+     * The output will contain separators in the format specified.
+     * &lt;p&gt;
+     * A trailing slash will be retained.
+     * A double slash will be merged to a single slash (but UNC names are handled).
+     * A single dot path segment will be removed.
+     * A double dot will cause that path segment and the one before to be removed.
+     * If the double dot has no parent path segment to work with, {@code null}
+     * is returned.
+     * &lt;p&gt;
+     * The output will be the same on both Unix and Windows except
+     * for the separator character.
+     * &lt;pre&gt;
+     * /foo//               --&amp;gt;   /foo/
+     * /foo/./              --&amp;gt;   /foo/
+     * /foo/../bar          --&amp;gt;   /bar
+     * /foo/../bar/         --&amp;gt;   /bar/
+     * /foo/../bar/../baz   --&amp;gt;   /baz
+     * //foo//./bar         --&amp;gt;   /foo/bar
+     * /../                 --&amp;gt;   null
+     * ../foo               --&amp;gt;   null
+     * foo/bar/..           --&amp;gt;   foo/
+     * foo/../../bar        --&amp;gt;   null
+     * foo/../bar           --&amp;gt;   bar
+     * //server/foo/../bar  --&amp;gt;   //server/bar
+     * //server/../bar      --&amp;gt;   null
+     * C:\foo\..\bar        --&amp;gt;   C:\bar
+     * C:\..\bar            --&amp;gt;   null
+     * ~/foo/../bar/        --&amp;gt;   ~/bar/
+     * ~/../bar             --&amp;gt;   null
+     * &lt;/pre&gt;
+     * The output will be the same on both Unix and Windows including
+     * the separator character.
+     *
+     * @param filename  the filename to normalize, null returns null
+     * @param unixSeparator {@code true} if a unix separator should
+     * be used or {@code false} if a windows separator should be used.
+     * @return the normalized filename, or null if invalid. Null bytes inside string will be removed
+     * @since 2.0
+     */
+    public static String normalize(final String filename, final boolean unixSeparator) {
+<span class="fc bfc" id="L242" title="All 2 branches covered.">        final char separator = unixSeparator ? UNIX_SEPARATOR : WINDOWS_SEPARATOR;</span>
+<span class="fc" id="L243">        return doNormalize(filename, separator, true);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Normalizes a path, removing double and single dot path steps,
+     * and removing any final directory separator.
+     * &lt;p&gt;
+     * This method normalizes a path to a standard format.
+     * The input may contain separators in either Unix or Windows format.
+     * The output will contain separators in the format of the system.
+     * &lt;p&gt;
+     * A trailing slash will be removed.
+     * A double slash will be merged to a single slash (but UNC names are handled).
+     * A single dot path segment will be removed.
+     * A double dot will cause that path segment and the one before to be removed.
+     * If the double dot has no parent path segment to work with, {@code null}
+     * is returned.
+     * &lt;p&gt;
+     * The output will be the same on both Unix and Windows except
+     * for the separator character.
+     * &lt;pre&gt;
+     * /foo//               --&amp;gt;   /foo
+     * /foo/./              --&amp;gt;   /foo
+     * /foo/../bar          --&amp;gt;   /bar
+     * /foo/../bar/         --&amp;gt;   /bar
+     * /foo/../bar/../baz   --&amp;gt;   /baz
+     * //foo//./bar         --&amp;gt;   /foo/bar
+     * /../                 --&amp;gt;   null
+     * ../foo               --&amp;gt;   null
+     * foo/bar/..           --&amp;gt;   foo
+     * foo/../../bar        --&amp;gt;   null
+     * foo/../bar           --&amp;gt;   bar
+     * //server/foo/../bar  --&amp;gt;   //server/bar
+     * //server/../bar      --&amp;gt;   null
+     * C:\foo\..\bar        --&amp;gt;   C:\bar
+     * C:\..\bar            --&amp;gt;   null
+     * ~/foo/../bar/        --&amp;gt;   ~/bar
+     * ~/../bar             --&amp;gt;   null
+     * &lt;/pre&gt;
+     * (Note the file separator returned will be correct for Windows/Unix)
+     *
+     * @param filename  the filename to normalize, null returns null
+     * @return the normalized filename, or null if invalid. Null bytes inside string will be removed
+     */
+    public static String normalizeNoEndSeparator(final String filename) {
+<span class="fc" id="L289">        return doNormalize(filename, SYSTEM_SEPARATOR, false);</span>
+    }
+
+    /**
+     * Normalizes a path, removing double and single dot path steps,
+     * and removing any final directory separator.
+     * &lt;p&gt;
+     * This method normalizes a path to a standard format.
+     * The input may contain separators in either Unix or Windows format.
+     * The output will contain separators in the format specified.
+     * &lt;p&gt;
+     * A trailing slash will be removed.
+     * A double slash will be merged to a single slash (but UNC names are handled).
+     * A single dot path segment will be removed.
+     * A double dot will cause that path segment and the one before to be removed.
+     * If the double dot has no parent path segment to work with, {@code null}
+     * is returned.
+     * &lt;p&gt;
+     * The output will be the same on both Unix and Windows including
+     * the separator character.
+     * &lt;pre&gt;
+     * /foo//               --&amp;gt;   /foo
+     * /foo/./              --&amp;gt;   /foo
+     * /foo/../bar          --&amp;gt;   /bar
+     * /foo/../bar/         --&amp;gt;   /bar
+     * /foo/../bar/../baz   --&amp;gt;   /baz
+     * //foo//./bar         --&amp;gt;   /foo/bar
+     * /../                 --&amp;gt;   null
+     * ../foo               --&amp;gt;   null
+     * foo/bar/..           --&amp;gt;   foo
+     * foo/../../bar        --&amp;gt;   null
+     * foo/../bar           --&amp;gt;   bar
+     * //server/foo/../bar  --&amp;gt;   //server/bar
+     * //server/../bar      --&amp;gt;   null
+     * C:\foo\..\bar        --&amp;gt;   C:\bar
+     * C:\..\bar            --&amp;gt;   null
+     * ~/foo/../bar/        --&amp;gt;   ~/bar
+     * ~/../bar             --&amp;gt;   null
+     * &lt;/pre&gt;
+     *
+     * @param filename  the filename to normalize, null returns null
+     * @param unixSeparator {@code true} if a unix separator should
+     * be used or {@code false} if a windows separator should be used.
+     * @return the normalized filename, or null if invalid. Null bytes inside string will be removed
+     * @since 2.0
+     */
+    public static String normalizeNoEndSeparator(final String filename, final boolean unixSeparator) {
+<span class="fc bfc" id="L336" title="All 2 branches covered.">         final char separator = unixSeparator ? UNIX_SEPARATOR : WINDOWS_SEPARATOR;</span>
+<span class="fc" id="L337">        return doNormalize(filename, separator, false);</span>
+    }
+
+    /**
+     * Internal method to perform the normalization.
+     *
+     * @param filename  the filename
+     * @param separator The separator character to use
+     * @param keepSeparator  true to keep the final separator
+     * @return the normalized filename. Null bytes inside string will be removed.
+     */
+    private static String doNormalize(final String filename, final char separator, final boolean keepSeparator) {
+<span class="fc bfc" id="L349" title="All 2 branches covered.">        if (filename == null) {</span>
+<span class="fc" id="L350">            return null;</span>
+        }
+
+<span class="fc" id="L353">        failIfNullBytePresent(filename);</span>
+
+<span class="fc" id="L355">        int size = filename.length();</span>
+<span class="fc bfc" id="L356" title="All 2 branches covered.">        if (size == 0) {</span>
+<span class="fc" id="L357">            return filename;</span>
+        }
+<span class="fc" id="L359">        final int prefix = getPrefixLength(filename);</span>
+<span class="fc bfc" id="L360" title="All 2 branches covered.">        if (prefix &lt; 0) {</span>
+<span class="fc" id="L361">            return null;</span>
+        }
+
+<span class="fc" id="L364">        final char[] array = new char[size + 2];  // +1 for possible extra slash, +2 for arraycopy</span>
+<span class="fc" id="L365">        filename.getChars(0, filename.length(), array, 0);</span>
+
+        // fix separators throughout
+<span class="fc bfc" id="L368" title="All 2 branches covered.">        final char otherSeparator = separator == SYSTEM_SEPARATOR ? OTHER_SEPARATOR : SYSTEM_SEPARATOR;</span>
+<span class="fc bfc" id="L369" title="All 2 branches covered.">        for (int i = 0; i &lt; array.length; i++) {</span>
+<span class="fc bfc" id="L370" title="All 2 branches covered.">            if (array[i] == otherSeparator) {</span>
+<span class="fc" id="L371">                array[i] = separator;</span>
+            }
+        }
+
+        // add extra separator on the end to simplify code below
+<span class="fc" id="L376">        boolean lastIsDirectory = true;</span>
+<span class="fc bfc" id="L377" title="All 2 branches covered.">        if (array[size - 1] != separator) {</span>
+<span class="fc" id="L378">            array[size++] = separator;</span>
+<span class="fc" id="L379">            lastIsDirectory = false;</span>
+        }
+
+        // adjoining slashes
+<span class="fc bfc" id="L383" title="All 2 branches covered.">        for (int i = prefix + 1; i &lt; size; i++) {</span>
+<span class="fc bfc" id="L384" title="All 4 branches covered.">            if (array[i] == separator &amp;&amp; array[i - 1] == separator) {</span>
+<span class="fc" id="L385">                System.arraycopy(array, i, array, i - 1, size - i);</span>
+<span class="fc" id="L386">                size--;</span>
+<span class="fc" id="L387">                i--;</span>
+            }
+        }
+
+        // dot slash
+<span class="fc bfc" id="L392" title="All 2 branches covered.">        for (int i = prefix + 1; i &lt; size; i++) {</span>
+<span class="fc bfc" id="L393" title="All 4 branches covered.">            if (array[i] == separator &amp;&amp; array[i - 1] == '.' &amp;&amp;</span>
+<span class="fc bfc" id="L394" title="All 4 branches covered.">                    (i == prefix + 1 || array[i - 2] == separator)) {</span>
+<span class="fc bfc" id="L395" title="All 2 branches covered.">                if (i == size - 1) {</span>
+<span class="fc" id="L396">                    lastIsDirectory = true;</span>
+                }
+<span class="fc" id="L398">                System.arraycopy(array, i + 1, array, i - 1, size - i);</span>
+<span class="fc" id="L399">                size -=2;</span>
+<span class="fc" id="L400">                i--;</span>
+            }
+        }
+
+        // double dot slash
+        outer:
+<span class="fc bfc" id="L406" title="All 2 branches covered.">        for (int i = prefix + 2; i &lt; size; i++) {</span>
+<span class="pc bpc" id="L407" title="1 of 6 branches missed.">            if (array[i] == separator &amp;&amp; array[i - 1] == '.' &amp;&amp; array[i - 2] == '.' &amp;&amp;</span>
+<span class="pc bpc" id="L408" title="1 of 4 branches missed.">                    (i == prefix + 2 || array[i - 3] == separator)) {</span>
+<span class="fc bfc" id="L409" title="All 2 branches covered.">                if (i == prefix + 2) {</span>
+<span class="fc" id="L410">                    return null;</span>
+                }
+<span class="fc bfc" id="L412" title="All 2 branches covered.">                if (i == size - 1) {</span>
+<span class="fc" id="L413">                    lastIsDirectory = true;</span>
+                }
+                int j;
+<span class="fc bfc" id="L416" title="All 2 branches covered.">                for (j = i - 4 ; j &gt;= prefix; j--) {</span>
+<span class="fc bfc" id="L417" title="All 2 branches covered.">                    if (array[j] == separator) {</span>
+                        // remove b/../ from a/b/../c
+<span class="fc" id="L419">                        System.arraycopy(array, i + 1, array, j + 1, size - i);</span>
+<span class="fc" id="L420">                        size -= i - j;</span>
+<span class="fc" id="L421">                        i = j + 1;</span>
+<span class="fc" id="L422">                        continue outer;</span>
+                    }
+                }
+                // remove a/../ from a/../c
+<span class="fc" id="L426">                System.arraycopy(array, i + 1, array, prefix, size - i);</span>
+<span class="fc" id="L427">                size -= i + 1 - prefix;</span>
+<span class="fc" id="L428">                i = prefix + 1;</span>
+            }
+        }
+
+<span class="fc bfc" id="L432" title="All 2 branches covered.">        if (size &lt;= 0) {  // should never be less than 0</span>
+<span class="fc" id="L433">            return &quot;&quot;;</span>
+        }
+<span class="fc bfc" id="L435" title="All 2 branches covered.">        if (size &lt;= prefix) {  // should never be less than prefix</span>
+<span class="fc" id="L436">            return new String(array, 0, size);</span>
+        }
+<span class="fc bfc" id="L438" title="All 4 branches covered.">        if (lastIsDirectory &amp;&amp; keepSeparator) {</span>
+<span class="fc" id="L439">            return new String(array, 0, size);  // keep trailing separator</span>
+        }
+<span class="fc" id="L441">        return new String(array, 0, size - 1);  // lose trailing separator</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Concatenates a filename to a base path using normal command line style rules.
+     * &lt;p&gt;
+     * The effect is equivalent to resultant directory after changing
+     * directory to the first argument, followed by changing directory to
+     * the second argument.
+     * &lt;p&gt;
+     * The first argument is the base path, the second is the path to concatenate.
+     * The returned path is always normalized via {@link #normalize(String)},
+     * thus &lt;code&gt;..&lt;/code&gt; is handled.
+     * &lt;p&gt;
+     * If &lt;code&gt;pathToAdd&lt;/code&gt; is absolute (has an absolute prefix), then
+     * it will be normalized and returned.
+     * Otherwise, the paths will be joined, normalized and returned.
+     * &lt;p&gt;
+     * The output will be the same on both Unix and Windows except
+     * for the separator character.
+     * &lt;pre&gt;
+     * /foo/ + bar          --&amp;gt;   /foo/bar
+     * /foo + bar           --&amp;gt;   /foo/bar
+     * /foo + /bar          --&amp;gt;   /bar
+     * /foo + C:/bar        --&amp;gt;   C:/bar
+     * /foo + C:bar         --&amp;gt;   C:bar (*)
+     * /foo/a/ + ../bar     --&amp;gt;   foo/bar
+     * /foo/ + ../../bar    --&amp;gt;   null
+     * /foo/ + /bar         --&amp;gt;   /bar
+     * /foo/.. + /bar       --&amp;gt;   /bar
+     * /foo + bar/c.txt     --&amp;gt;   /foo/bar/c.txt
+     * /foo/c.txt + bar     --&amp;gt;   /foo/c.txt/bar (!)
+     * &lt;/pre&gt;
+     * (*) Note that the Windows relative drive prefix is unreliable when
+     * used with this method.
+     * (!) Note that the first parameter must be a path. If it ends with a name, then
+     * the name will be built into the concatenated path. If this might be a problem,
+     * use {@link #getFullPath(String)} on the base path argument.
+     *
+     * @param basePath  the base path to attach to, always treated as a path
+     * @param fullFilenameToAdd  the filename (or path) to attach to the base
+     * @return the concatenated path, or null if invalid.  Null bytes inside string will be removed
+     */
+    public static String concat(final String basePath, final String fullFilenameToAdd) {
+<span class="fc" id="L486">        final int prefix = getPrefixLength(fullFilenameToAdd);</span>
+<span class="fc bfc" id="L487" title="All 2 branches covered.">        if (prefix &lt; 0) {</span>
+<span class="fc" id="L488">            return null;</span>
+        }
+<span class="fc bfc" id="L490" title="All 2 branches covered.">        if (prefix &gt; 0) {</span>
+<span class="fc" id="L491">            return normalize(fullFilenameToAdd);</span>
+        }
+<span class="fc bfc" id="L493" title="All 2 branches covered.">        if (basePath == null) {</span>
+<span class="fc" id="L494">            return null;</span>
+        }
+<span class="fc" id="L496">        final int len = basePath.length();</span>
+<span class="fc bfc" id="L497" title="All 2 branches covered.">        if (len == 0) {</span>
+<span class="fc" id="L498">            return normalize(fullFilenameToAdd);</span>
+        }
+<span class="fc" id="L500">        final char ch = basePath.charAt(len - 1);</span>
+<span class="fc bfc" id="L501" title="All 2 branches covered.">        if (isSeparator(ch)) {</span>
+<span class="fc" id="L502">            return normalize(basePath + fullFilenameToAdd);</span>
+        } else {
+<span class="fc" id="L504">            return normalize(basePath + '/' + fullFilenameToAdd);</span>
+        }
+    }
+
+    /**
+     * Determines whether the {@code parent} directory contains the {@code child} element (a file or directory).
+     * &lt;p&gt;
+     * The files names are expected to be normalized.
+     * &lt;/p&gt;
+     *
+     * Edge cases:
+     * &lt;ul&gt;
+     * &lt;li&gt;A {@code directory} must not be null: if null, throw IllegalArgumentException&lt;/li&gt;
+     * &lt;li&gt;A directory does not contain itself: return false&lt;/li&gt;
+     * &lt;li&gt;A null child file is not contained in any parent: return false&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * @param canonicalParent
+     *            the file to consider as the parent.
+     * @param canonicalChild
+     *            the file to consider as the child.
+     * @return true is the candidate leaf is under by the specified composite. False otherwise.
+     * @throws IOException
+     *             if an IO error occurs while checking the files.
+     * @since 2.2
+     * @see FileUtils#directoryContains(File, File)
+     */
+    public static boolean directoryContains(final String canonicalParent, final String canonicalChild)
+            throws IOException {
+
+        // Fail fast against NullPointerException
+<span class="pc bpc" id="L535" title="1 of 2 branches missed.">        if (canonicalParent == null) {</span>
+<span class="nc" id="L536">            throw new IllegalArgumentException(&quot;Directory must not be null&quot;);</span>
+        }
+
+<span class="pc bpc" id="L539" title="1 of 2 branches missed.">        if (canonicalChild == null) {</span>
+<span class="nc" id="L540">            return false;</span>
+        }
+
+<span class="pc bpc" id="L543" title="1 of 2 branches missed.">        if (IOCase.SYSTEM.checkEquals(canonicalParent, canonicalChild)) {</span>
+<span class="nc" id="L544">            return false;</span>
+        }
+
+<span class="fc" id="L547">        return IOCase.SYSTEM.checkStartsWith(canonicalChild, canonicalParent);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Converts all separators to the Unix separator of forward slash.
+     *
+     * @param path  the path to be changed, null ignored
+     * @return the updated path
+     */
+    public static String separatorsToUnix(final String path) {
+<span class="fc bfc" id="L558" title="All 4 branches covered.">        if (path == null || path.indexOf(WINDOWS_SEPARATOR) == NOT_FOUND) {</span>
+<span class="fc" id="L559">            return path;</span>
+        }
+<span class="fc" id="L561">        return path.replace(WINDOWS_SEPARATOR, UNIX_SEPARATOR);</span>
+    }
+
+    /**
+     * Converts all separators to the Windows separator of backslash.
+     *
+     * @param path  the path to be changed, null ignored
+     * @return the updated path
+     */
+    public static String separatorsToWindows(final String path) {
+<span class="fc bfc" id="L571" title="All 4 branches covered.">        if (path == null || path.indexOf(UNIX_SEPARATOR) == NOT_FOUND) {</span>
+<span class="fc" id="L572">            return path;</span>
+        }
+<span class="fc" id="L574">        return path.replace(UNIX_SEPARATOR, WINDOWS_SEPARATOR);</span>
+    }
+
+    /**
+     * Converts all separators to the system separator.
+     *
+     * @param path  the path to be changed, null ignored
+     * @return the updated path
+     */
+    public static String separatorsToSystem(final String path) {
+<span class="fc bfc" id="L584" title="All 2 branches covered.">        if (path == null) {</span>
+<span class="fc" id="L585">            return null;</span>
+        }
+<span class="pc bpc" id="L587" title="1 of 2 branches missed.">        if (isSystemWindows()) {</span>
+<span class="nc" id="L588">            return separatorsToWindows(path);</span>
+        } else {
+<span class="fc" id="L590">            return separatorsToUnix(path);</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Returns the length of the filename prefix, such as &lt;code&gt;C:/&lt;/code&gt; or &lt;code&gt;~/&lt;/code&gt;.
+     * &lt;p&gt;
+     * This method will handle a file in either Unix or Windows format.
+     * &lt;p&gt;
+     * The prefix length includes the first slash in the full filename
+     * if applicable. Thus, it is possible that the length returned is greater
+     * than the length of the input string.
+     * &lt;pre&gt;
+     * Windows:
+     * a\b\c.txt           --&amp;gt; &quot;&quot;          --&amp;gt; relative
+     * \a\b\c.txt          --&amp;gt; &quot;\&quot;         --&amp;gt; current drive absolute
+     * C:a\b\c.txt         --&amp;gt; &quot;C:&quot;        --&amp;gt; drive relative
+     * C:\a\b\c.txt        --&amp;gt; &quot;C:\&quot;       --&amp;gt; absolute
+     * \\server\a\b\c.txt  --&amp;gt; &quot;\\server\&quot; --&amp;gt; UNC
+     * \\\a\b\c.txt        --&amp;gt;  error, length = -1
+     *
+     * Unix:
+     * a/b/c.txt           --&amp;gt; &quot;&quot;          --&amp;gt; relative
+     * /a/b/c.txt          --&amp;gt; &quot;/&quot;         --&amp;gt; absolute
+     * ~/a/b/c.txt         --&amp;gt; &quot;~/&quot;        --&amp;gt; current user
+     * ~                   --&amp;gt; &quot;~/&quot;        --&amp;gt; current user (slash added)
+     * ~user/a/b/c.txt     --&amp;gt; &quot;~user/&quot;    --&amp;gt; named user
+     * ~user               --&amp;gt; &quot;~user/&quot;    --&amp;gt; named user (slash added)
+     * //server/a/b/c.txt  --&amp;gt; &quot;//server/&quot;
+     * ///a/b/c.txt        --&amp;gt; error, length = -1
+     * &lt;/pre&gt;
+     * &lt;p&gt;
+     * The output will be the same irrespective of the machine that the code is running on.
+     * ie. both Unix and Windows prefixes are matched regardless.
+     *
+     * Note that a leading // (or \\) is used to indicate a UNC name on Windows.
+     * These must be followed by a server name, so double-slashes are not collapsed
+     * to a single slash at the start of the filename.
+     *
+     * @param filename  the filename to find the prefix in, null returns -1
+     * @return the length of the prefix, -1 if invalid or null
+     */
+    public static int getPrefixLength(final String filename) {
+<span class="fc bfc" id="L634" title="All 2 branches covered.">        if (filename == null) {</span>
+<span class="fc" id="L635">            return NOT_FOUND;</span>
+        }
+<span class="fc" id="L637">        final int len = filename.length();</span>
+<span class="fc bfc" id="L638" title="All 2 branches covered.">        if (len == 0) {</span>
+<span class="fc" id="L639">            return 0;</span>
+        }
+<span class="fc" id="L641">        char ch0 = filename.charAt(0);</span>
+<span class="fc bfc" id="L642" title="All 2 branches covered.">        if (ch0 == ':') {</span>
+<span class="fc" id="L643">            return NOT_FOUND;</span>
+        }
+<span class="fc bfc" id="L645" title="All 2 branches covered.">        if (len == 1) {</span>
+<span class="fc bfc" id="L646" title="All 2 branches covered.">            if (ch0 == '~') {</span>
+<span class="fc" id="L647">                return 2;  // return a length greater than the input</span>
+            }
+<span class="fc bfc" id="L649" title="All 2 branches covered.">            return isSeparator(ch0) ? 1 : 0;</span>
+        } else {
+<span class="fc bfc" id="L651" title="All 2 branches covered.">            if (ch0 == '~') {</span>
+<span class="fc" id="L652">                int posUnix = filename.indexOf(UNIX_SEPARATOR, 1);</span>
+<span class="fc" id="L653">                int posWin = filename.indexOf(WINDOWS_SEPARATOR, 1);</span>
+<span class="fc bfc" id="L654" title="All 4 branches covered.">                if (posUnix == NOT_FOUND &amp;&amp; posWin == NOT_FOUND) {</span>
+<span class="fc" id="L655">                    return len + 1;  // return a length greater than the input</span>
+                }
+<span class="fc bfc" id="L657" title="All 2 branches covered.">                posUnix = posUnix == NOT_FOUND ? posWin : posUnix;</span>
+<span class="fc bfc" id="L658" title="All 2 branches covered.">                posWin = posWin == NOT_FOUND ? posUnix : posWin;</span>
+<span class="fc" id="L659">                return Math.min(posUnix, posWin) + 1;</span>
+            }
+<span class="fc" id="L661">            final char ch1 = filename.charAt(1);</span>
+<span class="fc bfc" id="L662" title="All 2 branches covered.">            if (ch1 == ':') {</span>
+<span class="fc" id="L663">                ch0 = Character.toUpperCase(ch0);</span>
+<span class="pc bpc" id="L664" title="1 of 4 branches missed.">                if (ch0 &gt;= 'A' &amp;&amp; ch0 &lt;= 'Z') {</span>
+<span class="fc bfc" id="L665" title="All 4 branches covered.">                    if (len == 2 || isSeparator(filename.charAt(2)) == false) {</span>
+<span class="fc" id="L666">                        return 2;</span>
+                    }
+<span class="fc" id="L668">                    return 3;</span>
+<span class="fc bfc" id="L669" title="All 2 branches covered.">                } else if (ch0 == UNIX_SEPARATOR) {</span>
+<span class="fc" id="L670">                    return 1;</span>
+                }
+<span class="fc" id="L672">                return NOT_FOUND;</span>
+
+<span class="fc bfc" id="L674" title="All 4 branches covered.">            } else if (isSeparator(ch0) &amp;&amp; isSeparator(ch1)) {</span>
+<span class="fc" id="L675">                int posUnix = filename.indexOf(UNIX_SEPARATOR, 2);</span>
+<span class="fc" id="L676">                int posWin = filename.indexOf(WINDOWS_SEPARATOR, 2);</span>
+<span class="fc bfc" id="L677" title="All 8 branches covered.">                if (posUnix == NOT_FOUND &amp;&amp; posWin == NOT_FOUND || posUnix == 2 || posWin == 2) {</span>
+<span class="fc" id="L678">                    return NOT_FOUND;</span>
+                }
+<span class="fc bfc" id="L680" title="All 2 branches covered.">                posUnix = posUnix == NOT_FOUND ? posWin : posUnix;</span>
+<span class="fc bfc" id="L681" title="All 2 branches covered.">                posWin = posWin == NOT_FOUND ? posUnix : posWin;</span>
+<span class="fc" id="L682">                return Math.min(posUnix, posWin) + 1;</span>
+            } else {
+<span class="fc bfc" id="L684" title="All 2 branches covered.">                return isSeparator(ch0) ? 1 : 0;</span>
+            }
+        }
+    }
+
+    /**
+     * Returns the index of the last directory separator character.
+     * &lt;p&gt;
+     * This method will handle a file in either Unix or Windows format.
+     * The position of the last forward or backslash is returned.
+     * &lt;p&gt;
+     * The output will be the same irrespective of the machine that the code is running on.
+     *
+     * @param filename  the filename to find the last path separator in, null returns -1
+     * @return the index of the last separator character, or -1 if there
+     * is no such character
+     */
+    public static int indexOfLastSeparator(final String filename) {
+<span class="fc bfc" id="L702" title="All 2 branches covered.">        if (filename == null) {</span>
+<span class="fc" id="L703">            return NOT_FOUND;</span>
+        }
+<span class="fc" id="L705">        final int lastUnixPos = filename.lastIndexOf(UNIX_SEPARATOR);</span>
+<span class="fc" id="L706">        final int lastWindowsPos = filename.lastIndexOf(WINDOWS_SEPARATOR);</span>
+<span class="fc" id="L707">        return Math.max(lastUnixPos, lastWindowsPos);</span>
+    }
+
+    /**
+     * Returns the index of the last extension separator character, which is a dot.
+     * &lt;p&gt;
+     * This method also checks that there is no directory separator after the last dot. To do this it uses
+     * {@link #indexOfLastSeparator(String)} which will handle a file in either Unix or Windows format.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * The output will be the same irrespective of the machine that the code is running on.
+     * &lt;/p&gt;
+     *
+     * @param filename
+     *            the filename to find the last extension separator in, null returns -1
+     * @return the index of the last extension separator character, or -1 if there is no such character
+     */
+    public static int indexOfExtension(final String filename) {
+<span class="fc bfc" id="L725" title="All 2 branches covered.">        if (filename == null) {</span>
+<span class="fc" id="L726">            return NOT_FOUND;</span>
+        }
+<span class="fc" id="L728">        final int extensionPos = filename.lastIndexOf(EXTENSION_SEPARATOR);</span>
+<span class="fc" id="L729">        final int lastSeparator = indexOfLastSeparator(filename);</span>
+<span class="fc bfc" id="L730" title="All 2 branches covered.">        return lastSeparator &gt; extensionPos ? NOT_FOUND : extensionPos;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets the prefix from a full filename, such as &lt;code&gt;C:/&lt;/code&gt;
+     * or &lt;code&gt;~/&lt;/code&gt;.
+     * &lt;p&gt;
+     * This method will handle a file in either Unix or Windows format.
+     * The prefix includes the first slash in the full filename where applicable.
+     * &lt;pre&gt;
+     * Windows:
+     * a\b\c.txt           --&amp;gt; &quot;&quot;          --&amp;gt; relative
+     * \a\b\c.txt          --&amp;gt; &quot;\&quot;         --&amp;gt; current drive absolute
+     * C:a\b\c.txt         --&amp;gt; &quot;C:&quot;        --&amp;gt; drive relative
+     * C:\a\b\c.txt        --&amp;gt; &quot;C:\&quot;       --&amp;gt; absolute
+     * \\server\a\b\c.txt  --&amp;gt; &quot;\\server\&quot; --&amp;gt; UNC
+     *
+     * Unix:
+     * a/b/c.txt           --&amp;gt; &quot;&quot;          --&amp;gt; relative
+     * /a/b/c.txt          --&amp;gt; &quot;/&quot;         --&amp;gt; absolute
+     * ~/a/b/c.txt         --&amp;gt; &quot;~/&quot;        --&amp;gt; current user
+     * ~                   --&amp;gt; &quot;~/&quot;        --&amp;gt; current user (slash added)
+     * ~user/a/b/c.txt     --&amp;gt; &quot;~user/&quot;    --&amp;gt; named user
+     * ~user               --&amp;gt; &quot;~user/&quot;    --&amp;gt; named user (slash added)
+     * &lt;/pre&gt;
+     * &lt;p&gt;
+     * The output will be the same irrespective of the machine that the code is running on.
+     * ie. both Unix and Windows prefixes are matched regardless.
+     *
+     * @param filename  the filename to query, null returns null
+     * @return the prefix of the file, null if invalid. Null bytes inside string will be removed
+     */
+    public static String getPrefix(final String filename) {
+<span class="fc bfc" id="L764" title="All 2 branches covered.">        if (filename == null) {</span>
+<span class="fc" id="L765">            return null;</span>
+        }
+<span class="fc" id="L767">        final int len = getPrefixLength(filename);</span>
+<span class="fc bfc" id="L768" title="All 2 branches covered.">        if (len &lt; 0) {</span>
+<span class="fc" id="L769">            return null;</span>
+        }
+<span class="fc bfc" id="L771" title="All 2 branches covered.">        if (len &gt; filename.length()) {</span>
+<span class="fc" id="L772">            failIfNullBytePresent(filename + UNIX_SEPARATOR);</span>
+<span class="fc" id="L773">            return filename + UNIX_SEPARATOR;</span>
+        }
+<span class="fc" id="L775">        final String path = filename.substring(0, len);</span>
+<span class="fc" id="L776">        failIfNullBytePresent(path);</span>
+<span class="fc" id="L777">        return path;</span>
+    }
+
+    /**
+     * Gets the path from a full filename, which excludes the prefix.
+     * &lt;p&gt;
+     * This method will handle a file in either Unix or Windows format.
+     * The method is entirely text based, and returns the text before and
+     * including the last forward or backslash.
+     * &lt;pre&gt;
+     * C:\a\b\c.txt --&amp;gt; a\b\
+     * ~/a/b/c.txt  --&amp;gt; a/b/
+     * a.txt        --&amp;gt; &quot;&quot;
+     * a/b/c        --&amp;gt; a/b/
+     * a/b/c/       --&amp;gt; a/b/c/
+     * &lt;/pre&gt;
+     * &lt;p&gt;
+     * The output will be the same irrespective of the machine that the code is running on.
+     * &lt;p&gt;
+     * This method drops the prefix from the result.
+     * See {@link #getFullPath(String)} for the method that retains the prefix.
+     *
+     * @param filename  the filename to query, null returns null
+     * @return the path of the file, an empty string if none exists, null if invalid.
+     * Null bytes inside string will be removed
+     */
+    public static String getPath(final String filename) {
+<span class="fc" id="L804">        return doGetPath(filename, 1);</span>
+    }
+
+    /**
+     * Gets the path from a full filename, which excludes the prefix, and
+     * also excluding the final directory separator.
+     * &lt;p&gt;
+     * This method will handle a file in either Unix or Windows format.
+     * The method is entirely text based, and returns the text before the
+     * last forward or backslash.
+     * &lt;pre&gt;
+     * C:\a\b\c.txt --&amp;gt; a\b
+     * ~/a/b/c.txt  --&amp;gt; a/b
+     * a.txt        --&amp;gt; &quot;&quot;
+     * a/b/c        --&amp;gt; a/b
+     * a/b/c/       --&amp;gt; a/b/c
+     * &lt;/pre&gt;
+     * &lt;p&gt;
+     * The output will be the same irrespective of the machine that the code is running on.
+     * &lt;p&gt;
+     * This method drops the prefix from the result.
+     * See {@link #getFullPathNoEndSeparator(String)} for the method that retains the prefix.
+     *
+     * @param filename  the filename to query, null returns null
+     * @return the path of the file, an empty string if none exists, null if invalid.
+     * Null bytes inside string will be removed
+     */
+    public static String getPathNoEndSeparator(final String filename) {
+<span class="fc" id="L832">        return doGetPath(filename, 0);</span>
+    }
+
+    /**
+     * Does the work of getting the path.
+     *
+     * @param filename  the filename
+     * @param separatorAdd  0 to omit the end separator, 1 to return it
+     * @return the path. Null bytes inside string will be removed
+     */
+    private static String doGetPath(final String filename, final int separatorAdd) {
+<span class="fc bfc" id="L843" title="All 2 branches covered.">        if (filename == null) {</span>
+<span class="fc" id="L844">            return null;</span>
+        }
+<span class="fc" id="L846">        final int prefix = getPrefixLength(filename);</span>
+<span class="fc bfc" id="L847" title="All 2 branches covered.">        if (prefix &lt; 0) {</span>
+<span class="fc" id="L848">            return null;</span>
+        }
+<span class="fc" id="L850">        final int index = indexOfLastSeparator(filename);</span>
+<span class="fc" id="L851">        final int endIndex = index+separatorAdd;</span>
+<span class="fc bfc" id="L852" title="All 6 branches covered.">        if (prefix &gt;= filename.length() || index &lt; 0 || prefix &gt;= endIndex) {</span>
+<span class="fc" id="L853">            return &quot;&quot;;</span>
+        }
+<span class="fc" id="L855">        final String path = filename.substring(prefix, endIndex);</span>
+<span class="fc" id="L856">        failIfNullBytePresent(path);</span>
+<span class="fc" id="L857">        return path;</span>
+    }
+
+    /**
+     * Gets the full path from a full filename, which is the prefix + path.
+     * &lt;p&gt;
+     * This method will handle a file in either Unix or Windows format.
+     * The method is entirely text based, and returns the text before and
+     * including the last forward or backslash.
+     * &lt;pre&gt;
+     * C:\a\b\c.txt --&amp;gt; C:\a\b\
+     * ~/a/b/c.txt  --&amp;gt; ~/a/b/
+     * a.txt        --&amp;gt; &quot;&quot;
+     * a/b/c        --&amp;gt; a/b/
+     * a/b/c/       --&amp;gt; a/b/c/
+     * C:           --&amp;gt; C:
+     * C:\          --&amp;gt; C:\
+     * ~            --&amp;gt; ~/
+     * ~/           --&amp;gt; ~/
+     * ~user        --&amp;gt; ~user/
+     * ~user/       --&amp;gt; ~user/
+     * &lt;/pre&gt;
+     * &lt;p&gt;
+     * The output will be the same irrespective of the machine that the code is running on.
+     *
+     * @param filename  the filename to query, null returns null
+     * @return the path of the file, an empty string if none exists, null if invalid
+     */
+    public static String getFullPath(final String filename) {
+<span class="fc" id="L886">        return doGetFullPath(filename, true);</span>
+    }
+
+    /**
+     * Gets the full path from a full filename, which is the prefix + path,
+     * and also excluding the final directory separator.
+     * &lt;p&gt;
+     * This method will handle a file in either Unix or Windows format.
+     * The method is entirely text based, and returns the text before the
+     * last forward or backslash.
+     * &lt;pre&gt;
+     * C:\a\b\c.txt --&amp;gt; C:\a\b
+     * ~/a/b/c.txt  --&amp;gt; ~/a/b
+     * a.txt        --&amp;gt; &quot;&quot;
+     * a/b/c        --&amp;gt; a/b
+     * a/b/c/       --&amp;gt; a/b/c
+     * C:           --&amp;gt; C:
+     * C:\          --&amp;gt; C:\
+     * ~            --&amp;gt; ~
+     * ~/           --&amp;gt; ~
+     * ~user        --&amp;gt; ~user
+     * ~user/       --&amp;gt; ~user
+     * &lt;/pre&gt;
+     * &lt;p&gt;
+     * The output will be the same irrespective of the machine that the code is running on.
+     *
+     * @param filename  the filename to query, null returns null
+     * @return the path of the file, an empty string if none exists, null if invalid
+     */
+    public static String getFullPathNoEndSeparator(final String filename) {
+<span class="fc" id="L916">        return doGetFullPath(filename, false);</span>
+    }
+
+    /**
+     * Does the work of getting the path.
+     *
+     * @param filename  the filename
+     * @param includeSeparator  true to include the end separator
+     * @return the path
+     */
+    private static String doGetFullPath(final String filename, final boolean includeSeparator) {
+<span class="fc bfc" id="L927" title="All 2 branches covered.">        if (filename == null) {</span>
+<span class="fc" id="L928">            return null;</span>
+        }
+<span class="fc" id="L930">        final int prefix = getPrefixLength(filename);</span>
+<span class="fc bfc" id="L931" title="All 2 branches covered.">        if (prefix &lt; 0) {</span>
+<span class="fc" id="L932">            return null;</span>
+        }
+<span class="fc bfc" id="L934" title="All 2 branches covered.">        if (prefix &gt;= filename.length()) {</span>
+<span class="fc bfc" id="L935" title="All 2 branches covered.">            if (includeSeparator) {</span>
+<span class="fc" id="L936">                return getPrefix(filename);  // add end slash if necessary</span>
+            } else {
+<span class="fc" id="L938">                return filename;</span>
+            }
+        }
+<span class="fc" id="L941">        final int index = indexOfLastSeparator(filename);</span>
+<span class="fc bfc" id="L942" title="All 2 branches covered.">        if (index &lt; 0) {</span>
+<span class="fc" id="L943">            return filename.substring(0, prefix);</span>
+        }
+<span class="fc bfc" id="L945" title="All 2 branches covered.">        int end = index + (includeSeparator ?  1 : 0);</span>
+<span class="fc bfc" id="L946" title="All 2 branches covered.">        if (end == 0) {</span>
+<span class="fc" id="L947">            end++;</span>
+        }
+<span class="fc" id="L949">        return filename.substring(0, end);</span>
+    }
+
+    /**
+     * Gets the name minus the path from a full filename.
+     * &lt;p&gt;
+     * This method will handle a file in either Unix or Windows format.
+     * The text after the last forward or backslash is returned.
+     * &lt;pre&gt;
+     * a/b/c.txt --&amp;gt; c.txt
+     * a.txt     --&amp;gt; a.txt
+     * a/b/c     --&amp;gt; c
+     * a/b/c/    --&amp;gt; &quot;&quot;
+     * &lt;/pre&gt;
+     * &lt;p&gt;
+     * The output will be the same irrespective of the machine that the code is running on.
+     *
+     * @param filename  the filename to query, null returns null
+     * @return the name of the file without the path, or an empty string if none exists.
+     * Null bytes inside string will be removed
+     */
+    public static String getName(final String filename) {
+<span class="fc bfc" id="L971" title="All 2 branches covered.">        if (filename == null) {</span>
+<span class="fc" id="L972">            return null;</span>
+        }
+<span class="fc" id="L974">        failIfNullBytePresent(filename);</span>
+<span class="fc" id="L975">        final int index = indexOfLastSeparator(filename);</span>
+<span class="fc" id="L976">        return filename.substring(index + 1);</span>
+    }
+
+    /**
+     * Check the input for null bytes, a sign of unsanitized data being passed to to file level functions.
+     *
+     * This may be used for poison byte attacks.
+     * @param path the path to check
+     */
+    private static void failIfNullBytePresent(final String path) {
+<span class="fc" id="L986">        final int len = path.length();</span>
+<span class="fc bfc" id="L987" title="All 2 branches covered.">        for (int i = 0; i &lt; len; i++) {</span>
+<span class="fc bfc" id="L988" title="All 2 branches covered.">            if (path.charAt(i) == 0) {</span>
+<span class="fc" id="L989">                throw new IllegalArgumentException(&quot;Null byte present in file/path name. There are no &quot; +</span>
+                        &quot;known legitimate use cases for such data, but several injection attacks may use it&quot;);
+            }
+        }
+<span class="fc" id="L993">    }</span>
+
+    /**
+     * Gets the base name, minus the full path and extension, from a full filename.
+     * &lt;p&gt;
+     * This method will handle a file in either Unix or Windows format.
+     * The text after the last forward or backslash and before the last dot is returned.
+     * &lt;pre&gt;
+     * a/b/c.txt --&amp;gt; c
+     * a.txt     --&amp;gt; a
+     * a/b/c     --&amp;gt; c
+     * a/b/c/    --&amp;gt; &quot;&quot;
+     * &lt;/pre&gt;
+     * &lt;p&gt;
+     * The output will be the same irrespective of the machine that the code is running on.
+     *
+     * @param filename  the filename to query, null returns null
+     * @return the name of the file without the path, or an empty string if none exists. Null bytes inside string
+     * will be removed
+     */
+    public static String getBaseName(final String filename) {
+<span class="fc" id="L1014">        return removeExtension(getName(filename));</span>
+    }
+
+    /**
+     * Gets the extension of a filename.
+     * &lt;p&gt;
+     * This method returns the textual part of the filename after the last dot.
+     * There must be no directory separator after the dot.
+     * &lt;pre&gt;
+     * foo.txt      --&amp;gt; &quot;txt&quot;
+     * a/b/c.jpg    --&amp;gt; &quot;jpg&quot;
+     * a/b.txt/c    --&amp;gt; &quot;&quot;
+     * a/b/c        --&amp;gt; &quot;&quot;
+     * &lt;/pre&gt;
+     * &lt;p&gt;
+     * The output will be the same irrespective of the machine that the code is running on.
+     *
+     * @param filename the filename to retrieve the extension of.
+     * @return the extension of the file or an empty string if none exists or {@code null}
+     * if the filename is {@code null}.
+     */
+    public static String getExtension(final String filename) {
+<span class="fc bfc" id="L1036" title="All 2 branches covered.">        if (filename == null) {</span>
+<span class="fc" id="L1037">            return null;</span>
+        }
+<span class="fc" id="L1039">        final int index = indexOfExtension(filename);</span>
+<span class="fc bfc" id="L1040" title="All 2 branches covered.">        if (index == NOT_FOUND) {</span>
+<span class="fc" id="L1041">            return &quot;&quot;;</span>
+        } else {
+<span class="fc" id="L1043">            return filename.substring(index + 1);</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Removes the extension from a filename.
+     * &lt;p&gt;
+     * This method returns the textual part of the filename before the last dot.
+     * There must be no directory separator after the dot.
+     * &lt;pre&gt;
+     * foo.txt    --&amp;gt; foo
+     * a\b\c.jpg  --&amp;gt; a\b\c
+     * a\b\c      --&amp;gt; a\b\c
+     * a.b\c      --&amp;gt; a.b\c
+     * &lt;/pre&gt;
+     * &lt;p&gt;
+     * The output will be the same irrespective of the machine that the code is running on.
+     *
+     * @param filename  the filename to query, null returns null
+     * @return the filename minus the extension
+     */
+    public static String removeExtension(final String filename) {
+<span class="fc bfc" id="L1066" title="All 2 branches covered.">        if (filename == null) {</span>
+<span class="fc" id="L1067">            return null;</span>
+        }
+<span class="fc" id="L1069">        failIfNullBytePresent(filename);</span>
+
+<span class="fc" id="L1071">        final int index = indexOfExtension(filename);</span>
+<span class="fc bfc" id="L1072" title="All 2 branches covered.">        if (index == NOT_FOUND) {</span>
+<span class="fc" id="L1073">            return filename;</span>
+        } else {
+<span class="fc" id="L1075">            return filename.substring(0, index);</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Checks whether two filenames are equal exactly.
+     * &lt;p&gt;
+     * No processing is performed on the filenames other than comparison,
+     * thus this is merely a null-safe case-sensitive equals.
+     *
+     * @param filename1  the first filename to query, may be null
+     * @param filename2  the second filename to query, may be null
+     * @return true if the filenames are equal, null equals null
+     * @see IOCase#SENSITIVE
+     */
+    public static boolean equals(final String filename1, final String filename2) {
+<span class="fc" id="L1092">        return equals(filename1, filename2, false, IOCase.SENSITIVE);</span>
+    }
+
+    /**
+     * Checks whether two filenames are equal using the case rules of the system.
+     * &lt;p&gt;
+     * No processing is performed on the filenames other than comparison.
+     * The check is case-sensitive on Unix and case-insensitive on Windows.
+     *
+     * @param filename1  the first filename to query, may be null
+     * @param filename2  the second filename to query, may be null
+     * @return true if the filenames are equal, null equals null
+     * @see IOCase#SYSTEM
+     */
+    public static boolean equalsOnSystem(final String filename1, final String filename2) {
+<span class="fc" id="L1107">        return equals(filename1, filename2, false, IOCase.SYSTEM);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Checks whether two filenames are equal after both have been normalized.
+     * &lt;p&gt;
+     * Both filenames are first passed to {@link #normalize(String)}.
+     * The check is then performed in a case-sensitive manner.
+     *
+     * @param filename1  the first filename to query, may be null
+     * @param filename2  the second filename to query, may be null
+     * @return true if the filenames are equal, null equals null
+     * @see IOCase#SENSITIVE
+     */
+    public static boolean equalsNormalized(final String filename1, final String filename2) {
+<span class="fc" id="L1123">        return equals(filename1, filename2, true, IOCase.SENSITIVE);</span>
+    }
+
+    /**
+     * Checks whether two filenames are equal after both have been normalized
+     * and using the case rules of the system.
+     * &lt;p&gt;
+     * Both filenames are first passed to {@link #normalize(String)}.
+     * The check is then performed case-sensitive on Unix and
+     * case-insensitive on Windows.
+     *
+     * @param filename1  the first filename to query, may be null
+     * @param filename2  the second filename to query, may be null
+     * @return true if the filenames are equal, null equals null
+     * @see IOCase#SYSTEM
+     */
+    public static boolean equalsNormalizedOnSystem(final String filename1, final String filename2) {
+<span class="fc" id="L1140">        return equals(filename1, filename2, true, IOCase.SYSTEM);</span>
+    }
+
+    /**
+     * Checks whether two filenames are equal, optionally normalizing and providing
+     * control over the case-sensitivity.
+     *
+     * @param filename1  the first filename to query, may be null
+     * @param filename2  the second filename to query, may be null
+     * @param normalized  whether to normalize the filenames
+     * @param caseSensitivity  what case sensitivity rule to use, null means case-sensitive
+     * @return true if the filenames are equal, null equals null
+     * @since 1.3
+     */
+    public static boolean equals(
+            String filename1, String filename2,
+            final boolean normalized, IOCase caseSensitivity) {
+
+<span class="fc bfc" id="L1158" title="All 4 branches covered.">        if (filename1 == null || filename2 == null) {</span>
+<span class="fc bfc" id="L1159" title="All 4 branches covered.">            return filename1 == null &amp;&amp; filename2 == null;</span>
+        }
+<span class="fc bfc" id="L1161" title="All 2 branches covered.">        if (normalized) {</span>
+<span class="fc" id="L1162">            filename1 = normalize(filename1);</span>
+<span class="fc" id="L1163">            filename2 = normalize(filename2);</span>
+<span class="fc bfc" id="L1164" title="All 4 branches covered.">            if (filename1 == null || filename2 == null) {</span>
+<span class="fc" id="L1165">                throw new NullPointerException(</span>
+<span class="fc" id="L1166">                    &quot;Error normalizing one or both of the file names&quot;);</span>
+            }
+        }
+<span class="fc bfc" id="L1169" title="All 2 branches covered.">        if (caseSensitivity == null) {</span>
+<span class="fc" id="L1170">            caseSensitivity = IOCase.SENSITIVE;</span>
+        }
+<span class="fc" id="L1172">        return caseSensitivity.checkEquals(filename1, filename2);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Checks whether the extension of the filename is that specified.
+     * &lt;p&gt;
+     * This method obtains the extension as the textual part of the filename
+     * after the last dot. There must be no directory separator after the dot.
+     * The extension check is case-sensitive on all platforms.
+     *
+     * @param filename  the filename to query, null returns false
+     * @param extension  the extension to check for, null or empty checks for no extension
+     * @return true if the filename has the specified extension
+     * @throws java.lang.IllegalArgumentException if the supplied filename contains null bytes
+     */
+    public static boolean isExtension(final String filename, final String extension) {
+<span class="fc bfc" id="L1189" title="All 2 branches covered.">        if (filename == null) {</span>
+<span class="fc" id="L1190">            return false;</span>
+        }
+<span class="fc" id="L1192">        failIfNullBytePresent(filename);</span>
+
+<span class="fc bfc" id="L1194" title="All 4 branches covered.">        if (extension == null || extension.isEmpty()) {</span>
+<span class="fc bfc" id="L1195" title="All 2 branches covered.">            return indexOfExtension(filename) == NOT_FOUND;</span>
+        }
+<span class="fc" id="L1197">        final String fileExt = getExtension(filename);</span>
+<span class="fc" id="L1198">        return fileExt.equals(extension);</span>
+    }
+
+    /**
+     * Checks whether the extension of the filename is one of those specified.
+     * &lt;p&gt;
+     * This method obtains the extension as the textual part of the filename
+     * after the last dot. There must be no directory separator after the dot.
+     * The extension check is case-sensitive on all platforms.
+     *
+     * @param filename  the filename to query, null returns false
+     * @param extensions  the extensions to check for, null checks for no extension
+     * @return true if the filename is one of the extensions
+     * @throws java.lang.IllegalArgumentException if the supplied filename contains null bytes
+     */
+    public static boolean isExtension(final String filename, final String[] extensions) {
+<span class="fc bfc" id="L1214" title="All 2 branches covered.">        if (filename == null) {</span>
+<span class="fc" id="L1215">            return false;</span>
+        }
+<span class="fc" id="L1217">        failIfNullBytePresent(filename);</span>
+
+<span class="fc bfc" id="L1219" title="All 4 branches covered.">        if (extensions == null || extensions.length == 0) {</span>
+<span class="fc bfc" id="L1220" title="All 2 branches covered.">            return indexOfExtension(filename) == NOT_FOUND;</span>
+        }
+<span class="fc" id="L1222">        final String fileExt = getExtension(filename);</span>
+<span class="fc bfc" id="L1223" title="All 2 branches covered.">        for (final String extension : extensions) {</span>
+<span class="fc bfc" id="L1224" title="All 2 branches covered.">            if (fileExt.equals(extension)) {</span>
+<span class="fc" id="L1225">                return true;</span>
+            }
+        }
+<span class="fc" id="L1228">        return false;</span>
+    }
+
+    /**
+     * Checks whether the extension of the filename is one of those specified.
+     * &lt;p&gt;
+     * This method obtains the extension as the textual part of the filename
+     * after the last dot. There must be no directory separator after the dot.
+     * The extension check is case-sensitive on all platforms.
+     *
+     * @param filename  the filename to query, null returns false
+     * @param extensions  the extensions to check for, null checks for no extension
+     * @return true if the filename is one of the extensions
+     * @throws java.lang.IllegalArgumentException if the supplied filename contains null bytes
+     */
+    public static boolean isExtension(final String filename, final Collection&lt;String&gt; extensions) {
+<span class="fc bfc" id="L1244" title="All 2 branches covered.">        if (filename == null) {</span>
+<span class="fc" id="L1245">            return false;</span>
+        }
+<span class="fc" id="L1247">        failIfNullBytePresent(filename);</span>
+
+<span class="fc bfc" id="L1249" title="All 4 branches covered.">        if (extensions == null || extensions.isEmpty()) {</span>
+<span class="fc bfc" id="L1250" title="All 2 branches covered.">            return indexOfExtension(filename) == NOT_FOUND;</span>
+        }
+<span class="fc" id="L1252">        final String fileExt = getExtension(filename);</span>
+<span class="fc bfc" id="L1253" title="All 2 branches covered.">        for (final String extension : extensions) {</span>
+<span class="fc bfc" id="L1254" title="All 2 branches covered.">            if (fileExt.equals(extension)) {</span>
+<span class="fc" id="L1255">                return true;</span>
+            }
+        }
+<span class="fc" id="L1258">        return false;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Checks a filename to see if it matches the specified wildcard matcher,
+     * always testing case-sensitive.
+     * &lt;p&gt;
+     * The wildcard matcher uses the characters '?' and '*' to represent a
+     * single or multiple (zero or more) wildcard characters.
+     * This is the same as often found on Dos/Unix command lines.
+     * The check is case-sensitive always.
+     * &lt;pre&gt;
+     * wildcardMatch(&quot;c.txt&quot;, &quot;*.txt&quot;)      --&amp;gt; true
+     * wildcardMatch(&quot;c.txt&quot;, &quot;*.jpg&quot;)      --&amp;gt; false
+     * wildcardMatch(&quot;a/b/c.txt&quot;, &quot;a/b/*&quot;)  --&amp;gt; true
+     * wildcardMatch(&quot;c.txt&quot;, &quot;*.???&quot;)      --&amp;gt; true
+     * wildcardMatch(&quot;c.txt&quot;, &quot;*.????&quot;)     --&amp;gt; false
+     * &lt;/pre&gt;
+     * N.B. the sequence &quot;*?&quot; does not work properly at present in match strings.
+     *
+     * @param filename  the filename to match on
+     * @param wildcardMatcher  the wildcard string to match against
+     * @return true if the filename matches the wildcard string
+     * @see IOCase#SENSITIVE
+     */
+    public static boolean wildcardMatch(final String filename, final String wildcardMatcher) {
+<span class="fc" id="L1285">        return wildcardMatch(filename, wildcardMatcher, IOCase.SENSITIVE);</span>
+    }
+
+    /**
+     * Checks a filename to see if it matches the specified wildcard matcher
+     * using the case rules of the system.
+     * &lt;p&gt;
+     * The wildcard matcher uses the characters '?' and '*' to represent a
+     * single or multiple (zero or more) wildcard characters.
+     * This is the same as often found on Dos/Unix command lines.
+     * The check is case-sensitive on Unix and case-insensitive on Windows.
+     * &lt;pre&gt;
+     * wildcardMatch(&quot;c.txt&quot;, &quot;*.txt&quot;)      --&amp;gt; true
+     * wildcardMatch(&quot;c.txt&quot;, &quot;*.jpg&quot;)      --&amp;gt; false
+     * wildcardMatch(&quot;a/b/c.txt&quot;, &quot;a/b/*&quot;)  --&amp;gt; true
+     * wildcardMatch(&quot;c.txt&quot;, &quot;*.???&quot;)      --&amp;gt; true
+     * wildcardMatch(&quot;c.txt&quot;, &quot;*.????&quot;)     --&amp;gt; false
+     * &lt;/pre&gt;
+     * N.B. the sequence &quot;*?&quot; does not work properly at present in match strings.
+     *
+     * @param filename  the filename to match on
+     * @param wildcardMatcher  the wildcard string to match against
+     * @return true if the filename matches the wildcard string
+     * @see IOCase#SYSTEM
+     */
+    public static boolean wildcardMatchOnSystem(final String filename, final String wildcardMatcher) {
+<span class="fc" id="L1311">        return wildcardMatch(filename, wildcardMatcher, IOCase.SYSTEM);</span>
+    }
+
+    /**
+     * Checks a filename to see if it matches the specified wildcard matcher
+     * allowing control over case-sensitivity.
+     * &lt;p&gt;
+     * The wildcard matcher uses the characters '?' and '*' to represent a
+     * single or multiple (zero or more) wildcard characters.
+     * N.B. the sequence &quot;*?&quot; does not work properly at present in match strings.
+     *
+     * @param filename  the filename to match on
+     * @param wildcardMatcher  the wildcard string to match against
+     * @param caseSensitivity  what case sensitivity rule to use, null means case-sensitive
+     * @return true if the filename matches the wildcard string
+     * @since 1.3
+     */
+    public static boolean wildcardMatch(final String filename, final String wildcardMatcher, IOCase caseSensitivity) {
+<span class="fc bfc" id="L1329" title="All 4 branches covered.">        if (filename == null &amp;&amp; wildcardMatcher == null) {</span>
+<span class="fc" id="L1330">            return true;</span>
+        }
+<span class="fc bfc" id="L1332" title="All 4 branches covered.">        if (filename == null || wildcardMatcher == null) {</span>
+<span class="fc" id="L1333">            return false;</span>
+        }
+<span class="pc bpc" id="L1335" title="1 of 2 branches missed.">        if (caseSensitivity == null) {</span>
+<span class="nc" id="L1336">            caseSensitivity = IOCase.SENSITIVE;</span>
+        }
+<span class="fc" id="L1338">        final String[] wcs = splitOnTokens(wildcardMatcher);</span>
+<span class="fc" id="L1339">        boolean anyChars = false;</span>
+<span class="fc" id="L1340">        int textIdx = 0;</span>
+<span class="fc" id="L1341">        int wcsIdx = 0;</span>
+<span class="fc" id="L1342">        final Stack&lt;int[]&gt; backtrack = new Stack&lt;&gt;();</span>
+
+        // loop around a backtrack stack, to handle complex * matching
+<span class="fc bfc" id="L1345" title="All 2 branches covered.">        do {</span>
+<span class="fc bfc" id="L1346" title="All 2 branches covered.">            if (backtrack.size() &gt; 0) {</span>
+<span class="fc" id="L1347">                final int[] array = backtrack.pop();</span>
+<span class="fc" id="L1348">                wcsIdx = array[0];</span>
+<span class="fc" id="L1349">                textIdx = array[1];</span>
+<span class="fc" id="L1350">                anyChars = true;</span>
+            }
+
+            // loop whilst tokens and text left to process
+<span class="fc bfc" id="L1354" title="All 2 branches covered.">            while (wcsIdx &lt; wcs.length) {</span>
+
+<span class="fc bfc" id="L1356" title="All 2 branches covered.">                if (wcs[wcsIdx].equals(&quot;?&quot;)) {</span>
+                    // ? so move to next text char
+<span class="fc" id="L1358">                    textIdx++;</span>
+<span class="fc bfc" id="L1359" title="All 2 branches covered.">                    if (textIdx &gt; filename.length()) {</span>
+<span class="fc" id="L1360">                        break;</span>
+                    }
+<span class="fc" id="L1362">                    anyChars = false;</span>
+
+<span class="fc bfc" id="L1364" title="All 2 branches covered.">                } else if (wcs[wcsIdx].equals(&quot;*&quot;)) {</span>
+                    // set any chars status
+<span class="fc" id="L1366">                    anyChars = true;</span>
+<span class="fc bfc" id="L1367" title="All 2 branches covered.">                    if (wcsIdx == wcs.length - 1) {</span>
+<span class="fc" id="L1368">                        textIdx = filename.length();</span>
+                    }
+
+<span class="fc" id="L1371">                } else {</span>
+                    // matching text token
+<span class="fc bfc" id="L1373" title="All 2 branches covered.">                    if (anyChars) {</span>
+                        // any chars then try to locate text token
+<span class="fc" id="L1375">                        textIdx = caseSensitivity.checkIndexOf(filename, textIdx, wcs[wcsIdx]);</span>
+<span class="fc bfc" id="L1376" title="All 2 branches covered.">                        if (textIdx == NOT_FOUND) {</span>
+                            // token not found
+<span class="fc" id="L1378">                            break;</span>
+                        }
+<span class="fc" id="L1380">                        final int repeat = caseSensitivity.checkIndexOf(filename, textIdx + 1, wcs[wcsIdx]);</span>
+<span class="fc bfc" id="L1381" title="All 2 branches covered.">                        if (repeat &gt;= 0) {</span>
+<span class="fc" id="L1382">                            backtrack.push(new int[] {wcsIdx, repeat});</span>
+                        }
+<span class="fc" id="L1384">                    } else {</span>
+                        // matching from current position
+<span class="fc bfc" id="L1386" title="All 2 branches covered.">                        if (!caseSensitivity.checkRegionMatches(filename, textIdx, wcs[wcsIdx])) {</span>
+                            // couldnt match token
+<span class="fc" id="L1388">                            break;</span>
+                        }
+                    }
+
+                    // matched text token, move text index to end of matched token
+<span class="fc" id="L1393">                    textIdx += wcs[wcsIdx].length();</span>
+<span class="fc" id="L1394">                    anyChars = false;</span>
+                }
+
+<span class="fc" id="L1397">                wcsIdx++;</span>
+            }
+
+            // full match
+<span class="fc bfc" id="L1401" title="All 4 branches covered.">            if (wcsIdx == wcs.length &amp;&amp; textIdx == filename.length()) {</span>
+<span class="fc" id="L1402">                return true;</span>
+            }
+
+<span class="fc" id="L1405">        } while (backtrack.size() &gt; 0);</span>
+
+<span class="fc" id="L1407">        return false;</span>
+    }
+
+    /**
+     * Splits a string into a number of tokens.
+     * The text is split by '?' and '*'.
+     * Where multiple '*' occur consecutively they are collapsed into a single '*'.
+     *
+     * @param text  the text to split
+     * @return the array of tokens, never null
+     */
+    static String[] splitOnTokens(final String text) {
+        // used by wildcardMatch
+        // package level so a unit test may run on this
+
+<span class="fc bfc" id="L1422" title="All 4 branches covered.">        if (text.indexOf('?') == NOT_FOUND &amp;&amp; text.indexOf('*') == NOT_FOUND) {</span>
+<span class="fc" id="L1423">            return new String[] { text };</span>
+        }
+
+<span class="fc" id="L1426">        final char[] array = text.toCharArray();</span>
+<span class="fc" id="L1427">        final ArrayList&lt;String&gt; list = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L1428">        final StringBuilder buffer = new StringBuilder();</span>
+<span class="fc" id="L1429">        char prevChar = 0;</span>
+<span class="fc bfc" id="L1430" title="All 2 branches covered.">        for (final char ch : array) {</span>
+<span class="fc bfc" id="L1431" title="All 4 branches covered.">            if (ch == '?' || ch == '*') {</span>
+<span class="fc bfc" id="L1432" title="All 2 branches covered.">                if (buffer.length() != 0) {</span>
+<span class="fc" id="L1433">                    list.add(buffer.toString());</span>
+<span class="fc" id="L1434">                    buffer.setLength(0);</span>
+                }
+<span class="fc bfc" id="L1436" title="All 2 branches covered.">                if (ch == '?') {</span>
+<span class="fc" id="L1437">                    list.add(&quot;?&quot;);</span>
+<span class="fc bfc" id="L1438" title="All 2 branches covered.">                } else if (prevChar != '*') {// ch == '*' here; check if previous char was '*'</span>
+<span class="fc" id="L1439">                    list.add(&quot;*&quot;);</span>
+                }
+<span class="fc" id="L1441">            } else {</span>
+<span class="fc" id="L1442">                buffer.append(ch);</span>
+            }
+<span class="fc" id="L1444">            prevChar = ch;</span>
+        }
+<span class="fc bfc" id="L1446" title="All 2 branches covered.">        if (buffer.length() != 0) {</span>
+<span class="fc" id="L1447">            list.add(buffer.toString());</span>
+        }
+
+<span class="fc" id="L1450">        return list.toArray( new String[ list.size() ] );</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

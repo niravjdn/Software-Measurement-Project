@@ -1,0 +1,1404 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>XMLConfiguration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2</a> &gt; <span class="el_source">XMLConfiguration.java</span></div><h1>XMLConfiguration.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.commons.configuration2;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Result;
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
+import org.apache.commons.configuration2.convert.ListDelimiterHandler;
+import org.apache.commons.configuration2.ex.ConfigurationException;
+import org.apache.commons.configuration2.io.ConfigurationLogger;
+import org.apache.commons.configuration2.io.FileLocator;
+import org.apache.commons.configuration2.io.FileLocatorAware;
+import org.apache.commons.configuration2.io.InputStreamSupport;
+import org.apache.commons.configuration2.resolver.DefaultEntityResolver;
+import org.apache.commons.configuration2.tree.ImmutableNode;
+import org.apache.commons.configuration2.tree.NodeTreeWalker;
+import org.apache.commons.configuration2.tree.ReferenceNodeHandler;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.mutable.MutableObject;
+import org.w3c.dom.Attr;
+import org.w3c.dom.CDATASection;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Text;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
+import org.xml.sax.helpers.DefaultHandler;
+
+/**
+ * &lt;p&gt;
+ * A specialized hierarchical configuration class that is able to parse XML
+ * documents.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * The parsed document will be stored keeping its structure. The class also
+ * tries to preserve as much information from the loaded XML document as
+ * possible, including comments and processing instructions. These will be
+ * contained in documents created by the {@code save()} methods, too.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * Like other file based configuration classes this class maintains the name and
+ * path to the loaded configuration file. These properties can be altered using
+ * several setter methods, but they are not modified by {@code save()} and
+ * {@code load()} methods. If XML documents contain relative paths to other
+ * documents (e.g. to a DTD), these references are resolved based on the path
+ * set for this configuration.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * By inheriting from {@link AbstractConfiguration} this class provides some
+ * extended functionality, e.g. interpolation of property values. Like in
+ * {@link PropertiesConfiguration} property values can contain delimiter
+ * characters (the comma ',' per default) and are then split into multiple
+ * values. This works for XML attributes and text content of elements as well.
+ * The delimiter can be escaped by a backslash. As an example consider the
+ * following XML fragment:
+ * &lt;/p&gt;
+ *
+ * &lt;pre&gt;
+ * &amp;lt;config&amp;gt;
+ *   &amp;lt;array&amp;gt;10,20,30,40&amp;lt;/array&amp;gt;
+ *   &amp;lt;scalar&amp;gt;3\,1415&amp;lt;/scalar&amp;gt;
+ *   &amp;lt;cite text=&quot;To be or not to be\, this is the question!&quot;/&amp;gt;
+ * &amp;lt;/config&amp;gt;
+ * &lt;/pre&gt;
+ *
+ * &lt;p&gt;
+ * Here the content of the {@code array} element will be split at the commas, so
+ * the {@code array} key will be assigned 4 values. In the {@code scalar}
+ * property and the {@code text} attribute of the {@code cite} element the comma
+ * is escaped, so that no splitting is performed.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * The configuration API allows setting multiple values for a single attribute,
+ * e.g. something like the following is legal (assuming that the default
+ * expression engine is used):
+ * &lt;/p&gt;
+ *
+ * &lt;pre&gt;
+ * XMLConfiguration config = new XMLConfiguration();
+ * config.addProperty(&amp;quot;test.dir[@name]&amp;quot;, &amp;quot;C:\\Temp\\&amp;quot;);
+ * config.addProperty(&amp;quot;test.dir[@name]&amp;quot;, &amp;quot;D:\\Data\\&amp;quot;);
+ * &lt;/pre&gt;
+ *
+ * &lt;p&gt;
+ * However, in XML such a constellation is not supported; an attribute can
+ * appear only once for a single element. Therefore, an attempt to save a
+ * configuration which violates this condition will throw an exception.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * Like other {@code Configuration} implementations, {@code XMLConfiguration}
+ * uses a {@link ListDelimiterHandler} object for controlling list split
+ * operations. Per default, a list delimiter handler object is set which
+ * disables this feature. XML has a built-in support for complex structures
+ * including list properties; therefore, list splitting is not that relevant for
+ * this configuration type. Nevertheless, by setting an alternative
+ * {@code ListDelimiterHandler} implementation, this feature can be enabled. It
+ * works as for any other concrete {@code Configuration} implementation.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * Whitespace in the content of XML documents is trimmed per default. In most
+ * cases this is desired. However, sometimes whitespace is indeed important and
+ * should be treated as part of the value of a property as in the following
+ * example:
+ * &lt;/p&gt;
+ * &lt;pre&gt;
+ *   &amp;lt;indent&amp;gt;    &amp;lt;/indent&amp;gt;
+ * &lt;/pre&gt;
+ *
+ * &lt;p&gt;
+ * Per default the spaces in the {@code indent} element will be trimmed
+ * resulting in an empty element. To tell {@code XMLConfiguration} that spaces
+ * are relevant the {@code xml:space} attribute can be used, which is defined in
+ * the &lt;a href=&quot;http://www.w3.org/TR/REC-xml/#sec-white-space&quot;&gt;XML
+ * specification&lt;/a&gt;. This will look as follows:
+ * &lt;/p&gt;
+ * &lt;pre&gt;
+ *   &amp;lt;indent &lt;strong&gt;xml:space=&amp;quot;preserve&amp;quot;&lt;/strong&gt;&amp;gt;    &amp;lt;/indent&amp;gt;
+ * &lt;/pre&gt;
+ *
+ * &lt;p&gt;
+ * The value of the {@code indent} property will now contain the spaces.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * {@code XMLConfiguration} implements the {@link FileBasedConfiguration}
+ * interface and thus can be used together with a file-based builder to load XML
+ * configuration files from various sources like files, URLs, or streams.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * Like other {@code Configuration} implementations, this class uses a
+ * {@code Synchronizer} object to control concurrent access. By choosing a
+ * suitable implementation of the {@code Synchronizer} interface, an instance
+ * can be made thread-safe or not. Note that access to most of the properties
+ * typically set through a builder is not protected by the {@code Synchronizer}.
+ * The intended usage is that these properties are set once at construction time
+ * through the builder and after that remain constant. If you wish to change
+ * such properties during life time of an instance, you have to use the
+ * {@code lock()} and {@code unlock()} methods manually to ensure that other
+ * threads see your changes.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * More information about the basic functionality supported by
+ * {@code XMLConfiguration} can be found at the user's guide at
+ * &lt;a href=&quot;http://commons.apache.org/proper/commons-configuration/userguide/howto_basicfeatures.html&quot;&gt;
+ * Basic features and AbstractConfiguration&lt;/a&gt;. There is
+ * also a separate chapter dealing with
+ * &lt;a href=&quot;commons.apache.org/proper/commons-configuration/userguide/howto_xml.html&quot;&gt;
+ * XML Configurations&lt;/a&gt; in special.
+ * &lt;/p&gt;
+ *
+ * @since commons-configuration 1.0
+ * @author J&amp;ouml;rg Schaible
+ * @version $Id$
+ */
+public class XMLConfiguration extends BaseHierarchicalConfiguration implements
+        FileBasedConfiguration, FileLocatorAware, InputStreamSupport
+{
+    /** Constant for the default root element name. */
+    private static final String DEFAULT_ROOT_NAME = &quot;configuration&quot;;
+
+    /** Constant for the name of the space attribute.*/
+    private static final String ATTR_SPACE = &quot;xml:space&quot;;
+
+    /** Constant for an internally used space attribute. */
+    private static final String ATTR_SPACE_INTERNAL = &quot;config-xml:space&quot;;
+
+    /** Constant for the xml:space value for preserving whitespace.*/
+    private static final String VALUE_PRESERVE = &quot;preserve&quot;;
+
+    /** Schema Langauge key for the parser */
+    private static final String JAXP_SCHEMA_LANGUAGE =
+        &quot;http://java.sun.com/xml/jaxp/properties/schemaLanguage&quot;;
+
+    /** Schema Language for the parser */
+    private static final String W3C_XML_SCHEMA =
+        &quot;http://www.w3.org/2001/XMLSchema&quot;;
+
+    /** Stores the name of the root element. */
+    private String rootElementName;
+
+    /** Stores the public ID from the DOCTYPE.*/
+    private String publicID;
+
+    /** Stores the system ID from the DOCTYPE.*/
+    private String systemID;
+
+    /** Stores the document builder that should be used for loading.*/
+    private DocumentBuilder documentBuilder;
+
+    /** Stores a flag whether DTD or Schema validation should be performed.*/
+    private boolean validating;
+
+    /** Stores a flag whether DTD or Schema validation is used */
+    private boolean schemaValidation;
+
+    /** The EntityResolver to use */
+<span class="fc" id="L236">    private EntityResolver entityResolver = new DefaultEntityResolver();</span>
+
+    /** The current file locator. */
+    private FileLocator locator;
+
+    /**
+     * Creates a new instance of {@code XMLConfiguration}.
+     */
+    public XMLConfiguration()
+    {
+<span class="fc" id="L246">        super();</span>
+<span class="fc" id="L247">        initLogger(new ConfigurationLogger(XMLConfiguration.class));</span>
+<span class="fc" id="L248">    }</span>
+
+    /**
+     * Creates a new instance of {@code XMLConfiguration} and copies the
+     * content of the passed in configuration into this object. Note that only
+     * the data of the passed in configuration will be copied. If, for instance,
+     * the other configuration is a {@code XMLConfiguration}, too,
+     * things like comments or processing instructions will be lost.
+     *
+     * @param c the configuration to copy
+     * @since 1.4
+     */
+    public XMLConfiguration(final HierarchicalConfiguration&lt;ImmutableNode&gt; c)
+    {
+<span class="fc" id="L262">        super(c);</span>
+<span class="fc bfc" id="L263" title="All 2 branches covered.">        rootElementName =</span>
+<span class="fc" id="L264">                (c != null) ? c.getRootElementName() : null;</span>
+<span class="fc" id="L265">        initLogger(new ConfigurationLogger(XMLConfiguration.class));</span>
+<span class="fc" id="L266">    }</span>
+
+    /**
+     * Returns the name of the root element. If this configuration was loaded
+     * from a XML document, the name of this document's root element is
+     * returned. Otherwise it is possible to set a name for the root element
+     * that will be used when this configuration is stored.
+     *
+     * @return the name of the root element
+     */
+    @Override
+    protected String getRootElementNameInternal()
+    {
+<span class="fc" id="L279">        final Document doc = getDocument();</span>
+<span class="fc bfc" id="L280" title="All 2 branches covered.">        if (doc == null)</span>
+        {
+<span class="fc bfc" id="L282" title="All 2 branches covered.">            return (rootElementName == null) ? DEFAULT_ROOT_NAME : rootElementName;</span>
+        }
+<span class="fc" id="L284">        return doc.getDocumentElement().getNodeName();</span>
+    }
+
+    /**
+     * Sets the name of the root element. This name is used when this
+     * configuration object is stored in an XML file. Note that setting the name
+     * of the root element works only if this configuration has been newly
+     * created. If the configuration was loaded from an XML file, the name
+     * cannot be changed and an {@code UnsupportedOperationException}
+     * exception is thrown. Whether this configuration has been loaded from an
+     * XML document or not can be found out using the {@code getDocument()}
+     * method.
+     *
+     * @param name the name of the root element
+     */
+    public void setRootElementName(final String name)
+    {
+<span class="fc" id="L301">        beginRead(true);</span>
+        try
+        {
+<span class="fc bfc" id="L304" title="All 2 branches covered.">            if (getDocument() != null)</span>
+            {
+<span class="fc" id="L306">                throw new UnsupportedOperationException(</span>
+                        &quot;The name of the root element &quot;
+                                + &quot;cannot be changed when loaded from an XML document!&quot;);
+            }
+<span class="fc" id="L310">            rootElementName = name;</span>
+        }
+        finally
+        {
+<span class="fc" id="L314">            endRead();</span>
+<span class="fc" id="L315">        }</span>
+<span class="fc" id="L316">    }</span>
+
+    /**
+     * Returns the {@code DocumentBuilder} object that is used for
+     * loading documents. If no specific builder has been set, this method
+     * returns &lt;b&gt;null&lt;/b&gt;.
+     *
+     * @return the {@code DocumentBuilder} for loading new documents
+     * @since 1.2
+     */
+    public DocumentBuilder getDocumentBuilder()
+    {
+<span class="fc" id="L328">        return documentBuilder;</span>
+    }
+
+    /**
+     * Sets the {@code DocumentBuilder} object to be used for loading
+     * documents. This method makes it possible to specify the exact document
+     * builder. So an application can create a builder, configure it for its
+     * special needs, and then pass it to this method.
+     *
+     * @param documentBuilder the document builder to be used; if undefined, a
+     * default builder will be used
+     * @since 1.2
+     */
+    public void setDocumentBuilder(final DocumentBuilder documentBuilder)
+    {
+<span class="fc" id="L343">        this.documentBuilder = documentBuilder;</span>
+<span class="fc" id="L344">    }</span>
+
+    /**
+     * Returns the public ID of the DOCTYPE declaration from the loaded XML
+     * document. This is &lt;b&gt;null&lt;/b&gt; if no document has been loaded yet or if
+     * the document does not contain a DOCTYPE declaration with a public ID.
+     *
+     * @return the public ID
+     * @since 1.3
+     */
+    public String getPublicID()
+    {
+<span class="fc" id="L356">        beginRead(false);</span>
+        try
+        {
+<span class="fc" id="L359">            return publicID;</span>
+        }
+        finally
+        {
+<span class="pc" id="L363">            endRead();</span>
+<span class="nc" id="L364">        }</span>
+    }
+
+    /**
+     * Sets the public ID of the DOCTYPE declaration. When this configuration is
+     * saved, a DOCTYPE declaration will be constructed that contains this
+     * public ID.
+     *
+     * @param publicID the public ID
+     * @since 1.3
+     */
+    public void setPublicID(final String publicID)
+    {
+<span class="fc" id="L377">        beginWrite(false);</span>
+        try
+        {
+<span class="fc" id="L380">            this.publicID = publicID;</span>
+        }
+        finally
+        {
+<span class="pc" id="L384">            endWrite();</span>
+<span class="pc" id="L385">        }</span>
+<span class="fc" id="L386">    }</span>
+
+    /**
+     * Returns the system ID of the DOCTYPE declaration from the loaded XML
+     * document. This is &lt;b&gt;null&lt;/b&gt; if no document has been loaded yet or if
+     * the document does not contain a DOCTYPE declaration with a system ID.
+     *
+     * @return the system ID
+     * @since 1.3
+     */
+    public String getSystemID()
+    {
+<span class="fc" id="L398">        beginRead(false);</span>
+        try
+        {
+<span class="fc" id="L401">            return systemID;</span>
+        }
+        finally
+        {
+<span class="pc" id="L405">            endRead();</span>
+<span class="nc" id="L406">        }</span>
+    }
+
+    /**
+     * Sets the system ID of the DOCTYPE declaration. When this configuration is
+     * saved, a DOCTYPE declaration will be constructed that contains this
+     * system ID.
+     *
+     * @param systemID the system ID
+     * @since 1.3
+     */
+    public void setSystemID(final String systemID)
+    {
+<span class="fc" id="L419">        beginWrite(false);</span>
+        try
+        {
+<span class="fc" id="L422">            this.systemID = systemID;</span>
+        }
+        finally
+        {
+<span class="pc" id="L426">            endWrite();</span>
+<span class="pc" id="L427">        }</span>
+<span class="fc" id="L428">    }</span>
+
+    /**
+     * Returns the value of the validating flag.
+     *
+     * @return the validating flag
+     * @since 1.2
+     */
+    public boolean isValidating()
+    {
+<span class="fc" id="L438">        return validating;</span>
+    }
+
+    /**
+     * Sets the value of the validating flag. This flag determines whether
+     * DTD/Schema validation should be performed when loading XML documents. This
+     * flag is evaluated only if no custom {@code DocumentBuilder} was set.
+     *
+     * @param validating the validating flag
+     * @since 1.2
+     */
+    public void setValidating(final boolean validating)
+    {
+<span class="fc bfc" id="L451" title="All 2 branches covered.">        if (!schemaValidation)</span>
+        {
+<span class="fc" id="L453">            this.validating = validating;</span>
+        }
+<span class="fc" id="L455">    }</span>
+
+
+    /**
+     * Returns the value of the schemaValidation flag.
+     *
+     * @return the schemaValidation flag
+     * @since 1.7
+     */
+    public boolean isSchemaValidation()
+    {
+<span class="fc" id="L466">        return schemaValidation;</span>
+    }
+
+    /**
+     * Sets the value of the schemaValidation flag. This flag determines whether
+     * DTD or Schema validation should be used. This
+     * flag is evaluated only if no custom {@code DocumentBuilder} was set.
+     * If set to true the XML document must contain a schemaLocation definition
+     * that provides resolvable hints to the required schemas.
+     *
+     * @param schemaValidation the validating flag
+     * @since 1.7
+     */
+    public void setSchemaValidation(final boolean schemaValidation)
+    {
+<span class="fc" id="L481">        this.schemaValidation = schemaValidation;</span>
+<span class="fc bfc" id="L482" title="All 2 branches covered.">        if (schemaValidation)</span>
+        {
+<span class="fc" id="L484">            this.validating = true;</span>
+        }
+<span class="fc" id="L486">    }</span>
+
+    /**
+     * Sets a new EntityResolver. Setting this will cause RegisterEntityId to have no
+     * effect.
+     * @param resolver The EntityResolver to use.
+     * @since 1.7
+     */
+    public void setEntityResolver(final EntityResolver resolver)
+    {
+<span class="fc" id="L496">        this.entityResolver = resolver;</span>
+<span class="fc" id="L497">    }</span>
+
+    /**
+     * Returns the EntityResolver.
+     * @return The EntityResolver.
+     * @since 1.7
+     */
+    public EntityResolver getEntityResolver()
+    {
+<span class="fc" id="L506">        return this.entityResolver;</span>
+    }
+
+    /**
+     * Returns the XML document this configuration was loaded from. The return
+     * value is &lt;b&gt;null&lt;/b&gt; if this configuration was not loaded from a XML
+     * document.
+     *
+     * @return the XML document this configuration was loaded from
+     */
+    public Document getDocument()
+    {
+<span class="fc" id="L518">        final XMLDocumentHelper docHelper = getDocumentHelper();</span>
+<span class="fc bfc" id="L519" title="All 2 branches covered.">        return (docHelper != null) ? docHelper.getDocument() : null;</span>
+    }
+
+    /**
+     * Returns the helper object for managing the underlying document.
+     *
+     * @return the {@code XMLDocumentHelper}
+     */
+    private XMLDocumentHelper getDocumentHelper()
+    {
+<span class="fc" id="L529">        final ReferenceNodeHandler handler = getReferenceHandler();</span>
+<span class="fc" id="L530">        return (XMLDocumentHelper) handler.getReference(handler.getRootNode());</span>
+    }
+
+    /**
+     * Returns the extended node handler with support for references.
+     *
+     * @return the {@code ReferenceNodeHandler}
+     */
+    private ReferenceNodeHandler getReferenceHandler()
+    {
+<span class="fc" id="L540">        return getSubConfigurationParentModel().getReferenceNodeHandler();</span>
+    }
+
+    /**
+     * Initializes this configuration from an XML document.
+     *
+     * @param docHelper the helper object with the document to be parsed
+     * @param elemRefs a flag whether references to the XML elements should be set
+     */
+    private void initProperties(final XMLDocumentHelper docHelper, final boolean elemRefs)
+    {
+<span class="fc" id="L551">        final Document document = docHelper.getDocument();</span>
+<span class="fc" id="L552">        setPublicID(docHelper.getSourcePublicID());</span>
+<span class="fc" id="L553">        setSystemID(docHelper.getSourceSystemID());</span>
+
+<span class="fc" id="L555">        final ImmutableNode.Builder rootBuilder = new ImmutableNode.Builder();</span>
+<span class="fc" id="L556">        final MutableObject&lt;String&gt; rootValue = new MutableObject&lt;&gt;();</span>
+<span class="fc bfc" id="L557" title="All 2 branches covered.">        final Map&lt;ImmutableNode, Object&gt; elemRefMap =</span>
+                elemRefs ? new HashMap&lt;&gt;() : null;
+<span class="fc" id="L559">        final Map&lt;String, String&gt; attributes =</span>
+<span class="fc" id="L560">                constructHierarchy(rootBuilder, rootValue,</span>
+<span class="fc" id="L561">                        document.getDocumentElement(), elemRefMap, true, 0);</span>
+<span class="fc" id="L562">        attributes.remove(ATTR_SPACE_INTERNAL);</span>
+<span class="fc" id="L563">        final ImmutableNode top =</span>
+<span class="fc" id="L564">                rootBuilder.value(rootValue.getValue())</span>
+<span class="fc" id="L565">                        .addAttributes(attributes).create();</span>
+<span class="fc" id="L566">        getSubConfigurationParentModel().mergeRoot(top,</span>
+<span class="fc bfc" id="L567" title="All 2 branches covered.">                document.getDocumentElement().getTagName(), elemRefMap,</span>
+                elemRefs ? docHelper : null, this);
+<span class="fc" id="L569">    }</span>
+
+    /**
+     * Helper method for building the internal storage hierarchy. The XML
+     * elements are transformed into node objects.
+     *
+     * @param node a builder for the current node
+     * @param refValue stores the text value of the element
+     * @param element the current XML element
+     * @param elemRefs a map for assigning references objects to nodes; can be
+     *        &lt;b&gt;null&lt;/b&gt;, then reference objects are irrelevant
+     * @param trim a flag whether the text content of elements should be
+     *        trimmed; this controls the whitespace handling
+     * @param level the current level in the hierarchy
+     * @return a map with all attribute values extracted for the current node;
+     *         this map also contains the value of the trim flag for this node
+     *         under the key {@value #ATTR_SPACE}
+     */
+    private Map&lt;String, String&gt; constructHierarchy(final ImmutableNode.Builder node,
+            final MutableObject&lt;String&gt; refValue, final Element element,
+            final Map&lt;ImmutableNode, Object&gt; elemRefs, final boolean trim, final int level)
+    {
+<span class="fc" id="L591">        final boolean trimFlag = shouldTrim(element, trim);</span>
+<span class="fc" id="L592">        final Map&lt;String, String&gt; attributes = processAttributes(element);</span>
+<span class="fc" id="L593">        attributes.put(ATTR_SPACE_INTERNAL, String.valueOf(trimFlag));</span>
+<span class="fc" id="L594">        final StringBuilder buffer = new StringBuilder();</span>
+<span class="fc" id="L595">        final NodeList list = element.getChildNodes();</span>
+<span class="fc" id="L596">        boolean hasChildren = false;</span>
+
+<span class="fc bfc" id="L598" title="All 2 branches covered.">        for (int i = 0; i &lt; list.getLength(); i++)</span>
+        {
+<span class="fc" id="L600">            final org.w3c.dom.Node w3cNode = list.item(i);</span>
+<span class="fc bfc" id="L601" title="All 2 branches covered.">            if (w3cNode instanceof Element)</span>
+            {
+<span class="fc" id="L603">                final Element child = (Element) w3cNode;</span>
+<span class="fc" id="L604">                final ImmutableNode.Builder childNode = new ImmutableNode.Builder();</span>
+<span class="fc" id="L605">                childNode.name(child.getTagName());</span>
+<span class="fc" id="L606">                final MutableObject&lt;String&gt; refChildValue =</span>
+                        new MutableObject&lt;&gt;();
+<span class="fc" id="L608">                final Map&lt;String, String&gt; attrmap =</span>
+<span class="fc" id="L609">                        constructHierarchy(childNode, refChildValue, child,</span>
+                                elemRefs, trimFlag, level + 1);
+<span class="fc" id="L611">                final Boolean childTrim = Boolean.valueOf(attrmap.remove(ATTR_SPACE_INTERNAL));</span>
+<span class="fc" id="L612">                childNode.addAttributes(attrmap);</span>
+<span class="fc" id="L613">                final ImmutableNode newChild =</span>
+<span class="fc" id="L614">                        createChildNodeWithValue(node, childNode, child,</span>
+<span class="fc" id="L615">                                refChildValue.getValue(),</span>
+<span class="fc" id="L616">                                childTrim.booleanValue(), attrmap, elemRefs);</span>
+<span class="fc bfc" id="L617" title="All 4 branches covered.">                if (elemRefs != null &amp;&amp; !elemRefs.containsKey(newChild))</span>
+                {
+<span class="fc" id="L619">                    elemRefs.put(newChild, child);</span>
+                }
+<span class="fc" id="L621">                hasChildren = true;</span>
+<span class="fc" id="L622">            }</span>
+<span class="fc bfc" id="L623" title="All 2 branches covered.">            else if (w3cNode instanceof Text)</span>
+            {
+<span class="fc" id="L625">                final Text data = (Text) w3cNode;</span>
+<span class="fc" id="L626">                buffer.append(data.getData());</span>
+            }
+        }
+
+<span class="fc" id="L630">        boolean childrenFlag = false;</span>
+<span class="fc bfc" id="L631" title="All 4 branches covered.">        if (hasChildren || trimFlag)</span>
+        {
+<span class="fc bfc" id="L633" title="All 4 branches covered.">            childrenFlag = hasChildren || attributes.size() &gt; 1;</span>
+        }
+<span class="fc" id="L635">        final String text = determineValue(buffer.toString(), childrenFlag, trimFlag);</span>
+<span class="fc bfc" id="L636" title="All 6 branches covered.">        if (text.length() &gt; 0 || (!childrenFlag &amp;&amp; level != 0))</span>
+        {
+<span class="fc" id="L638">            refValue.setValue(text);</span>
+        }
+<span class="fc" id="L640">        return attributes;</span>
+    }
+
+    /**
+     * Determines the value of a configuration node. This method mainly checks
+     * whether the text value is to be trimmed or not. This is normally defined
+     * by the trim flag. However, if the node has children and its content is
+     * only whitespace, then it makes no sense to store any value; this would
+     * only scramble layout when the configuration is saved again.
+     *
+     * @param content the text content of this node
+     * @param hasChildren a flag whether the node has children
+     * @param trimFlag the trim flag
+     * @return the value to be stored for this node
+     */
+    private static String determineValue(final String content, final boolean hasChildren,
+            final boolean trimFlag)
+    {
+<span class="fc bfc" id="L658" title="All 2 branches covered.">        final boolean shouldTrim =</span>
+<span class="fc bfc" id="L659" title="All 4 branches covered.">                trimFlag || (StringUtils.isBlank(content) &amp;&amp; hasChildren);</span>
+<span class="fc bfc" id="L660" title="All 2 branches covered.">        return shouldTrim ? content.trim() : content;</span>
+    }
+
+    /**
+     * Helper method for initializing the attributes of a configuration node
+     * from the given XML element.
+     *
+     * @param element the current XML element
+     * @return a map with all attribute values extracted for the current node
+     */
+    private static Map&lt;String, String&gt; processAttributes(final Element element)
+    {
+<span class="fc" id="L672">        final NamedNodeMap attributes = element.getAttributes();</span>
+<span class="fc" id="L673">        final Map&lt;String, String&gt; attrmap = new HashMap&lt;&gt;();</span>
+
+<span class="fc bfc" id="L675" title="All 2 branches covered.">        for (int i = 0; i &lt; attributes.getLength(); ++i)</span>
+        {
+<span class="fc" id="L677">            final org.w3c.dom.Node w3cNode = attributes.item(i);</span>
+<span class="pc bpc" id="L678" title="1 of 2 branches missed.">            if (w3cNode instanceof Attr)</span>
+            {
+<span class="fc" id="L680">                final Attr attr = (Attr) w3cNode;</span>
+<span class="fc" id="L681">                attrmap.put(attr.getName(), attr.getValue());</span>
+            }
+        }
+
+<span class="fc" id="L685">        return attrmap;</span>
+    }
+
+    /**
+     * Creates a new child node, assigns its value, and adds it to its parent.
+     * This method also deals with elements whose value is a list. In this case
+     * multiple child elements must be added. The return value is the first
+     * child node which was added.
+     *
+     * @param parent the builder for the parent element
+     * @param child the builder for the child element
+     * @param elem the associated XML element
+     * @param value the value of the child element
+     * @param trim flag whether texts of elements should be trimmed
+     * @param attrmap a map with the attributes of the current node
+     * @param elemRefs a map for assigning references objects to nodes; can be
+     *        &lt;b&gt;null&lt;/b&gt;, then reference objects are irrelevant
+     * @return the first child node added to the parent
+     */
+    private ImmutableNode createChildNodeWithValue(final ImmutableNode.Builder parent,
+            final ImmutableNode.Builder child, final Element elem, final String value,
+            final boolean trim, final Map&lt;String, String&gt; attrmap,
+            final Map&lt;ImmutableNode, Object&gt; elemRefs)
+    {
+        ImmutableNode addedChildNode;
+        Collection&lt;String&gt; values;
+
+<span class="fc bfc" id="L712" title="All 2 branches covered.">        if (value != null)</span>
+        {
+<span class="fc" id="L714">            values = getListDelimiterHandler().split(value, trim);</span>
+        }
+        else
+        {
+<span class="fc" id="L718">            values = Collections.emptyList();</span>
+        }
+
+<span class="fc bfc" id="L721" title="All 2 branches covered.">        if (values.size() &gt; 1)</span>
+        {
+<span class="fc bfc" id="L723" title="All 2 branches covered.">            final Map&lt;ImmutableNode, Object&gt; refs = isSingleElementList(elem) ? elemRefs : null;</span>
+<span class="fc" id="L724">            final Iterator&lt;String&gt; it = values.iterator();</span>
+            // Create new node for the original child's first value
+<span class="fc" id="L726">            child.value(it.next());</span>
+<span class="fc" id="L727">            addedChildNode = child.create();</span>
+<span class="fc" id="L728">            parent.addChild(addedChildNode);</span>
+<span class="fc" id="L729">            XMLListReference.assignListReference(refs, addedChildNode, elem);</span>
+
+            // add multiple new children
+<span class="fc bfc" id="L732" title="All 2 branches covered.">            while (it.hasNext())</span>
+            {
+<span class="fc" id="L734">                final ImmutableNode.Builder c = new ImmutableNode.Builder();</span>
+<span class="fc" id="L735">                c.name(addedChildNode.getNodeName());</span>
+<span class="fc" id="L736">                c.value(it.next());</span>
+<span class="fc" id="L737">                c.addAttributes(attrmap);</span>
+<span class="fc" id="L738">                final ImmutableNode newChild = c.create();</span>
+<span class="fc" id="L739">                parent.addChild(newChild);</span>
+<span class="fc" id="L740">                XMLListReference.assignListReference(refs, newChild, null);</span>
+<span class="fc" id="L741">            }</span>
+<span class="fc" id="L742">        }</span>
+<span class="fc bfc" id="L743" title="All 2 branches covered.">        else if (values.size() == 1)</span>
+        {
+            // we will have to replace the value because it might
+            // contain escaped delimiters
+<span class="fc" id="L747">            child.value(values.iterator().next());</span>
+<span class="fc" id="L748">            addedChildNode = child.create();</span>
+<span class="fc" id="L749">            parent.addChild(addedChildNode);</span>
+        }
+        else
+        {
+<span class="fc" id="L753">            addedChildNode = child.create();</span>
+<span class="fc" id="L754">            parent.addChild(addedChildNode);</span>
+        }
+
+<span class="fc" id="L757">        return addedChildNode;</span>
+    }
+
+    /**
+     * Checks whether an element defines a complete list. If this is the case,
+     * extended list handling can be applied.
+     *
+     * @param element the element to be checked
+     * @return a flag whether this is the only element defining the list
+     */
+    private static boolean isSingleElementList(final Element element)
+    {
+<span class="fc" id="L769">        final Node parentNode = element.getParentNode();</span>
+<span class="fc bfc" id="L770" title="All 2 branches covered.">        return countChildElements(parentNode, element.getTagName()) == 1;</span>
+    }
+
+    /**
+     * Determines the number of child elements of this given node with the
+     * specified node name.
+     *
+     * @param parent the parent node
+     * @param name the name in question
+     * @return the number of child elements with this name
+     */
+    private static int countChildElements(final Node parent, final String name)
+    {
+<span class="fc" id="L783">        final NodeList childNodes = parent.getChildNodes();</span>
+<span class="fc" id="L784">        int count = 0;</span>
+<span class="fc bfc" id="L785" title="All 2 branches covered.">        for (int i = 0; i &lt; childNodes.getLength(); i++)</span>
+        {
+<span class="fc" id="L787">            final Node item = childNodes.item(i);</span>
+<span class="fc bfc" id="L788" title="All 2 branches covered.">            if (item instanceof Element)</span>
+            {
+<span class="fc bfc" id="L790" title="All 2 branches covered.">                if (name.equals(((Element) item).getTagName()))</span>
+                {
+<span class="fc" id="L792">                    count++;</span>
+                }
+            }
+        }
+<span class="fc" id="L796">        return count;</span>
+    }
+
+    /**
+     * Checks whether the content of the current XML element should be trimmed.
+     * This method checks whether a {@code xml:space} attribute is
+     * present and evaluates its value. See &lt;a
+     * href=&quot;http://www.w3.org/TR/REC-xml/#sec-white-space&quot;&gt;
+     * http://www.w3.org/TR/REC-xml/#sec-white-space&lt;/a&gt; for more details.
+     *
+     * @param element the current XML element
+     * @param currentTrim the current trim flag
+     * @return a flag whether the content of this element should be trimmed
+     */
+    private static boolean shouldTrim(final Element element, final boolean currentTrim)
+    {
+<span class="fc" id="L812">        final Attr attr = element.getAttributeNode(ATTR_SPACE);</span>
+
+<span class="fc bfc" id="L814" title="All 2 branches covered.">        if (attr == null)</span>
+        {
+<span class="fc" id="L816">            return currentTrim;</span>
+        }
+<span class="fc bfc" id="L818" title="All 2 branches covered.">        return !VALUE_PRESERVE.equals(attr.getValue());</span>
+    }
+
+    /**
+     * Creates the {@code DocumentBuilder} to be used for loading files.
+     * This implementation checks whether a specific
+     * {@code DocumentBuilder} has been set. If this is the case, this
+     * one is used. Otherwise a default builder is created. Depending on the
+     * value of the validating flag this builder will be a validating or a non
+     * validating {@code DocumentBuilder}.
+     *
+     * @return the {@code DocumentBuilder} for loading configuration
+     * files
+     * @throws ParserConfigurationException if an error occurs
+     * @since 1.2
+     */
+    protected DocumentBuilder createDocumentBuilder()
+            throws ParserConfigurationException
+    {
+<span class="fc bfc" id="L837" title="All 2 branches covered.">        if (getDocumentBuilder() != null)</span>
+        {
+<span class="fc" id="L839">            return getDocumentBuilder();</span>
+        }
+        final DocumentBuilderFactory factory = DocumentBuilderFactory
+<span class="fc" id="L842">                .newInstance();</span>
+<span class="fc bfc" id="L843" title="All 2 branches covered.">        if (isValidating())</span>
+        {
+<span class="fc" id="L845">            factory.setValidating(true);</span>
+<span class="fc bfc" id="L846" title="All 2 branches covered.">            if (isSchemaValidation())</span>
+            {
+<span class="fc" id="L848">                factory.setNamespaceAware(true);</span>
+<span class="fc" id="L849">                factory.setAttribute(JAXP_SCHEMA_LANGUAGE, W3C_XML_SCHEMA);</span>
+            }
+        }
+
+<span class="fc" id="L853">        final DocumentBuilder result = factory.newDocumentBuilder();</span>
+<span class="fc" id="L854">        result.setEntityResolver(this.entityResolver);</span>
+
+<span class="fc bfc" id="L856" title="All 2 branches covered.">        if (isValidating())</span>
+        {
+            // register an error handler which detects validation errors
+<span class="fc" id="L859">            result.setErrorHandler(new DefaultHandler()</span>
+<span class="fc" id="L860">            {</span>
+                @Override
+                public void error(final SAXParseException ex) throws SAXException
+                {
+<span class="fc" id="L864">                    throw ex;</span>
+                }
+            });
+        }
+<span class="fc" id="L868">        return result;</span>
+    }
+
+    /**
+     * Creates and initializes the transformer used for save operations. This
+     * base implementation initializes all of the default settings like
+     * indention mode and the DOCTYPE. Derived classes may overload this method
+     * if they have specific needs.
+     *
+     * @return the transformer to use for a save operation
+     * @throws ConfigurationException if an error occurs
+     * @since 1.3
+     */
+    protected Transformer createTransformer() throws ConfigurationException
+    {
+<span class="fc" id="L883">        final Transformer transformer = XMLDocumentHelper.createTransformer();</span>
+
+<span class="fc" id="L885">        transformer.setOutputProperty(OutputKeys.INDENT, &quot;yes&quot;);</span>
+<span class="fc bfc" id="L886" title="All 2 branches covered.">        if (locator.getEncoding() != null)</span>
+        {
+<span class="fc" id="L888">            transformer.setOutputProperty(OutputKeys.ENCODING, locator.getEncoding());</span>
+        }
+<span class="fc bfc" id="L890" title="All 2 branches covered.">        if (publicID != null)</span>
+        {
+<span class="fc" id="L892">            transformer.setOutputProperty(OutputKeys.DOCTYPE_PUBLIC,</span>
+                    publicID);
+        }
+<span class="fc bfc" id="L895" title="All 2 branches covered.">        if (systemID != null)</span>
+        {
+<span class="fc" id="L897">            transformer.setOutputProperty(OutputKeys.DOCTYPE_SYSTEM,</span>
+                    systemID);
+        }
+
+<span class="fc" id="L901">        return transformer;</span>
+    }
+
+    /**
+     * Creates a DOM document from the internal tree of configuration nodes.
+     *
+     * @return the new document
+     * @throws ConfigurationException if an error occurs
+     */
+    private Document createDocument() throws ConfigurationException
+    {
+<span class="fc" id="L912">        final ReferenceNodeHandler handler = getReferenceHandler();</span>
+<span class="fc" id="L913">        final XMLDocumentHelper docHelper =</span>
+<span class="fc" id="L914">                (XMLDocumentHelper) handler.getReference(handler.getRootNode());</span>
+<span class="fc bfc" id="L915" title="All 2 branches covered.">        final XMLDocumentHelper newHelper =</span>
+                (docHelper == null) ? XMLDocumentHelper
+<span class="fc" id="L917">                        .forNewDocument(getRootElementName()) : docHelper</span>
+<span class="fc" id="L918">                        .createCopy();</span>
+
+<span class="fc" id="L920">        final XMLBuilderVisitor builder =</span>
+<span class="fc" id="L921">                new XMLBuilderVisitor(newHelper, getListDelimiterHandler());</span>
+<span class="fc" id="L922">        builder.handleRemovedNodes(handler);</span>
+<span class="fc" id="L923">        builder.processDocument(handler);</span>
+<span class="fc" id="L924">        initRootElementText(newHelper.getDocument(), getModel()</span>
+<span class="fc" id="L925">                .getNodeHandler().getRootNode().getValue());</span>
+<span class="fc" id="L926">        return newHelper.getDocument();</span>
+    }
+
+    /**
+     * Sets the text of the root element of a newly created XML Document.
+     *
+     * @param doc the document
+     * @param value the new text to be set
+     */
+    private void initRootElementText(final Document doc, final Object value)
+    {
+<span class="fc" id="L937">        final Element elem = doc.getDocumentElement();</span>
+<span class="fc" id="L938">        final NodeList children = elem.getChildNodes();</span>
+
+        // Remove all existing text nodes
+<span class="fc bfc" id="L941" title="All 2 branches covered.">        for (int i = 0; i &lt; children.getLength(); i++)</span>
+        {
+<span class="fc" id="L943">            final org.w3c.dom.Node nd = children.item(i);</span>
+<span class="fc bfc" id="L944" title="All 2 branches covered.">            if (nd.getNodeType() == org.w3c.dom.Node.TEXT_NODE)</span>
+            {
+<span class="fc" id="L946">                elem.removeChild(nd);</span>
+            }
+        }
+
+<span class="fc bfc" id="L950" title="All 2 branches covered.">        if (value != null)</span>
+        {
+            // Add a new text node
+<span class="fc" id="L953">            elem.appendChild(doc.createTextNode(String.valueOf(value)));</span>
+        }
+<span class="fc" id="L955">    }</span>
+
+    /**
+     * {@inheritDoc} Stores the passed in locator for the upcoming IO operation.
+     */
+    @Override
+    public void initFileLocator(final FileLocator loc)
+    {
+<span class="fc" id="L963">        locator = loc;</span>
+<span class="fc" id="L964">    }</span>
+
+    /**
+     * Loads the configuration from the given reader.
+     * Note that the {@code clear()} method is not called, so
+     * the properties contained in the loaded file will be added to the
+     * current set of properties.
+     *
+     * @param in the reader
+     * @throws ConfigurationException if an error occurs
+     * @throws IOException if an IO error occurs
+     */
+    @Override
+    public void read(final Reader in) throws ConfigurationException, IOException
+    {
+<span class="fc" id="L979">        load(new InputSource(in));</span>
+<span class="fc" id="L980">    }</span>
+
+    /**
+     * Loads the configuration from the given input stream. This is analogous to
+     * {@link #read(Reader)}, but data is read from a stream. Note that this
+     * method will be called most time when reading an XML configuration source.
+     * By reading XML documents directly from an input stream, the file's
+     * encoding can be correctly dealt with.
+     *
+     * @param in the input stream
+     * @throws ConfigurationException if an error occurs
+     * @throws IOException if an IO error occurs
+     */
+    @Override
+    public void read(final InputStream in) throws ConfigurationException, IOException
+    {
+<span class="fc" id="L996">        load(new InputSource(in));</span>
+<span class="fc" id="L997">    }</span>
+
+    /**
+     * Loads a configuration file from the specified input source.
+     *
+     * @param source the input source
+     * @throws ConfigurationException if an error occurs
+     */
+    private void load(final InputSource source) throws ConfigurationException
+    {
+<span class="fc bfc" id="L1007" title="All 2 branches covered.">        if (locator == null)</span>
+        {
+<span class="fc" id="L1009">            throw new ConfigurationException(&quot;Load operation not properly &quot;</span>
+                    + &quot;initialized! Do not call read(InputStream) directly,&quot;
+                    + &quot; but use a FileHandler to load a configuration.&quot;);
+        }
+
+        try
+        {
+<span class="fc" id="L1016">            final URL sourceURL = locator.getSourceURL();</span>
+<span class="fc bfc" id="L1017" title="All 2 branches covered.">            if (sourceURL != null)</span>
+            {
+<span class="fc" id="L1019">                source.setSystemId(sourceURL.toString());</span>
+            }
+
+<span class="fc" id="L1022">            final DocumentBuilder builder = createDocumentBuilder();</span>
+<span class="fc" id="L1023">            final Document newDocument = builder.parse(source);</span>
+<span class="fc" id="L1024">            final Document oldDocument = getDocument();</span>
+<span class="fc bfc" id="L1025" title="All 2 branches covered.">            initProperties(XMLDocumentHelper.forSourceDocument(newDocument),</span>
+                    oldDocument == null);
+        }
+<span class="fc" id="L1028">        catch (final SAXParseException spe)</span>
+        {
+<span class="fc" id="L1030">            throw new ConfigurationException(&quot;Error parsing &quot; + source.getSystemId(), spe);</span>
+        }
+<span class="nc" id="L1032">        catch (final Exception e)</span>
+        {
+<span class="nc" id="L1034">            this.getLogger().debug(&quot;Unable to load the configuration: &quot; + e);</span>
+<span class="nc" id="L1035">            throw new ConfigurationException(&quot;Unable to load the configuration&quot;, e);</span>
+<span class="fc" id="L1036">        }</span>
+<span class="fc" id="L1037">    }</span>
+
+    /**
+     * Saves the configuration to the specified writer.
+     *
+     * @param writer the writer used to save the configuration
+     * @throws ConfigurationException if an error occurs
+     * @throws IOException if an IO error occurs
+     */
+    @Override
+    public void write(final Writer writer) throws ConfigurationException, IOException
+    {
+<span class="fc" id="L1049">        final Transformer transformer = createTransformer();</span>
+<span class="fc" id="L1050">        final Source source = new DOMSource(createDocument());</span>
+<span class="fc" id="L1051">        final Result result = new StreamResult(writer);</span>
+<span class="fc" id="L1052">        XMLDocumentHelper.transform(transformer, source, result);</span>
+<span class="fc" id="L1053">    }</span>
+
+    /**
+     * Validate the document against the Schema.
+     * @throws ConfigurationException if the validation fails.
+     */
+    public void validate() throws ConfigurationException
+    {
+<span class="fc" id="L1061">        beginWrite(false);</span>
+        try
+        {
+<span class="fc" id="L1064">            final Transformer transformer = createTransformer();</span>
+<span class="fc" id="L1065">            final Source source = new DOMSource(createDocument());</span>
+<span class="fc" id="L1066">            final StringWriter writer = new StringWriter();</span>
+<span class="fc" id="L1067">            final Result result = new StreamResult(writer);</span>
+<span class="fc" id="L1068">            XMLDocumentHelper.transform(transformer, source, result);</span>
+<span class="fc" id="L1069">            final Reader reader = new StringReader(writer.getBuffer().toString());</span>
+<span class="fc" id="L1070">            final DocumentBuilder builder = createDocumentBuilder();</span>
+<span class="fc" id="L1071">            builder.parse(new InputSource(reader));</span>
+        }
+<span class="fc" id="L1073">        catch (final SAXException e)</span>
+        {
+<span class="fc" id="L1075">            throw new ConfigurationException(&quot;Validation failed&quot;, e);</span>
+        }
+<span class="nc" id="L1077">        catch (final IOException e)</span>
+        {
+<span class="nc" id="L1079">            throw new ConfigurationException(&quot;Validation failed&quot;, e);</span>
+        }
+<span class="nc" id="L1081">        catch (final ParserConfigurationException pce)</span>
+        {
+<span class="nc" id="L1083">            throw new ConfigurationException(&quot;Validation failed&quot;, pce);</span>
+        }
+        finally
+        {
+<span class="fc" id="L1087">            endWrite();</span>
+<span class="fc" id="L1088">        }</span>
+<span class="fc" id="L1089">    }</span>
+
+    /**
+     * A concrete {@code BuilderVisitor} that can construct XML
+     * documents.
+     */
+    static class XMLBuilderVisitor extends BuilderVisitor
+    {
+        /** Stores the document to be constructed. */
+        private final Document document;
+
+        /** The element mapping. */
+        private final Map&lt;Node, Node&gt; elementMapping;
+
+        /** A mapping for the references for new nodes. */
+        private final Map&lt;ImmutableNode, Element&gt; newElements;
+
+        /** Stores the list delimiter handler .*/
+        private final ListDelimiterHandler listDelimiterHandler;
+
+        /**
+         * Creates a new instance of {@code XMLBuilderVisitor}.
+         *
+         * @param docHelper the document helper
+         * @param handler the delimiter handler for properties with multiple
+         *        values
+         */
+        public XMLBuilderVisitor(final XMLDocumentHelper docHelper,
+                final ListDelimiterHandler handler)
+<span class="fc" id="L1118">        {</span>
+<span class="fc" id="L1119">            document = docHelper.getDocument();</span>
+<span class="fc" id="L1120">            elementMapping = docHelper.getElementMapping();</span>
+<span class="fc" id="L1121">            listDelimiterHandler = handler;</span>
+<span class="fc" id="L1122">            newElements = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L1123">        }</span>
+
+        /**
+         * Processes the specified document, updates element values, and adds
+         * new nodes to the hierarchy.
+         *
+         * @param refHandler the {@code ReferenceNodeHandler}
+         */
+        public void processDocument(final ReferenceNodeHandler refHandler)
+        {
+<span class="fc" id="L1133">            updateAttributes(refHandler.getRootNode(), document.getDocumentElement());</span>
+<span class="fc" id="L1134">            NodeTreeWalker.INSTANCE.walkDFS(refHandler.getRootNode(), this,</span>
+                    refHandler);
+<span class="fc" id="L1136">        }</span>
+
+        /**
+         * Updates the current XML document regarding removed nodes. The
+         * elements associated with removed nodes are removed from the document.
+         *
+         * @param refHandler the {@code ReferenceNodeHandler}
+         */
+        public void handleRemovedNodes(final ReferenceNodeHandler refHandler)
+        {
+<span class="fc bfc" id="L1146" title="All 2 branches covered.">            for (final Object ref : refHandler.removedReferences())</span>
+            {
+<span class="fc bfc" id="L1148" title="All 2 branches covered.">                if (ref instanceof Node)</span>
+                {
+<span class="fc" id="L1150">                    final Node removedElem = (Node) ref;</span>
+<span class="fc" id="L1151">                    removeReference((Element) elementMapping.get(removedElem));</span>
+                }
+<span class="fc" id="L1153">            }</span>
+<span class="fc" id="L1154">        }</span>
+
+        /**
+         * {@inheritDoc} This implementation ensures that the correct XML
+         * element is created and inserted between the given siblings.
+         */
+        @Override
+        protected void insert(final ImmutableNode newNode, final ImmutableNode parent,
+                final ImmutableNode sibling1, final ImmutableNode sibling2,
+                final ReferenceNodeHandler refHandler)
+        {
+<span class="fc bfc" id="L1165" title="All 2 branches covered.">            if (XMLListReference.isListNode(newNode, refHandler))</span>
+            {
+<span class="fc" id="L1167">                return;</span>
+            }
+
+<span class="fc" id="L1170">            final Element elem = document.createElement(newNode.getNodeName());</span>
+<span class="fc" id="L1171">            newElements.put(newNode, elem);</span>
+<span class="fc" id="L1172">            updateAttributes(newNode, elem);</span>
+<span class="fc bfc" id="L1173" title="All 2 branches covered.">            if (newNode.getValue() != null)</span>
+            {
+<span class="fc" id="L1175">                final String txt =</span>
+<span class="fc" id="L1176">                        String.valueOf(listDelimiterHandler.escape(</span>
+<span class="fc" id="L1177">                                newNode.getValue(),</span>
+                                ListDelimiterHandler.NOOP_TRANSFORMER));
+<span class="fc" id="L1179">                elem.appendChild(document.createTextNode(txt));</span>
+            }
+<span class="fc bfc" id="L1181" title="All 2 branches covered.">            if (sibling2 == null)</span>
+            {
+<span class="fc" id="L1183">                getElement(parent, refHandler).appendChild(elem);</span>
+            }
+<span class="pc bpc" id="L1185" title="1 of 2 branches missed.">            else if (sibling1 != null)</span>
+            {
+<span class="fc" id="L1187">                getElement(parent, refHandler).insertBefore(elem,</span>
+<span class="fc" id="L1188">                        getElement(sibling1, refHandler).getNextSibling());</span>
+            }
+            else
+            {
+<span class="nc" id="L1192">                getElement(parent, refHandler).insertBefore(elem,</span>
+<span class="nc" id="L1193">                        getElement(parent, refHandler).getFirstChild());</span>
+            }
+<span class="fc" id="L1195">        }</span>
+
+        /**
+         * {@inheritDoc} This implementation determines the XML element
+         * associated with the given node. Then this element's value and
+         * attributes are set accordingly.
+         */
+        @Override
+        protected void update(final ImmutableNode node, final Object reference,
+                final ReferenceNodeHandler refHandler)
+        {
+<span class="fc bfc" id="L1206" title="All 2 branches covered.">            if (XMLListReference.isListNode(node, refHandler))</span>
+            {
+<span class="fc bfc" id="L1208" title="All 2 branches covered.">                if (XMLListReference.isFirstListItem(node, refHandler))</span>
+                {
+<span class="fc" id="L1210">                    final String value = XMLListReference.listValue(node, refHandler, listDelimiterHandler);</span>
+<span class="fc" id="L1211">                    updateElement(node, refHandler, value);</span>
+<span class="fc" id="L1212">                }</span>
+            }
+            else
+            {
+<span class="fc" id="L1216">                final Object value = listDelimiterHandler.escape(refHandler.getValue(node),</span>
+                        ListDelimiterHandler.NOOP_TRANSFORMER);
+<span class="fc" id="L1218">                updateElement(node, refHandler, value);</span>
+            }
+<span class="fc" id="L1220">        }</span>
+
+        private void updateElement(final ImmutableNode node, final ReferenceNodeHandler refHandler,
+                                   final Object value)
+        {
+<span class="fc" id="L1225">            final Element element = getElement(node, refHandler);</span>
+<span class="fc" id="L1226">            updateElement(element, value);</span>
+<span class="fc" id="L1227">            updateAttributes(node, element);</span>
+<span class="fc" id="L1228">        }</span>
+
+        /**
+         * Updates the node's value if it represents an element node.
+         *
+         * @param element the element
+         * @param value the new value
+         */
+        private void updateElement(final Element element, final Object value)
+        {
+<span class="fc" id="L1238">            Text txtNode = findTextNodeForUpdate(element);</span>
+<span class="fc bfc" id="L1239" title="All 2 branches covered.">            if (value == null)</span>
+            {
+                // remove text
+<span class="fc bfc" id="L1242" title="All 2 branches covered.">                if (txtNode != null)</span>
+                {
+<span class="fc" id="L1244">                    element.removeChild(txtNode);</span>
+                }
+            }
+            else
+            {
+<span class="fc" id="L1249">                final String newValue = String.valueOf(value);</span>
+<span class="fc bfc" id="L1250" title="All 2 branches covered.">                if (txtNode == null)</span>
+                {
+<span class="fc" id="L1252">                    txtNode = document.createTextNode(newValue);</span>
+<span class="fc bfc" id="L1253" title="All 2 branches covered.">                    if (element.getFirstChild() != null)</span>
+                    {
+<span class="fc" id="L1255">                        element.insertBefore(txtNode, element.getFirstChild());</span>
+                    }
+                    else
+                    {
+<span class="fc" id="L1259">                        element.appendChild(txtNode);</span>
+                    }
+                }
+                else
+                {
+<span class="fc" id="L1264">                    txtNode.setNodeValue(newValue);</span>
+                }
+            }
+<span class="fc" id="L1267">        }</span>
+
+        /**
+         * Updates the associated XML elements when a node is removed.
+         * @param element the element to be removed
+         */
+        private void removeReference(final Element element)
+        {
+<span class="fc" id="L1275">            final org.w3c.dom.Node parentElem = element.getParentNode();</span>
+<span class="pc bpc" id="L1276" title="1 of 2 branches missed.">            if (parentElem != null)</span>
+            {
+<span class="fc" id="L1278">                parentElem.removeChild(element);</span>
+            }
+<span class="fc" id="L1280">        }</span>
+
+        /**
+         * Helper method for accessing the element of the specified node.
+         *
+         * @param node the node
+         * @param refHandler the {@code ReferenceNodeHandler}
+         * @return the element of this node
+         */
+        private Element getElement(final ImmutableNode node,
+                final ReferenceNodeHandler refHandler)
+        {
+<span class="fc" id="L1292">            final Element elementNew = newElements.get(node);</span>
+<span class="fc bfc" id="L1293" title="All 2 branches covered.">            if (elementNew != null)</span>
+            {
+<span class="fc" id="L1295">                return elementNew;</span>
+            }
+
+            // special treatment for root node of the hierarchy
+<span class="fc" id="L1299">            final Object reference = refHandler.getReference(node);</span>
+            Node element;
+<span class="fc bfc" id="L1301" title="All 2 branches covered.">            if (reference instanceof XMLDocumentHelper)</span>
+            {
+<span class="fc" id="L1303">                element =</span>
+<span class="fc" id="L1304">                        ((XMLDocumentHelper) reference).getDocument()</span>
+<span class="fc" id="L1305">                                .getDocumentElement();</span>
+            }
+<span class="fc bfc" id="L1307" title="All 2 branches covered.">            else if (reference instanceof XMLListReference)</span>
+            {
+<span class="fc" id="L1309">                element = ((XMLListReference) reference).getElement();</span>
+            }
+            else
+            {
+<span class="fc" id="L1313">                element = (Node) reference;</span>
+            }
+<span class="fc bfc" id="L1315" title="All 2 branches covered.">            return (element != null) ? (Element) elementMapping.get(element)</span>
+<span class="fc" id="L1316">                    : document.getDocumentElement();</span>
+        }
+
+        /**
+         * Helper method for updating the values of all attributes of the
+         * specified node.
+         *
+         * @param node the affected node
+         * @param elem the element that is associated with this node
+         */
+        private static void updateAttributes(final ImmutableNode node, final Element elem)
+        {
+<span class="pc bpc" id="L1328" title="2 of 4 branches missed.">            if (node != null &amp;&amp; elem != null)</span>
+            {
+<span class="fc" id="L1330">                clearAttributes(elem);</span>
+<span class="fc bfc" id="L1331" title="All 2 branches covered.">                for (final Map.Entry&lt;String, Object&gt; e : node.getAttributes()</span>
+<span class="fc" id="L1332">                        .entrySet())</span>
+                {
+<span class="pc bpc" id="L1334" title="1 of 2 branches missed.">                    if (e.getValue() != null)</span>
+                    {
+<span class="fc" id="L1336">                        elem.setAttribute(e.getKey(), e.getValue().toString());</span>
+                    }
+<span class="fc" id="L1338">                }</span>
+            }
+<span class="fc" id="L1340">        }</span>
+
+        /**
+         * Removes all attributes of the given element.
+         *
+         * @param elem the element
+         */
+        private static void clearAttributes(final Element elem)
+        {
+<span class="fc" id="L1349">            final NamedNodeMap attributes = elem.getAttributes();</span>
+<span class="fc bfc" id="L1350" title="All 2 branches covered.">            for (int i = 0; i &lt; attributes.getLength(); i++)</span>
+            {
+<span class="fc" id="L1352">                elem.removeAttribute(attributes.item(i).getNodeName());</span>
+            }
+<span class="fc" id="L1354">        }</span>
+
+        /**
+         * Returns the only text node of an element for update. This method is
+         * called when the element's text changes. Then all text nodes except
+         * for the first are removed. A reference to the first is returned or
+         * &lt;b&gt;null&lt;/b&gt; if there is no text node at all.
+         *
+         * @param elem the element
+         * @return the first and only text node
+         */
+        private static Text findTextNodeForUpdate(final Element elem)
+        {
+<span class="fc" id="L1367">            Text result = null;</span>
+            // Find all Text nodes
+<span class="fc" id="L1369">            final NodeList children = elem.getChildNodes();</span>
+<span class="fc" id="L1370">            final Collection&lt;org.w3c.dom.Node&gt; textNodes =</span>
+                    new ArrayList&lt;&gt;();
+<span class="fc bfc" id="L1372" title="All 2 branches covered.">            for (int i = 0; i &lt; children.getLength(); i++)</span>
+            {
+<span class="fc" id="L1374">                final org.w3c.dom.Node nd = children.item(i);</span>
+<span class="fc bfc" id="L1375" title="All 2 branches covered.">                if (nd instanceof Text)</span>
+                {
+<span class="fc bfc" id="L1377" title="All 2 branches covered.">                    if (result == null)</span>
+                    {
+<span class="fc" id="L1379">                        result = (Text) nd;</span>
+                    }
+                    else
+                    {
+<span class="fc" id="L1383">                        textNodes.add(nd);</span>
+                    }
+                }
+            }
+
+            // We don't want CDATAs
+<span class="pc bpc" id="L1389" title="1 of 2 branches missed.">            if (result instanceof CDATASection)</span>
+            {
+<span class="nc" id="L1391">                textNodes.add(result);</span>
+<span class="nc" id="L1392">                result = null;</span>
+            }
+
+            // Remove all but the first Text node
+<span class="fc bfc" id="L1396" title="All 2 branches covered.">            for (final org.w3c.dom.Node tn : textNodes)</span>
+            {
+<span class="fc" id="L1398">                elem.removeChild(tn);</span>
+<span class="fc" id="L1399">            }</span>
+<span class="fc" id="L1400">            return result;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

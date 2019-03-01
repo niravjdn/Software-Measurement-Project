@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FunctorUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.functors</a> &gt; <span class="el_source">FunctorUtils.java</span></div><h1>FunctorUtils.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.functors;
+
+import java.util.Collection;
+
+import org.apache.commons.collections4.Closure;
+import org.apache.commons.collections4.Predicate;
+import org.apache.commons.collections4.Transformer;
+
+/**
+ * Internal utilities for functors.
+ *
+ * @since 3.0
+ */
+class FunctorUtils {
+
+    /**
+     * Restricted constructor.
+     */
+    private FunctorUtils() {
+        super();
+    }
+
+    /**
+     * Clone the predicates to ensure that the internal reference can't be messed with.
+     * Due to the {@link Predicate#evaluate(T)} method, Predicate&lt;? super T&gt; is
+     * able to be coerced to Predicate&lt;T&gt; without casting issues.
+     *
+     * @param predicates  the predicates to copy
+     * @return the cloned predicates
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    static &lt;T&gt; Predicate&lt;T&gt;[] copy(final Predicate&lt;? super T&gt;... predicates) {
+<span class="pc bpc" id="L49" title="1 of 2 branches missed.">        if (predicates == null) {</span>
+<span class="nc" id="L50">            return null;</span>
+        }
+<span class="fc" id="L52">        return (Predicate&lt;T&gt;[]) predicates.clone();</span>
+    }
+
+    /**
+     * A very simple method that coerces Predicate&lt;? super T&gt; to Predicate&lt;T&gt;.
+     * Due to the {@link Predicate#evaluate(T)} method, Predicate&lt;? super T&gt; is
+     * able to be coerced to Predicate&lt;T&gt; without casting issues.
+     * &lt;p&gt;This method exists
+     * simply as centralised documentation and atomic unchecked warning
+     * suppression.
+     *
+     * @param &lt;T&gt; the type of object the returned predicate should &quot;accept&quot;
+     * @param predicate the predicate to coerce.
+     * @return the coerced predicate.
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    static &lt;T&gt; Predicate&lt;T&gt; coerce(final Predicate&lt;? super T&gt; predicate) {
+<span class="fc" id="L69">        return (Predicate&lt;T&gt;) predicate;</span>
+    }
+
+    /**
+     * Validate the predicates to ensure that all is well.
+     *
+     * @param predicates  the predicates to validate
+     */
+    static void validate(final Predicate&lt;?&gt;... predicates) {
+<span class="fc bfc" id="L78" title="All 2 branches covered.">        if (predicates == null) {</span>
+<span class="fc" id="L79">            throw new NullPointerException(&quot;The predicate array must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L81" title="All 2 branches covered.">        for (int i = 0; i &lt; predicates.length; i++) {</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">            if (predicates[i] == null) {</span>
+<span class="fc" id="L83">                throw new NullPointerException(</span>
+                        &quot;The predicate array must not contain a null predicate, index &quot; + i + &quot; was null&quot;);
+            }
+        }
+<span class="fc" id="L87">    }</span>
+
+    /**
+     * Validate the predicates to ensure that all is well.
+     *
+     * @param predicates  the predicates to validate
+     * @return predicate array
+     */
+    static &lt;T&gt; Predicate&lt;? super T&gt;[] validate(final Collection&lt;? extends Predicate&lt;? super T&gt;&gt; predicates) {
+<span class="fc bfc" id="L96" title="All 2 branches covered.">        if (predicates == null) {</span>
+<span class="fc" id="L97">            throw new NullPointerException(&quot;The predicate collection must not be null&quot;);</span>
+        }
+        // convert to array like this to guarantee iterator() ordering
+        @SuppressWarnings(&quot;unchecked&quot;) // OK
+<span class="fc" id="L101">        final Predicate&lt;? super T&gt;[] preds = new Predicate[predicates.size()];</span>
+<span class="fc" id="L102">        int i = 0;</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">        for (final Predicate&lt;? super T&gt; predicate : predicates) {</span>
+<span class="fc" id="L104">            preds[i] = predicate;</span>
+<span class="fc bfc" id="L105" title="All 2 branches covered.">            if (preds[i] == null) {</span>
+<span class="fc" id="L106">                throw new NullPointerException(</span>
+                        &quot;The predicate collection must not contain a null predicate, index &quot; + i + &quot; was null&quot;);
+            }
+<span class="fc" id="L109">            i++;</span>
+<span class="fc" id="L110">        }</span>
+<span class="fc" id="L111">        return preds;</span>
+    }
+
+    /**
+     * Clone the closures to ensure that the internal reference can't be messed with.
+     *
+     * @param closures  the closures to copy
+     * @return the cloned closures
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    static &lt;E&gt; Closure&lt;E&gt;[] copy(final Closure&lt;? super E&gt;... closures) {
+<span class="pc bpc" id="L122" title="1 of 2 branches missed.">        if (closures == null) {</span>
+<span class="nc" id="L123">            return null;</span>
+        }
+<span class="fc" id="L125">        return (Closure&lt;E&gt;[]) closures.clone();</span>
+    }
+
+    /**
+     * Validate the closures to ensure that all is well.
+     *
+     * @param closures  the closures to validate
+     */
+    static void validate(final Closure&lt;?&gt;... closures) {
+<span class="fc bfc" id="L134" title="All 2 branches covered.">        if (closures == null) {</span>
+<span class="fc" id="L135">            throw new NullPointerException(&quot;The closure array must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L137" title="All 2 branches covered.">        for (int i = 0; i &lt; closures.length; i++) {</span>
+<span class="fc bfc" id="L138" title="All 2 branches covered.">            if (closures[i] == null) {</span>
+<span class="fc" id="L139">                throw new NullPointerException(</span>
+                        &quot;The closure array must not contain a null closure, index &quot; + i + &quot; was null&quot;);
+            }
+        }
+<span class="fc" id="L143">    }</span>
+
+    /**
+     * A very simple method that coerces Closure&lt;? super T&gt; to Closure&lt;T&gt;.
+     * &lt;p&gt;This method exists
+     * simply as centralised documentation and atomic unchecked warning
+     * suppression.
+     *
+     * @param &lt;T&gt; the type of object the returned closure should &quot;accept&quot;
+     * @param closure the closure to coerce.
+     * @return the coerced closure.
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    static &lt;T&gt; Closure&lt;T&gt; coerce(final Closure&lt;? super T&gt; closure) {
+<span class="nc" id="L157">        return (Closure&lt;T&gt;) closure;</span>
+    }
+
+    /**
+     * Copy method
+     *
+     * @param transformers  the transformers to copy
+     * @return a clone of the transformers
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    static &lt;I, O&gt; Transformer&lt;I, O&gt;[] copy(final Transformer&lt;? super I, ? extends O&gt;... transformers) {
+<span class="pc bpc" id="L168" title="1 of 2 branches missed.">        if (transformers == null) {</span>
+<span class="nc" id="L169">            return null;</span>
+        }
+<span class="fc" id="L171">        return (Transformer&lt;I, O&gt;[]) transformers.clone();</span>
+    }
+
+    /**
+     * Validate method
+     *
+     * @param transformers  the transformers to validate
+     */
+    static void validate(final Transformer&lt;?, ?&gt;... transformers) {
+<span class="fc bfc" id="L180" title="All 2 branches covered.">        if (transformers == null) {</span>
+<span class="fc" id="L181">            throw new NullPointerException(&quot;The transformer array must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L183" title="All 2 branches covered.">        for (int i = 0; i &lt; transformers.length; i++) {</span>
+<span class="fc bfc" id="L184" title="All 2 branches covered.">            if (transformers[i] == null) {</span>
+<span class="fc" id="L185">                throw new NullPointerException(</span>
+                    &quot;The transformer array must not contain a null transformer, index &quot; + i + &quot; was null&quot;);
+            }
+        }
+<span class="fc" id="L189">    }</span>
+
+    /**
+     * A very simple method that coerces Transformer&lt;? super I, ? extends O&gt; to Transformer&lt;I, O&gt;.
+     * &lt;p&gt;This method exists
+     * simply as centralised documentation and atomic unchecked warning
+     * suppression.
+     *
+     * @param &lt;I&gt; the type of object the returned transformer should &quot;accept&quot;
+     * @param &lt;O&gt; the type of object the returned transformer should &quot;produce&quot;
+     * @param transformer the transformer to coerce.
+     * @return the coerced transformer.
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    static &lt;I, O&gt; Transformer&lt;I, O&gt; coerce(final Transformer&lt;? super I, ? extends O&gt; transformer) {
+<span class="nc" id="L204">        return (Transformer&lt;I, O&gt;) transformer;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

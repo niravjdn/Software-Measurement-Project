@@ -1,0 +1,491 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JNDIConfiguration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2</a> &gt; <span class="el_source">JNDIConfiguration.java</span></div><h1>JNDIConfiguration.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.commons.configuration2;
+
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NameClassPair;
+import javax.naming.NameNotFoundException;
+import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
+import javax.naming.NotContextException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+
+import org.apache.commons.configuration2.event.ConfigurationErrorEvent;
+import org.apache.commons.configuration2.io.ConfigurationLogger;
+import org.apache.commons.lang3.StringUtils;
+
+/**
+ * This Configuration class allows you to interface with a JNDI datasource.
+ * A JNDIConfiguration is read-only, write operations will throw an
+ * UnsupportedOperationException. The clear operations are supported but the
+ * underlying JNDI data source is not changed.
+ *
+ * @author &lt;a href=&quot;mailto:epugh@upstate.com&quot;&gt;Eric Pugh&lt;/a&gt;
+ * @version $Id$
+ */
+public class JNDIConfiguration extends AbstractConfiguration
+{
+    /** The prefix of the context. */
+    private String prefix;
+
+    /** The initial JNDI context. */
+    private Context context;
+
+    /** The base JNDI context. */
+    private Context baseContext;
+
+    /** The Set of keys that have been virtually cleared. */
+<span class="fc" id="L59">    private final Set&lt;String&gt; clearedProperties = new HashSet&lt;&gt;();</span>
+
+    /**
+     * Creates a JNDIConfiguration using the default initial context as the
+     * root of the properties.
+     *
+     * @throws NamingException thrown if an error occurs when initializing the default context
+     */
+    public JNDIConfiguration() throws NamingException
+    {
+<span class="fc" id="L69">        this((String) null);</span>
+<span class="fc" id="L70">    }</span>
+
+    /**
+     * Creates a JNDIConfiguration using the default initial context, shifted
+     * with the specified prefix, as the root of the properties.
+     *
+     * @param prefix the prefix
+     *
+     * @throws NamingException thrown if an error occurs when initializing the default context
+     */
+    public JNDIConfiguration(final String prefix) throws NamingException
+    {
+<span class="fc" id="L82">        this(new InitialContext(), prefix);</span>
+<span class="fc" id="L83">    }</span>
+
+    /**
+     * Creates a JNDIConfiguration using the specified initial context as the
+     * root of the properties.
+     *
+     * @param context the initial context
+     */
+    public JNDIConfiguration(final Context context)
+    {
+<span class="fc" id="L93">        this(context, null);</span>
+<span class="fc" id="L94">    }</span>
+
+    /**
+     * Creates a JNDIConfiguration using the specified initial context shifted
+     * by the specified prefix as the root of the properties.
+     *
+     * @param context the initial context
+     * @param prefix the prefix
+     */
+    public JNDIConfiguration(final Context context, final String prefix)
+<span class="fc" id="L104">    {</span>
+<span class="fc" id="L105">        this.context = context;</span>
+<span class="fc" id="L106">        this.prefix = prefix;</span>
+<span class="fc" id="L107">        initLogger(new ConfigurationLogger(JNDIConfiguration.class));</span>
+<span class="fc" id="L108">        addErrorLogListener();</span>
+<span class="fc" id="L109">    }</span>
+
+    /**
+     * This method recursive traverse the JNDI tree, looking for Context objects.
+     * When it finds them, it traverses them as well.  Otherwise it just adds the
+     * values to the list of keys found.
+     *
+     * @param keys All the keys that have been found.
+     * @param context The parent context
+     * @param prefix What prefix we are building on.
+     * @param processedCtx a set with the so far processed objects
+     * @throws NamingException If JNDI has an issue.
+     */
+    private void recursiveGetKeys(final Set&lt;String&gt; keys, final Context context, final String prefix,
+            final Set&lt;Context&gt; processedCtx) throws NamingException
+    {
+<span class="fc" id="L125">        processedCtx.add(context);</span>
+<span class="fc" id="L126">        NamingEnumeration&lt;NameClassPair&gt; elements = null;</span>
+
+        try
+        {
+<span class="fc" id="L130">            elements = context.list(&quot;&quot;);</span>
+
+            // iterates through the context's elements
+<span class="fc bfc" id="L133" title="All 2 branches covered.">            while (elements.hasMore())</span>
+            {
+<span class="fc" id="L135">                final NameClassPair nameClassPair = elements.next();</span>
+<span class="fc" id="L136">                final String name = nameClassPair.getName();</span>
+<span class="fc" id="L137">                final Object object = context.lookup(name);</span>
+
+                // build the key
+<span class="fc" id="L140">                final StringBuilder key = new StringBuilder();</span>
+<span class="fc" id="L141">                key.append(prefix);</span>
+<span class="fc bfc" id="L142" title="All 2 branches covered.">                if (key.length() &gt; 0)</span>
+                {
+<span class="fc" id="L144">                    key.append(&quot;.&quot;);</span>
+                }
+<span class="fc" id="L146">                key.append(name);</span>
+
+<span class="fc bfc" id="L148" title="All 2 branches covered.">                if (object instanceof Context)</span>
+                {
+                    // add the keys of the sub context
+<span class="fc" id="L151">                    final Context subcontext = (Context) object;</span>
+<span class="fc bfc" id="L152" title="All 2 branches covered.">                    if (!processedCtx.contains(subcontext))</span>
+                    {
+<span class="fc" id="L154">                        recursiveGetKeys(keys, subcontext, key.toString(),</span>
+                                processedCtx);
+                    }
+<span class="fc" id="L157">                }</span>
+                else
+                {
+                    // add the key
+<span class="fc" id="L161">                    keys.add(key.toString());</span>
+                }
+<span class="fc" id="L163">            }</span>
+        }
+        finally
+        {
+            // close the enumeration
+<span class="pc bpc" id="L168" title="3 of 4 branches missed.">            if (elements != null)</span>
+            {
+<span class="pc" id="L170">                elements.close();</span>
+            }
+<span class="nc" id="L172">        }</span>
+<span class="fc" id="L173">    }</span>
+
+    /**
+     * Returns an iterator with all property keys stored in this configuration.
+     *
+     * @return an iterator with all keys
+     */
+    @Override
+    protected Iterator&lt;String&gt; getKeysInternal()
+    {
+<span class="fc" id="L183">        return getKeysInternal(&quot;&quot;);</span>
+    }
+
+    /**
+     * Returns an iterator with all property keys starting with the given
+     * prefix.
+     *
+     * @param prefix the prefix
+     * @return an iterator with the selected keys
+     */
+    @Override
+    protected Iterator&lt;String&gt; getKeysInternal(final String prefix)
+    {
+        // build the path
+<span class="fc" id="L197">        final String[] splitPath = StringUtils.split(prefix, &quot;.&quot;);</span>
+
+<span class="fc" id="L199">        final List&lt;String&gt; path = Arrays.asList(splitPath);</span>
+
+        try
+        {
+            // find the context matching the specified path
+<span class="fc" id="L204">            final Context context = getContext(path, getBaseContext());</span>
+
+            // return all the keys under the context found
+<span class="fc" id="L207">            final Set&lt;String&gt; keys = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L208" title="All 2 branches covered.">            if (context != null)</span>
+            {
+<span class="fc" id="L210">                recursiveGetKeys(keys, context, prefix, new HashSet&lt;Context&gt;());</span>
+            }
+<span class="fc bfc" id="L212" title="All 2 branches covered.">            else if (containsKey(prefix))</span>
+            {
+                // add the prefix if it matches exactly a property key
+<span class="fc" id="L215">                keys.add(prefix);</span>
+            }
+
+<span class="fc" id="L218">            return keys.iterator();</span>
+        }
+<span class="fc" id="L220">        catch (final NameNotFoundException e)</span>
+        {
+            // expected exception, no need to log it
+<span class="fc" id="L223">            return new ArrayList&lt;String&gt;().iterator();</span>
+        }
+<span class="fc" id="L225">        catch (final NamingException e)</span>
+        {
+<span class="fc" id="L227">            fireError(ConfigurationErrorEvent.READ,</span>
+                    ConfigurationErrorEvent.READ, null, null, e);
+<span class="fc" id="L229">            return new ArrayList&lt;String&gt;().iterator();</span>
+        }
+    }
+
+    /**
+     * Because JNDI is based on a tree configuration, we need to filter down the
+     * tree, till we find the Context specified by the key to start from.
+     * Otherwise return null.
+     *
+     * @param path     the path of keys to traverse in order to find the context
+     * @param context  the context to start from
+     * @return The context at that key's location in the JNDI tree, or null if not found
+     * @throws NamingException if JNDI has an issue
+     */
+    private Context getContext(final List&lt;String&gt; path, final Context context) throws NamingException
+    {
+        // return the current context if the path is empty
+<span class="pc bpc" id="L246" title="1 of 4 branches missed.">        if (path == null || path.isEmpty())</span>
+        {
+<span class="fc" id="L248">            return context;</span>
+        }
+
+<span class="fc" id="L251">        final String key = path.get(0);</span>
+
+        // search a context matching the key in the context's elements
+<span class="fc" id="L254">        NamingEnumeration&lt;NameClassPair&gt; elements = null;</span>
+
+        try
+        {
+<span class="fc" id="L258">            elements = context.list(&quot;&quot;);</span>
+<span class="fc bfc" id="L259" title="All 2 branches covered.">            while (elements.hasMore())</span>
+            {
+<span class="fc" id="L261">                final NameClassPair nameClassPair = elements.next();</span>
+<span class="fc" id="L262">                final String name = nameClassPair.getName();</span>
+<span class="fc" id="L263">                final Object object = context.lookup(name);</span>
+
+<span class="fc bfc" id="L265" title="All 4 branches covered.">                if (object instanceof Context &amp;&amp; name.equals(key))</span>
+                {
+<span class="fc" id="L267">                    final Context subcontext = (Context) object;</span>
+
+                    // recursive search in the sub context
+<span class="fc" id="L270">                    return getContext(path.subList(1, path.size()), subcontext);</span>
+                }
+<span class="fc" id="L272">            }</span>
+        }
+        finally
+        {
+<span class="pc bpc" id="L276" title="4 of 6 branches missed.">            if (elements != null)</span>
+            {
+<span class="pc" id="L278">                elements.close();</span>
+            }
+<span class="nc" id="L280">        }</span>
+
+<span class="fc" id="L282">        return null;</span>
+    }
+
+    /**
+     * Returns a flag whether this configuration is empty.
+     *
+     * @return the empty flag
+     */
+    @Override
+    protected boolean isEmptyInternal()
+    {
+        try
+        {
+<span class="fc" id="L295">            NamingEnumeration&lt;NameClassPair&gt; enumeration = null;</span>
+
+            try
+            {
+<span class="fc" id="L299">                enumeration = getBaseContext().list(&quot;&quot;);</span>
+<span class="pc bpc" id="L300" title="1 of 2 branches missed.">                return !enumeration.hasMore();</span>
+            }
+            finally
+            {
+                // close the enumeration
+<span class="pc bpc" id="L305" title="2 of 4 branches missed.">                if (enumeration != null)</span>
+                {
+<span class="pc" id="L307">                    enumeration.close();</span>
+                }
+<span class="fc" id="L309">            }</span>
+        }
+<span class="fc" id="L311">        catch (final NamingException e)</span>
+        {
+<span class="fc" id="L313">            fireError(ConfigurationErrorEvent.READ,</span>
+                    ConfigurationErrorEvent.READ, null, null, e);
+<span class="fc" id="L315">            return true;</span>
+        }
+    }
+
+    /**
+     * &lt;p&gt;&lt;strong&gt;This operation is not supported and will throw an
+     * UnsupportedOperationException.&lt;/strong&gt;&lt;/p&gt;
+     *
+     * @param key the key
+     * @param value the value
+     * @throws UnsupportedOperationException always thrown as this method is not supported
+     */
+    @Override
+    protected void setPropertyInternal(final String key, final Object value)
+    {
+<span class="nc" id="L330">        throw new UnsupportedOperationException(&quot;This operation is not supported&quot;);</span>
+    }
+
+    /**
+     * Removes the specified property.
+     *
+     * @param key the key of the property to remove
+     */
+    @Override
+    protected void clearPropertyDirect(final String key)
+    {
+<span class="fc" id="L341">        clearedProperties.add(key);</span>
+<span class="fc" id="L342">    }</span>
+
+    /**
+     * Checks whether the specified key is contained in this configuration.
+     *
+     * @param key the key to check
+     * @return a flag whether this key is stored in this configuration
+     */
+    @Override
+    protected boolean containsKeyInternal(String key)
+    {
+<span class="fc bfc" id="L353" title="All 2 branches covered.">        if (clearedProperties.contains(key))</span>
+        {
+<span class="fc" id="L355">            return false;</span>
+        }
+<span class="fc" id="L357">        key = key.replaceAll(&quot;\\.&quot;, &quot;/&quot;);</span>
+        try
+        {
+            // throws a NamingException if JNDI doesn't contain the key.
+<span class="fc" id="L361">            getBaseContext().lookup(key);</span>
+<span class="fc" id="L362">            return true;</span>
+        }
+<span class="fc" id="L364">        catch (final NameNotFoundException e)</span>
+        {
+            // expected exception, no need to log it
+<span class="fc" id="L367">            return false;</span>
+        }
+<span class="fc" id="L369">        catch (final NamingException e)</span>
+        {
+<span class="fc" id="L371">            fireError(ConfigurationErrorEvent.READ,</span>
+                    ConfigurationErrorEvent.READ, key, null, e);
+<span class="fc" id="L373">            return false;</span>
+        }
+    }
+
+    /**
+     * Returns the prefix.
+     * @return the prefix
+     */
+    public String getPrefix()
+    {
+<span class="nc" id="L383">        return prefix;</span>
+    }
+
+    /**
+     * Sets the prefix.
+     *
+     * @param prefix The prefix to set
+     */
+    public void setPrefix(final String prefix)
+    {
+<span class="fc" id="L393">        this.prefix = prefix;</span>
+
+        // clear the previous baseContext
+<span class="fc" id="L396">        baseContext = null;</span>
+<span class="fc" id="L397">    }</span>
+
+    /**
+     * Returns the value of the specified property.
+     *
+     * @param key the key of the property
+     * @return the value of this property
+     */
+    @Override
+    protected Object getPropertyInternal(String key)
+    {
+<span class="fc bfc" id="L408" title="All 2 branches covered.">        if (clearedProperties.contains(key))</span>
+        {
+<span class="fc" id="L410">            return null;</span>
+        }
+
+        try
+        {
+<span class="fc" id="L415">            key = key.replaceAll(&quot;\\.&quot;, &quot;/&quot;);</span>
+<span class="fc" id="L416">            return getBaseContext().lookup(key);</span>
+        }
+<span class="fc" id="L418">        catch (final NameNotFoundException e)</span>
+        {
+            // expected exception, no need to log it
+<span class="fc" id="L421">            return null;</span>
+        }
+<span class="nc" id="L423">        catch (final NotContextException nctxex)</span>
+        {
+            // expected exception, no need to log it
+<span class="nc" id="L426">            return null;</span>
+        }
+<span class="fc" id="L428">        catch (final NamingException e)</span>
+        {
+<span class="fc" id="L430">            fireError(ConfigurationErrorEvent.READ,</span>
+                    ConfigurationErrorEvent.READ, key, null, e);
+<span class="fc" id="L432">            return null;</span>
+        }
+    }
+
+    /**
+     * &lt;p&gt;&lt;strong&gt;This operation is not supported and will throw an
+     * UnsupportedOperationException.&lt;/strong&gt;&lt;/p&gt;
+     *
+     * @param key the key
+     * @param obj the value
+     * @throws UnsupportedOperationException always thrown as this method is not supported
+     */
+    @Override
+    protected void addPropertyDirect(final String key, final Object obj)
+    {
+<span class="nc" id="L447">        throw new UnsupportedOperationException(&quot;This operation is not supported&quot;);</span>
+    }
+
+    /**
+     * Return the base context with the prefix applied.
+     *
+     * @return the base context
+     * @throws NamingException if an error occurs
+     */
+    public Context getBaseContext() throws NamingException
+    {
+<span class="fc bfc" id="L458" title="All 2 branches covered.">        if (baseContext == null)</span>
+        {
+<span class="fc bfc" id="L460" title="All 2 branches covered.">            baseContext = (Context) getContext().lookup(prefix == null ? &quot;&quot; : prefix);</span>
+        }
+
+<span class="fc" id="L463">        return baseContext;</span>
+    }
+
+    /**
+     * Return the initial context used by this configuration. This context is
+     * independent of the prefix specified.
+     *
+     * @return the initial context
+     */
+    public Context getContext()
+    {
+<span class="fc" id="L474">        return context;</span>
+    }
+
+    /**
+     * Set the initial context of the configuration.
+     *
+     * @param context the context
+     */
+    public void setContext(final Context context)
+    {
+        // forget the removed properties
+<span class="fc" id="L485">        clearedProperties.clear();</span>
+
+        // change the context
+<span class="fc" id="L488">        this.context = context;</span>
+<span class="fc" id="L489">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SerializationUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Lang</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.lang3</a> &gt; <span class="el_source">SerializationUtils.java</span></div><h1>SerializationUtils.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.lang3;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.ObjectStreamClass;
+import java.io.OutputStream;
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * &lt;p&gt;Assists with the serialization process and performs additional functionality based
+ * on serialization.&lt;/p&gt;
+ *
+ * &lt;ul&gt;
+ * &lt;li&gt;Deep clone using serialization
+ * &lt;li&gt;Serialize managing finally and IOException
+ * &lt;li&gt;Deserialize managing finally and IOException
+ * &lt;/ul&gt;
+ *
+ * &lt;p&gt;This class throws exceptions for invalid {@code null} inputs.
+ * Each method documents its behaviour in more detail.&lt;/p&gt;
+ *
+ * &lt;p&gt;#ThreadSafe#&lt;/p&gt;
+ * @since 1.0
+ */
+public class SerializationUtils {
+
+    /**
+     * &lt;p&gt;SerializationUtils instances should NOT be constructed in standard programming.
+     * Instead, the class should be used as {@code SerializationUtils.clone(object)}.&lt;/p&gt;
+     *
+     * &lt;p&gt;This constructor is public to permit tools that require a JavaBean instance
+     * to operate.&lt;/p&gt;
+     * @since 2.0
+     */
+    public SerializationUtils() {
+<span class="fc" id="L58">        super();</span>
+<span class="fc" id="L59">    }</span>
+
+    // Clone
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Deep clone an {@code Object} using serialization.&lt;/p&gt;
+     *
+     * &lt;p&gt;This is many times slower than writing clone methods by hand
+     * on all objects in your object graph. However, for complex object
+     * graphs, or for those that don't support deep cloning this can
+     * be a simple alternative implementation. Of course all the objects
+     * must be {@code Serializable}.&lt;/p&gt;
+     *
+     * @param &lt;T&gt; the type of the object involved
+     * @param object  the {@code Serializable} object to clone
+     * @return the cloned object
+     * @throws SerializationException (runtime) if the serialization fails
+     */
+    public static &lt;T extends Serializable&gt; T clone(final T object) {
+<span class="fc bfc" id="L78" title="All 2 branches covered.">        if (object == null) {</span>
+<span class="fc" id="L79">            return null;</span>
+        }
+<span class="fc" id="L81">        final byte[] objectData = serialize(object);</span>
+<span class="fc" id="L82">        final ByteArrayInputStream bais = new ByteArrayInputStream(objectData);</span>
+
+<span class="fc" id="L84">        try (ClassLoaderAwareObjectInputStream in = new ClassLoaderAwareObjectInputStream(bais,</span>
+<span class="fc" id="L85">                object.getClass().getClassLoader())) {</span>
+            /*
+             * when we serialize and deserialize an object,
+             * it is reasonable to assume the deserialized object
+             * is of the same type as the original serialized object
+             */
+            @SuppressWarnings(&quot;unchecked&quot;) // see above
+<span class="fc" id="L92">            final T readObject = (T) in.readObject();</span>
+<span class="pc" id="L93">            return readObject;</span>
+
+<span class="pc bpc" id="L95" title="7 of 8 branches missed.">        } catch (final ClassNotFoundException ex) {</span>
+<span class="nc" id="L96">            throw new SerializationException(&quot;ClassNotFoundException while reading cloned object data&quot;, ex);</span>
+<span class="nc" id="L97">        } catch (final IOException ex) {</span>
+<span class="nc" id="L98">            throw new SerializationException(&quot;IOException while reading or closing cloned object data&quot;, ex);</span>
+        }
+    }
+
+    /**
+     * Performs a serialization roundtrip. Serializes and deserializes the given object, great for testing objects that
+     * implement {@link Serializable}.
+     *
+     * @param &lt;T&gt;
+     *           the type of the object involved
+     * @param msg
+     *            the object to roundtrip
+     * @return the serialized and deserialized object
+     * @since 3.3
+     */
+    @SuppressWarnings(&quot;unchecked&quot;) // OK, because we serialized a type `T`
+    public static &lt;T extends Serializable&gt; T roundtrip(final T msg) {
+<span class="fc" id="L115">        return (T) deserialize(serialize(msg));</span>
+    }
+
+    // Serialize
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;Serializes an {@code Object} to the specified stream.&lt;/p&gt;
+     *
+     * &lt;p&gt;The stream will be closed once the object is written.
+     * This avoids the need for a finally clause, and maybe also exception
+     * handling, in the application code.&lt;/p&gt;
+     *
+     * &lt;p&gt;The stream passed in is not buffered internally within this method.
+     * This is the responsibility of your application if desired.&lt;/p&gt;
+     *
+     * @param obj  the object to serialize to bytes, may be null
+     * @param outputStream  the stream to write to, must not be null
+     * @throws IllegalArgumentException if {@code outputStream} is {@code null}
+     * @throws SerializationException (runtime) if the serialization fails
+     */
+    public static void serialize(final Serializable obj, final OutputStream outputStream) {
+<span class="fc bfc" id="L136" title="All 2 branches covered.">        Validate.isTrue(outputStream != null, &quot;The OutputStream must not be null&quot;);</span>
+<span class="fc" id="L137">        try (ObjectOutputStream out = new ObjectOutputStream(outputStream)){</span>
+<span class="fc" id="L138">            out.writeObject(obj);</span>
+<span class="pc bpc" id="L139" title="3 of 8 branches missed.">        } catch (final IOException ex) {</span>
+<span class="fc" id="L140">            throw new SerializationException(ex);</span>
+        }
+<span class="fc" id="L142">    }</span>
+
+    /**
+     * &lt;p&gt;Serializes an {@code Object} to a byte array for
+     * storage/serialization.&lt;/p&gt;
+     *
+     * @param obj  the object to serialize to bytes
+     * @return a byte[] with the converted Serializable
+     * @throws SerializationException (runtime) if the serialization fails
+     */
+    public static byte[] serialize(final Serializable obj) {
+<span class="fc" id="L153">        final ByteArrayOutputStream baos = new ByteArrayOutputStream(512);</span>
+<span class="fc" id="L154">        serialize(obj, baos);</span>
+<span class="fc" id="L155">        return baos.toByteArray();</span>
+    }
+
+    // Deserialize
+    //-----------------------------------------------------------------------
+    /**
+     * &lt;p&gt;
+     * Deserializes an {@code Object} from the specified stream.
+     * &lt;/p&gt;
+     *
+     * &lt;p&gt;
+     * The stream will be closed once the object is written. This avoids the need for a finally clause, and maybe also
+     * exception handling, in the application code.
+     * &lt;/p&gt;
+     *
+     * &lt;p&gt;
+     * The stream passed in is not buffered internally within this method. This is the responsibility of your
+     * application if desired.
+     * &lt;/p&gt;
+     *
+     * &lt;p&gt;
+     * If the call site incorrectly types the return value, a {@link ClassCastException} is thrown from the call site.
+     * Without Generics in this declaration, the call site must type cast and can cause the same ClassCastException.
+     * Note that in both cases, the ClassCastException is in the call site, not in this method.
+     * &lt;/p&gt;
+     *
+     * @param &lt;T&gt;  the object type to be deserialized
+     * @param inputStream
+     *            the serialized object input stream, must not be null
+     * @return the deserialized object
+     * @throws IllegalArgumentException
+     *             if {@code inputStream} is {@code null}
+     * @throws SerializationException
+     *             (runtime) if the serialization fails
+     */
+    public static &lt;T&gt; T deserialize(final InputStream inputStream) {
+<span class="fc bfc" id="L191" title="All 2 branches covered.">        Validate.isTrue(inputStream != null, &quot;The InputStream must not be null&quot;);</span>
+<span class="fc" id="L192">        try (ObjectInputStream in = new ObjectInputStream(inputStream)) {</span>
+            @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L194">            final T obj = (T) in.readObject();</span>
+<span class="fc" id="L195">            return obj;</span>
+<span class="pc bpc" id="L196" title="3 of 8 branches missed.">        } catch (final ClassNotFoundException | IOException ex) {</span>
+<span class="fc" id="L197">            throw new SerializationException(ex);</span>
+        }
+    }
+
+    /**
+     * &lt;p&gt;
+     * Deserializes a single {@code Object} from an array of bytes.
+     * &lt;/p&gt;
+     *
+     * &lt;p&gt;
+     * If the call site incorrectly types the return value, a {@link ClassCastException} is thrown from the call site.
+     * Without Generics in this declaration, the call site must type cast and can cause the same ClassCastException.
+     * Note that in both cases, the ClassCastException is in the call site, not in this method.
+     * &lt;/p&gt;
+     *
+     * @param &lt;T&gt;  the object type to be deserialized
+     * @param objectData
+     *            the serialized object, must not be null
+     * @return the deserialized object
+     * @throws IllegalArgumentException
+     *             if {@code objectData} is {@code null}
+     * @throws SerializationException
+     *             (runtime) if the serialization fails
+     */
+    public static &lt;T&gt; T deserialize(final byte[] objectData) {
+<span class="fc bfc" id="L222" title="All 2 branches covered.">        Validate.isTrue(objectData != null, &quot;The byte[] must not be null&quot;);</span>
+<span class="fc" id="L223">        return deserialize(new ByteArrayInputStream(objectData));</span>
+    }
+
+    /**
+     * &lt;p&gt;Custom specialization of the standard JDK {@link java.io.ObjectInputStream}
+     * that uses a custom  &lt;code&gt;ClassLoader&lt;/code&gt; to resolve a class.
+     * If the specified &lt;code&gt;ClassLoader&lt;/code&gt; is not able to resolve the class,
+     * the context classloader of the current thread will be used.
+     * This way, the standard deserialization work also in web-application
+     * containers and application servers, no matter in which of the
+     * &lt;code&gt;ClassLoader&lt;/code&gt; the particular class that encapsulates
+     * serialization/deserialization lives. &lt;/p&gt;
+     *
+     * &lt;p&gt;For more in-depth information about the problem for which this
+     * class here is a workaround, see the JIRA issue LANG-626. &lt;/p&gt;
+     */
+     static class ClassLoaderAwareObjectInputStream extends ObjectInputStream {
+<span class="fc" id="L240">        private static final Map&lt;String, Class&lt;?&gt;&gt; primitiveTypes =</span>
+<span class="fc" id="L241">                new HashMap&lt;&gt;();</span>
+
+        static {
+<span class="fc" id="L244">            primitiveTypes.put(&quot;byte&quot;, byte.class);</span>
+<span class="fc" id="L245">            primitiveTypes.put(&quot;short&quot;, short.class);</span>
+<span class="fc" id="L246">            primitiveTypes.put(&quot;int&quot;, int.class);</span>
+<span class="fc" id="L247">            primitiveTypes.put(&quot;long&quot;, long.class);</span>
+<span class="fc" id="L248">            primitiveTypes.put(&quot;float&quot;, float.class);</span>
+<span class="fc" id="L249">            primitiveTypes.put(&quot;double&quot;, double.class);</span>
+<span class="fc" id="L250">            primitiveTypes.put(&quot;boolean&quot;, boolean.class);</span>
+<span class="fc" id="L251">            primitiveTypes.put(&quot;char&quot;, char.class);</span>
+<span class="fc" id="L252">            primitiveTypes.put(&quot;void&quot;, void.class);</span>
+<span class="fc" id="L253">        }</span>
+
+        private final ClassLoader classLoader;
+
+        /**
+         * Constructor.
+         * @param in The &lt;code&gt;InputStream&lt;/code&gt;.
+         * @param classLoader classloader to use
+         * @throws IOException if an I/O error occurs while reading stream header.
+         * @see java.io.ObjectInputStream
+         */
+        ClassLoaderAwareObjectInputStream(final InputStream in, final ClassLoader classLoader) throws IOException {
+<span class="fc" id="L265">            super(in);</span>
+<span class="fc" id="L266">            this.classLoader = classLoader;</span>
+<span class="fc" id="L267">        }</span>
+
+        /**
+         * Overridden version that uses the parameterized &lt;code&gt;ClassLoader&lt;/code&gt; or the &lt;code&gt;ClassLoader&lt;/code&gt;
+         * of the current &lt;code&gt;Thread&lt;/code&gt; to resolve the class.
+         * @param desc An instance of class &lt;code&gt;ObjectStreamClass&lt;/code&gt;.
+         * @return A &lt;code&gt;Class&lt;/code&gt; object corresponding to &lt;code&gt;desc&lt;/code&gt;.
+         * @throws IOException Any of the usual Input/Output exceptions.
+         * @throws ClassNotFoundException If class of a serialized object cannot be found.
+         */
+        @Override
+        protected Class&lt;?&gt; resolveClass(final ObjectStreamClass desc) throws IOException, ClassNotFoundException {
+<span class="fc" id="L279">            final String name = desc.getName();</span>
+            try {
+<span class="fc" id="L281">                return Class.forName(name, false, classLoader);</span>
+<span class="fc" id="L282">            } catch (final ClassNotFoundException ex) {</span>
+                try {
+<span class="nc" id="L284">                    return Class.forName(name, false, Thread.currentThread().getContextClassLoader());</span>
+<span class="fc" id="L285">                } catch (final ClassNotFoundException cnfe) {</span>
+<span class="fc" id="L286">                    final Class&lt;?&gt; cls = primitiveTypes.get(name);</span>
+<span class="pc bpc" id="L287" title="1 of 2 branches missed.">                    if (cls != null) {</span>
+<span class="fc" id="L288">                        return cls;</span>
+                    }
+<span class="nc" id="L290">                    throw cnfe;</span>
+                }
+            }
+        }
+
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

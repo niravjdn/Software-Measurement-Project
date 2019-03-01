@@ -1,0 +1,1402 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractHashedMap.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.map</a> &gt; <span class="el_source">AbstractHashedMap.java</span></div><h1>AbstractHashedMap.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.map;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.AbstractCollection;
+import java.util.AbstractMap;
+import java.util.AbstractSet;
+import java.util.Collection;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
+
+import org.apache.commons.collections4.IterableMap;
+import org.apache.commons.collections4.KeyValue;
+import org.apache.commons.collections4.MapIterator;
+import org.apache.commons.collections4.iterators.EmptyIterator;
+import org.apache.commons.collections4.iterators.EmptyMapIterator;
+
+/**
+ * An abstract implementation of a hash-based map which provides numerous points for
+ * subclasses to override.
+ * &lt;p&gt;
+ * This class implements all the features necessary for a subclass hash-based map.
+ * Key-value entries are stored in instances of the &lt;code&gt;HashEntry&lt;/code&gt; class,
+ * which can be overridden and replaced. The iterators can similarly be replaced,
+ * without the need to replace the KeySet, EntrySet and Values view classes.
+ * &lt;p&gt;
+ * Overridable methods are provided to change the default hashing behaviour, and
+ * to change how entries are added to and removed from the map. Hopefully, all you
+ * need for unusual subclasses is here.
+ * &lt;p&gt;
+ * NOTE: From Commons Collections 3.1 this class extends AbstractMap.
+ * This is to provide backwards compatibility for ReferenceMap between v3.0 and v3.1.
+ * This extends clause will be removed in v5.0.
+ *
+ * @param &lt;K&gt; the type of the keys in this map
+ * @param &lt;V&gt; the type of the values in this map
+ * @since 3.0
+ */
+public class AbstractHashedMap&lt;K, V&gt; extends AbstractMap&lt;K, V&gt; implements IterableMap&lt;K, V&gt; {
+
+    protected static final String NO_NEXT_ENTRY = &quot;No next() entry in the iteration&quot;;
+    protected static final String NO_PREVIOUS_ENTRY = &quot;No previous() entry in the iteration&quot;;
+    protected static final String REMOVE_INVALID = &quot;remove() can only be called once after next()&quot;;
+    protected static final String GETKEY_INVALID = &quot;getKey() can only be called after next() and before remove()&quot;;
+    protected static final String GETVALUE_INVALID = &quot;getValue() can only be called after next() and before remove()&quot;;
+    protected static final String SETVALUE_INVALID = &quot;setValue() can only be called after next() and before remove()&quot;;
+
+    /** The default capacity to use */
+    protected static final int DEFAULT_CAPACITY = 16;
+    /** The default threshold to use */
+    protected static final int DEFAULT_THRESHOLD = 12;
+    /** The default load factor to use */
+    protected static final float DEFAULT_LOAD_FACTOR = 0.75f;
+    /** The maximum capacity allowed */
+    protected static final int MAXIMUM_CAPACITY = 1 &lt;&lt; 30;
+    /** An object for masking null */
+<span class="fc" id="L77">    protected static final Object NULL = new Object();</span>
+
+    /** Load factor, normally 0.75 */
+    transient float loadFactor;
+    /** The size of the map */
+    transient int size;
+    /** Map entries */
+    transient HashEntry&lt;K, V&gt;[] data;
+    /** Size at which to rehash */
+    transient int threshold;
+    /** Modification count for iterators */
+    transient int modCount;
+    /** Entry set */
+    transient EntrySet&lt;K, V&gt; entrySet;
+    /** Key set */
+    transient KeySet&lt;K&gt; keySet;
+    /** Values */
+    transient Values&lt;V&gt; values;
+
+    /**
+     * Constructor only used in deserialization, do not use otherwise.
+     */
+    protected AbstractHashedMap() {
+<span class="fc" id="L100">        super();</span>
+<span class="fc" id="L101">    }</span>
+
+    /**
+     * Constructor which performs no validation on the passed in parameters.
+     *
+     * @param initialCapacity  the initial capacity, must be a power of two
+     * @param loadFactor  the load factor, must be &amp;gt; 0.0f and generally &amp;lt; 1.0f
+     * @param threshold  the threshold, must be sensible
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    protected AbstractHashedMap(final int initialCapacity, final float loadFactor, final int threshold) {
+<span class="fc" id="L112">        super();</span>
+<span class="fc" id="L113">        this.loadFactor = loadFactor;</span>
+<span class="fc" id="L114">        this.data = new HashEntry[initialCapacity];</span>
+<span class="fc" id="L115">        this.threshold = threshold;</span>
+<span class="fc" id="L116">        init();</span>
+<span class="fc" id="L117">    }</span>
+
+    /**
+     * Constructs a new, empty map with the specified initial capacity and
+     * default load factor.
+     *
+     * @param initialCapacity  the initial capacity
+     * @throws IllegalArgumentException if the initial capacity is negative
+     */
+    protected AbstractHashedMap(final int initialCapacity) {
+<span class="fc" id="L127">        this(initialCapacity, DEFAULT_LOAD_FACTOR);</span>
+<span class="fc" id="L128">    }</span>
+
+    /**
+     * Constructs a new, empty map with the specified initial capacity and
+     * load factor.
+     *
+     * @param initialCapacity  the initial capacity
+     * @param loadFactor  the load factor
+     * @throws IllegalArgumentException if the initial capacity is negative
+     * @throws IllegalArgumentException if the load factor is less than or equal to zero
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    protected AbstractHashedMap(int initialCapacity, final float loadFactor) {
+<span class="fc" id="L141">        super();</span>
+<span class="fc bfc" id="L142" title="All 2 branches covered.">        if (initialCapacity &lt; 0) {</span>
+<span class="fc" id="L143">            throw new IllegalArgumentException(&quot;Initial capacity must be a non negative number&quot;);</span>
+        }
+<span class="pc bpc" id="L145" title="2 of 4 branches missed.">        if (loadFactor &lt;= 0.0f || Float.isNaN(loadFactor)) {</span>
+<span class="nc" id="L146">            throw new IllegalArgumentException(&quot;Load factor must be greater than 0&quot;);</span>
+        }
+<span class="fc" id="L148">        this.loadFactor = loadFactor;</span>
+<span class="fc" id="L149">        initialCapacity = calculateNewCapacity(initialCapacity);</span>
+<span class="fc" id="L150">        this.threshold = calculateThreshold(initialCapacity, loadFactor);</span>
+<span class="fc" id="L151">        this.data = new HashEntry[initialCapacity];</span>
+<span class="fc" id="L152">        init();</span>
+<span class="fc" id="L153">    }</span>
+
+    /**
+     * Constructor copying elements from another map.
+     *
+     * @param map  the map to copy
+     * @throws NullPointerException if the map is null
+     */
+    protected AbstractHashedMap(final Map&lt;? extends K, ? extends V&gt; map) {
+<span class="fc" id="L162">        this(Math.max(2 * map.size(), DEFAULT_CAPACITY), DEFAULT_LOAD_FACTOR);</span>
+<span class="fc" id="L163">        _putAll(map);</span>
+<span class="fc" id="L164">    }</span>
+
+    /**
+     * Initialise subclasses during construction, cloning or deserialization.
+     */
+    protected void init() {
+<span class="fc" id="L170">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets the value mapped to the key specified.
+     *
+     * @param key  the key
+     * @return the mapped value, null if no match
+     */
+    @Override
+    public V get(Object key) {
+<span class="fc" id="L181">        key = convertKey(key);</span>
+<span class="fc" id="L182">        final int hashCode = hash(key);</span>
+<span class="fc" id="L183">        HashEntry&lt;K, V&gt; entry = data[hashIndex(hashCode, data.length)]; // no local for hash index</span>
+<span class="fc bfc" id="L184" title="All 2 branches covered.">        while (entry != null) {</span>
+<span class="fc bfc" id="L185" title="All 4 branches covered.">            if (entry.hashCode == hashCode &amp;&amp; isEqualKey(key, entry.key)) {</span>
+<span class="fc" id="L186">                return entry.getValue();</span>
+            }
+<span class="fc" id="L188">            entry = entry.next;</span>
+        }
+<span class="fc" id="L190">        return null;</span>
+    }
+
+    /**
+     * Gets the size of the map.
+     *
+     * @return the size
+     */
+    @Override
+    public int size() {
+<span class="fc" id="L200">        return size;</span>
+    }
+
+    /**
+     * Checks whether the map is currently empty.
+     *
+     * @return true if the map is currently size zero
+     */
+    @Override
+    public boolean isEmpty() {
+<span class="fc bfc" id="L210" title="All 2 branches covered.">        return size == 0;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Checks whether the map contains the specified key.
+     *
+     * @param key  the key to search for
+     * @return true if the map contains the key
+     */
+    @Override
+    public boolean containsKey(Object key) {
+<span class="fc" id="L222">        key = convertKey(key);</span>
+<span class="fc" id="L223">        final int hashCode = hash(key);</span>
+<span class="fc" id="L224">        HashEntry&lt;K, V&gt; entry = data[hashIndex(hashCode, data.length)]; // no local for hash index</span>
+<span class="fc bfc" id="L225" title="All 2 branches covered.">        while (entry != null) {</span>
+<span class="fc bfc" id="L226" title="All 4 branches covered.">            if (entry.hashCode == hashCode &amp;&amp; isEqualKey(key, entry.key)) {</span>
+<span class="fc" id="L227">                return true;</span>
+            }
+<span class="fc" id="L229">            entry = entry.next;</span>
+        }
+<span class="fc" id="L231">        return false;</span>
+    }
+
+    /**
+     * Checks whether the map contains the specified value.
+     *
+     * @param value  the value to search for
+     * @return true if the map contains the value
+     */
+    @Override
+    public boolean containsValue(final Object value) {
+<span class="fc bfc" id="L242" title="All 2 branches covered.">        if (value == null) {</span>
+<span class="fc bfc" id="L243" title="All 2 branches covered.">            for (final HashEntry&lt;K, V&gt; element : data) {</span>
+<span class="fc" id="L244">                HashEntry&lt;K, V&gt; entry = element;</span>
+<span class="fc bfc" id="L245" title="All 2 branches covered.">                while (entry != null) {</span>
+<span class="fc bfc" id="L246" title="All 2 branches covered.">                    if (entry.getValue() == null) {</span>
+<span class="fc" id="L247">                        return true;</span>
+                    }
+<span class="fc" id="L249">                    entry = entry.next;</span>
+                }
+            }
+        } else {
+<span class="fc bfc" id="L253" title="All 2 branches covered.">            for (final HashEntry&lt;K, V&gt; element : data) {</span>
+<span class="fc" id="L254">                HashEntry&lt;K, V&gt; entry = element;</span>
+<span class="fc bfc" id="L255" title="All 2 branches covered.">                while (entry != null) {</span>
+<span class="fc bfc" id="L256" title="All 2 branches covered.">                    if (isEqualValue(value, entry.getValue())) {</span>
+<span class="fc" id="L257">                        return true;</span>
+                    }
+<span class="fc" id="L259">                    entry = entry.next;</span>
+                }
+            }
+        }
+<span class="fc" id="L263">        return false;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Puts a key-value mapping into this map.
+     *
+     * @param key  the key to add
+     * @param value  the value to add
+     * @return the value previously mapped to this key, null if none
+     */
+    @Override
+    public V put(final K key, final V value) {
+<span class="fc" id="L276">        final Object convertedKey = convertKey(key);</span>
+<span class="fc" id="L277">        final int hashCode = hash(convertedKey);</span>
+<span class="fc" id="L278">        final int index = hashIndex(hashCode, data.length);</span>
+<span class="fc" id="L279">        HashEntry&lt;K, V&gt; entry = data[index];</span>
+<span class="fc bfc" id="L280" title="All 2 branches covered.">        while (entry != null) {</span>
+<span class="fc bfc" id="L281" title="All 4 branches covered.">            if (entry.hashCode == hashCode &amp;&amp; isEqualKey(convertedKey, entry.key)) {</span>
+<span class="fc" id="L282">                final V oldValue = entry.getValue();</span>
+<span class="fc" id="L283">                updateEntry(entry, value);</span>
+<span class="fc" id="L284">                return oldValue;</span>
+            }
+<span class="fc" id="L286">            entry = entry.next;</span>
+        }
+
+<span class="fc" id="L289">        addMapping(index, hashCode, key, value);</span>
+<span class="fc" id="L290">        return null;</span>
+    }
+
+    /**
+     * Puts all the values from the specified map into this map.
+     * &lt;p&gt;
+     * This implementation iterates around the specified map and
+     * uses {@link #put(Object, Object)}.
+     *
+     * @param map  the map to add
+     * @throws NullPointerException if the map is null
+     */
+    @Override
+    public void putAll(final Map&lt;? extends K, ? extends V&gt; map) {
+<span class="fc" id="L304">        _putAll(map);</span>
+<span class="fc" id="L305">    }</span>
+
+    /**
+     * Puts all the values from the specified map into this map.
+     * &lt;p&gt;
+     * This implementation iterates around the specified map and
+     * uses {@link #put(Object, Object)}.
+     * &lt;p&gt;
+     * It is private to allow the constructor to still call it
+     * even when putAll is overriden.
+     *
+     * @param map  the map to add
+     * @throws NullPointerException if the map is null
+     */
+    private void _putAll(final Map&lt;? extends K, ? extends V&gt; map) {
+<span class="fc" id="L320">        final int mapSize = map.size();</span>
+<span class="fc bfc" id="L321" title="All 2 branches covered.">        if (mapSize == 0) {</span>
+<span class="fc" id="L322">            return;</span>
+        }
+<span class="fc" id="L324">        final int newSize = (int) ((size + mapSize) / loadFactor + 1);</span>
+<span class="fc" id="L325">        ensureCapacity(calculateNewCapacity(newSize));</span>
+<span class="fc bfc" id="L326" title="All 2 branches covered.">        for (final Map.Entry&lt;? extends K, ? extends V&gt; entry: map.entrySet()) {</span>
+<span class="fc" id="L327">            put(entry.getKey(), entry.getValue());</span>
+<span class="fc" id="L328">        }</span>
+<span class="fc" id="L329">    }</span>
+
+    /**
+     * Removes the specified mapping from this map.
+     *
+     * @param key  the mapping to remove
+     * @return the value mapped to the removed key, null if key not in map
+     */
+    @Override
+    public V remove(Object key) {
+<span class="fc" id="L339">        key = convertKey(key);</span>
+<span class="fc" id="L340">        final int hashCode = hash(key);</span>
+<span class="fc" id="L341">        final int index = hashIndex(hashCode, data.length);</span>
+<span class="fc" id="L342">        HashEntry&lt;K, V&gt; entry = data[index];</span>
+<span class="fc" id="L343">        HashEntry&lt;K, V&gt; previous = null;</span>
+<span class="fc bfc" id="L344" title="All 2 branches covered.">        while (entry != null) {</span>
+<span class="fc bfc" id="L345" title="All 4 branches covered.">            if (entry.hashCode == hashCode &amp;&amp; isEqualKey(key, entry.key)) {</span>
+<span class="fc" id="L346">                final V oldValue = entry.getValue();</span>
+<span class="fc" id="L347">                removeMapping(entry, index, previous);</span>
+<span class="fc" id="L348">                return oldValue;</span>
+            }
+<span class="fc" id="L350">            previous = entry;</span>
+<span class="fc" id="L351">            entry = entry.next;</span>
+        }
+<span class="fc" id="L353">        return null;</span>
+    }
+
+    /**
+     * Clears the map, resetting the size to zero and nullifying references
+     * to avoid garbage collection issues.
+     */
+    @Override
+    public void clear() {
+<span class="fc" id="L362">        modCount++;</span>
+<span class="fc" id="L363">        final HashEntry&lt;K, V&gt;[] data = this.data;</span>
+<span class="fc bfc" id="L364" title="All 2 branches covered.">        for (int i = data.length - 1; i &gt;= 0; i--) {</span>
+<span class="fc" id="L365">            data[i] = null;</span>
+        }
+<span class="fc" id="L367">        size = 0;</span>
+<span class="fc" id="L368">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Converts input keys to another object for storage in the map.
+     * This implementation masks nulls.
+     * Subclasses can override this to perform alternate key conversions.
+     * &lt;p&gt;
+     * The reverse conversion can be changed, if required, by overriding the
+     * getKey() method in the hash entry.
+     *
+     * @param key  the key convert
+     * @return the converted key
+     */
+    protected Object convertKey(final Object key) {
+<span class="fc bfc" id="L383" title="All 2 branches covered.">        return key == null ? NULL : key;</span>
+    }
+
+    /**
+     * Gets the hash code for the key specified.
+     * This implementation uses the additional hashing routine from JDK1.4.
+     * Subclasses can override this to return alternate hash codes.
+     *
+     * @param key  the key to get a hash code for
+     * @return the hash code
+     */
+    protected int hash(final Object key) {
+        // same as JDK 1.4
+<span class="fc" id="L396">        int h = key.hashCode();</span>
+<span class="fc" id="L397">        h += ~(h &lt;&lt; 9);</span>
+<span class="fc" id="L398">        h ^=  h &gt;&gt;&gt; 14;</span>
+<span class="fc" id="L399">        h +=  h &lt;&lt; 4;</span>
+<span class="fc" id="L400">        h ^=  h &gt;&gt;&gt; 10;</span>
+<span class="fc" id="L401">        return h;</span>
+    }
+
+    /**
+     * Compares two keys, in internal converted form, to see if they are equal.
+     * This implementation uses the equals method and assumes neither key is null.
+     * Subclasses can override this to match differently.
+     *
+     * @param key1  the first key to compare passed in from outside
+     * @param key2  the second key extracted from the entry via &lt;code&gt;entry.key&lt;/code&gt;
+     * @return true if equal
+     */
+    protected boolean isEqualKey(final Object key1, final Object key2) {
+<span class="fc bfc" id="L414" title="All 4 branches covered.">        return key1 == key2 || key1.equals(key2);</span>
+    }
+
+    /**
+     * Compares two values, in external form, to see if they are equal.
+     * This implementation uses the equals method and assumes neither value is null.
+     * Subclasses can override this to match differently.
+     *
+     * @param value1  the first value to compare passed in from outside
+     * @param value2  the second value extracted from the entry via &lt;code&gt;getValue()&lt;/code&gt;
+     * @return true if equal
+     */
+    protected boolean isEqualValue(final Object value1, final Object value2) {
+<span class="pc bpc" id="L427" title="1 of 4 branches missed.">        return value1 == value2 || value1.equals(value2);</span>
+    }
+
+    /**
+     * Gets the index into the data storage for the hashCode specified.
+     * This implementation uses the least significant bits of the hashCode.
+     * Subclasses can override this to return alternate bucketing.
+     *
+     * @param hashCode  the hash code to use
+     * @param dataSize  the size of the data to pick a bucket from
+     * @return the bucket index
+     */
+    protected int hashIndex(final int hashCode, final int dataSize) {
+<span class="fc" id="L440">        return hashCode &amp; dataSize - 1;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets the entry mapped to the key specified.
+     * &lt;p&gt;
+     * This method exists for subclasses that may need to perform a multi-step
+     * process accessing the entry. The public methods in this class don't use this
+     * method to gain a small performance boost.
+     *
+     * @param key  the key
+     * @return the entry, null if no match
+     */
+    protected HashEntry&lt;K, V&gt; getEntry(Object key) {
+<span class="fc" id="L455">        key = convertKey(key);</span>
+<span class="fc" id="L456">        final int hashCode = hash(key);</span>
+<span class="fc" id="L457">        HashEntry&lt;K, V&gt; entry = data[hashIndex(hashCode, data.length)]; // no local for hash index</span>
+<span class="fc bfc" id="L458" title="All 2 branches covered.">        while (entry != null) {</span>
+<span class="fc bfc" id="L459" title="All 4 branches covered.">            if (entry.hashCode == hashCode &amp;&amp; isEqualKey(key, entry.key)) {</span>
+<span class="fc" id="L460">                return entry;</span>
+            }
+<span class="fc" id="L462">            entry = entry.next;</span>
+        }
+<span class="fc" id="L464">        return null;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Updates an existing key-value mapping to change the value.
+     * &lt;p&gt;
+     * This implementation calls &lt;code&gt;setValue()&lt;/code&gt; on the entry.
+     * Subclasses could override to handle changes to the map.
+     *
+     * @param entry  the entry to update
+     * @param newValue  the new value to store
+     */
+    protected void updateEntry(final HashEntry&lt;K, V&gt; entry, final V newValue) {
+<span class="fc" id="L478">        entry.setValue(newValue);</span>
+<span class="fc" id="L479">    }</span>
+
+    /**
+     * Reuses an existing key-value mapping, storing completely new data.
+     * &lt;p&gt;
+     * This implementation sets all the data fields on the entry.
+     * Subclasses could populate additional entry fields.
+     *
+     * @param entry  the entry to update, not null
+     * @param hashIndex  the index in the data array
+     * @param hashCode  the hash code of the key to add
+     * @param key  the key to add
+     * @param value  the value to add
+     */
+    protected void reuseEntry(final HashEntry&lt;K, V&gt; entry, final int hashIndex, final int hashCode,
+                              final K key, final V value) {
+<span class="fc" id="L495">        entry.next = data[hashIndex];</span>
+<span class="fc" id="L496">        entry.hashCode = hashCode;</span>
+<span class="fc" id="L497">        entry.key = key;</span>
+<span class="fc" id="L498">        entry.value = value;</span>
+<span class="fc" id="L499">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Adds a new key-value mapping into this map.
+     * &lt;p&gt;
+     * This implementation calls &lt;code&gt;createEntry()&lt;/code&gt;, &lt;code&gt;addEntry()&lt;/code&gt;
+     * and &lt;code&gt;checkCapacity()&lt;/code&gt;.
+     * It also handles changes to &lt;code&gt;modCount&lt;/code&gt; and &lt;code&gt;size&lt;/code&gt;.
+     * Subclasses could override to fully control adds to the map.
+     *
+     * @param hashIndex  the index into the data array to store at
+     * @param hashCode  the hash code of the key to add
+     * @param key  the key to add
+     * @param value  the value to add
+     */
+    protected void addMapping(final int hashIndex, final int hashCode, final K key, final V value) {
+<span class="fc" id="L516">        modCount++;</span>
+<span class="fc" id="L517">        final HashEntry&lt;K, V&gt; entry = createEntry(data[hashIndex], hashCode, key, value);</span>
+<span class="fc" id="L518">        addEntry(entry, hashIndex);</span>
+<span class="fc" id="L519">        size++;</span>
+<span class="fc" id="L520">        checkCapacity();</span>
+<span class="fc" id="L521">    }</span>
+
+    /**
+     * Creates an entry to store the key-value data.
+     * &lt;p&gt;
+     * This implementation creates a new HashEntry instance.
+     * Subclasses can override this to return a different storage class,
+     * or implement caching.
+     *
+     * @param next  the next entry in sequence
+     * @param hashCode  the hash code to use
+     * @param key  the key to store
+     * @param value  the value to store
+     * @return the newly created entry
+     */
+    protected HashEntry&lt;K, V&gt; createEntry(final HashEntry&lt;K, V&gt; next, final int hashCode, final K key, final V value) {
+<span class="fc" id="L537">        return new HashEntry&lt;&gt;(next, hashCode, convertKey(key), value);</span>
+    }
+
+    /**
+     * Adds an entry into this map.
+     * &lt;p&gt;
+     * This implementation adds the entry to the data storage table.
+     * Subclasses could override to handle changes to the map.
+     *
+     * @param entry  the entry to add
+     * @param hashIndex  the index into the data array to store at
+     */
+    protected void addEntry(final HashEntry&lt;K, V&gt; entry, final int hashIndex) {
+<span class="fc" id="L550">        data[hashIndex] = entry;</span>
+<span class="fc" id="L551">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Removes a mapping from the map.
+     * &lt;p&gt;
+     * This implementation calls &lt;code&gt;removeEntry()&lt;/code&gt; and &lt;code&gt;destroyEntry()&lt;/code&gt;.
+     * It also handles changes to &lt;code&gt;modCount&lt;/code&gt; and &lt;code&gt;size&lt;/code&gt;.
+     * Subclasses could override to fully control removals from the map.
+     *
+     * @param entry  the entry to remove
+     * @param hashIndex  the index into the data structure
+     * @param previous  the previous entry in the chain
+     */
+    protected void removeMapping(final HashEntry&lt;K, V&gt; entry, final int hashIndex, final HashEntry&lt;K, V&gt; previous) {
+<span class="fc" id="L566">        modCount++;</span>
+<span class="fc" id="L567">        removeEntry(entry, hashIndex, previous);</span>
+<span class="fc" id="L568">        size--;</span>
+<span class="fc" id="L569">        destroyEntry(entry);</span>
+<span class="fc" id="L570">    }</span>
+
+    /**
+     * Removes an entry from the chain stored in a particular index.
+     * &lt;p&gt;
+     * This implementation removes the entry from the data storage table.
+     * The size is not updated.
+     * Subclasses could override to handle changes to the map.
+     *
+     * @param entry  the entry to remove
+     * @param hashIndex  the index into the data structure
+     * @param previous  the previous entry in the chain
+     */
+    protected void removeEntry(final HashEntry&lt;K, V&gt; entry, final int hashIndex, final HashEntry&lt;K, V&gt; previous) {
+<span class="fc bfc" id="L584" title="All 2 branches covered.">        if (previous == null) {</span>
+<span class="fc" id="L585">            data[hashIndex] = entry.next;</span>
+        } else {
+<span class="fc" id="L587">            previous.next = entry.next;</span>
+        }
+<span class="fc" id="L589">    }</span>
+
+    /**
+     * Kills an entry ready for the garbage collector.
+     * &lt;p&gt;
+     * This implementation prepares the HashEntry for garbage collection.
+     * Subclasses can override this to implement caching (override clear as well).
+     *
+     * @param entry  the entry to destroy
+     */
+    protected void destroyEntry(final HashEntry&lt;K, V&gt; entry) {
+<span class="fc" id="L600">        entry.next = null;</span>
+<span class="fc" id="L601">        entry.key = null;</span>
+<span class="fc" id="L602">        entry.value = null;</span>
+<span class="fc" id="L603">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Checks the capacity of the map and enlarges it if necessary.
+     * &lt;p&gt;
+     * This implementation uses the threshold to check if the map needs enlarging
+     */
+    protected void checkCapacity() {
+<span class="fc bfc" id="L612" title="All 2 branches covered.">        if (size &gt;= threshold) {</span>
+<span class="fc" id="L613">            final int newCapacity = data.length * 2;</span>
+<span class="pc bpc" id="L614" title="1 of 2 branches missed.">            if (newCapacity &lt;= MAXIMUM_CAPACITY) {</span>
+<span class="fc" id="L615">                ensureCapacity(newCapacity);</span>
+            }
+        }
+<span class="fc" id="L618">    }</span>
+
+    /**
+     * Changes the size of the data structure to the capacity proposed.
+     *
+     * @param newCapacity  the new capacity of the array (a power of two, less or equal to max)
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    protected void ensureCapacity(final int newCapacity) {
+<span class="fc" id="L627">        final int oldCapacity = data.length;</span>
+<span class="fc bfc" id="L628" title="All 2 branches covered.">        if (newCapacity &lt;= oldCapacity) {</span>
+<span class="fc" id="L629">            return;</span>
+        }
+<span class="fc bfc" id="L631" title="All 2 branches covered.">        if (size == 0) {</span>
+<span class="fc" id="L632">            threshold = calculateThreshold(newCapacity, loadFactor);</span>
+<span class="fc" id="L633">            data = new HashEntry[newCapacity];</span>
+        } else {
+<span class="fc" id="L635">            final HashEntry&lt;K, V&gt; oldEntries[] = data;</span>
+<span class="fc" id="L636">            final HashEntry&lt;K, V&gt; newEntries[] = new HashEntry[newCapacity];</span>
+
+<span class="fc" id="L638">            modCount++;</span>
+<span class="fc bfc" id="L639" title="All 2 branches covered.">            for (int i = oldCapacity - 1; i &gt;= 0; i--) {</span>
+<span class="fc" id="L640">                HashEntry&lt;K, V&gt; entry = oldEntries[i];</span>
+<span class="fc bfc" id="L641" title="All 2 branches covered.">                if (entry != null) {</span>
+<span class="fc" id="L642">                    oldEntries[i] = null;  // gc</span>
+                    do {
+<span class="fc" id="L644">                        final HashEntry&lt;K, V&gt; next = entry.next;</span>
+<span class="fc" id="L645">                        final int index = hashIndex(entry.hashCode, newCapacity);</span>
+<span class="fc" id="L646">                        entry.next = newEntries[index];</span>
+<span class="fc" id="L647">                        newEntries[index] = entry;</span>
+<span class="fc" id="L648">                        entry = next;</span>
+<span class="fc bfc" id="L649" title="All 2 branches covered.">                    } while (entry != null);</span>
+                }
+            }
+<span class="fc" id="L652">            threshold = calculateThreshold(newCapacity, loadFactor);</span>
+<span class="fc" id="L653">            data = newEntries;</span>
+        }
+<span class="fc" id="L655">    }</span>
+
+    /**
+     * Calculates the new capacity of the map.
+     * This implementation normalizes the capacity to a power of two.
+     *
+     * @param proposedCapacity  the proposed capacity
+     * @return the normalized new capacity
+     */
+    protected int calculateNewCapacity(final int proposedCapacity) {
+<span class="fc" id="L665">        int newCapacity = 1;</span>
+<span class="pc bpc" id="L666" title="1 of 2 branches missed.">        if (proposedCapacity &gt; MAXIMUM_CAPACITY) {</span>
+<span class="nc" id="L667">            newCapacity = MAXIMUM_CAPACITY;</span>
+        } else {
+<span class="fc bfc" id="L669" title="All 2 branches covered.">            while (newCapacity &lt; proposedCapacity) {</span>
+<span class="fc" id="L670">                newCapacity &lt;&lt;= 1;  // multiply by two</span>
+            }
+<span class="pc bpc" id="L672" title="1 of 2 branches missed.">            if (newCapacity &gt; MAXIMUM_CAPACITY) {</span>
+<span class="nc" id="L673">                newCapacity = MAXIMUM_CAPACITY;</span>
+            }
+        }
+<span class="fc" id="L676">        return newCapacity;</span>
+    }
+
+    /**
+     * Calculates the new threshold of the map, where it will be resized.
+     * This implementation uses the load factor.
+     *
+     * @param newCapacity  the new capacity
+     * @param factor  the load factor
+     * @return the new resize threshold
+     */
+    protected int calculateThreshold(final int newCapacity, final float factor) {
+<span class="fc" id="L688">        return (int) (newCapacity * factor);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets the &lt;code&gt;next&lt;/code&gt; field from a &lt;code&gt;HashEntry&lt;/code&gt;.
+     * Used in subclasses that have no visibility of the field.
+     *
+     * @param entry  the entry to query, must not be null
+     * @return the &lt;code&gt;next&lt;/code&gt; field of the entry
+     * @throws NullPointerException if the entry is null
+     * @since 3.1
+     */
+    protected HashEntry&lt;K, V&gt; entryNext(final HashEntry&lt;K, V&gt; entry) {
+<span class="nc" id="L702">        return entry.next;</span>
+    }
+
+    /**
+     * Gets the &lt;code&gt;hashCode&lt;/code&gt; field from a &lt;code&gt;HashEntry&lt;/code&gt;.
+     * Used in subclasses that have no visibility of the field.
+     *
+     * @param entry  the entry to query, must not be null
+     * @return the &lt;code&gt;hashCode&lt;/code&gt; field of the entry
+     * @throws NullPointerException if the entry is null
+     * @since 3.1
+     */
+    protected int entryHashCode(final HashEntry&lt;K, V&gt; entry) {
+<span class="nc" id="L715">        return entry.hashCode;</span>
+    }
+
+    /**
+     * Gets the &lt;code&gt;key&lt;/code&gt; field from a &lt;code&gt;HashEntry&lt;/code&gt;.
+     * Used in subclasses that have no visibility of the field.
+     *
+     * @param entry  the entry to query, must not be null
+     * @return the &lt;code&gt;key&lt;/code&gt; field of the entry
+     * @throws NullPointerException if the entry is null
+     * @since 3.1
+     */
+    protected K entryKey(final HashEntry&lt;K, V&gt; entry) {
+<span class="nc" id="L728">        return entry.getKey();</span>
+    }
+
+    /**
+     * Gets the &lt;code&gt;value&lt;/code&gt; field from a &lt;code&gt;HashEntry&lt;/code&gt;.
+     * Used in subclasses that have no visibility of the field.
+     *
+     * @param entry  the entry to query, must not be null
+     * @return the &lt;code&gt;value&lt;/code&gt; field of the entry
+     * @throws NullPointerException if the entry is null
+     * @since 3.1
+     */
+    protected V entryValue(final HashEntry&lt;K, V&gt; entry) {
+<span class="nc" id="L741">        return entry.getValue();</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets an iterator over the map.
+     * Changes made to the iterator affect this map.
+     * &lt;p&gt;
+     * A MapIterator returns the keys in the map. It also provides convenient
+     * methods to get the key and value, and set the value.
+     * It avoids the need to create an entrySet/keySet/values object.
+     * It also avoids creating the Map.Entry object.
+     *
+     * @return the map iterator
+     */
+    @Override
+    public MapIterator&lt;K, V&gt; mapIterator() {
+<span class="fc bfc" id="L758" title="All 2 branches covered.">        if (size == 0) {</span>
+<span class="fc" id="L759">            return EmptyMapIterator.&lt;K, V&gt;emptyMapIterator();</span>
+        }
+<span class="fc" id="L761">        return new HashMapIterator&lt;&gt;(this);</span>
+    }
+
+    /**
+     * MapIterator implementation.
+     */
+    protected static class HashMapIterator&lt;K, V&gt; extends HashIterator&lt;K, V&gt; implements MapIterator&lt;K, V&gt; {
+
+        protected HashMapIterator(final AbstractHashedMap&lt;K, V&gt; parent) {
+<span class="fc" id="L770">            super(parent);</span>
+<span class="fc" id="L771">        }</span>
+
+        @Override
+        public K next() {
+<span class="fc" id="L775">            return super.nextEntry().getKey();</span>
+        }
+
+        @Override
+        public K getKey() {
+<span class="fc" id="L780">            final HashEntry&lt;K, V&gt; current = currentEntry();</span>
+<span class="fc bfc" id="L781" title="All 2 branches covered.">            if (current == null) {</span>
+<span class="fc" id="L782">                throw new IllegalStateException(AbstractHashedMap.GETKEY_INVALID);</span>
+            }
+<span class="fc" id="L784">            return current.getKey();</span>
+        }
+
+        @Override
+        public V getValue() {
+<span class="fc" id="L789">            final HashEntry&lt;K, V&gt; current = currentEntry();</span>
+<span class="fc bfc" id="L790" title="All 2 branches covered.">            if (current == null) {</span>
+<span class="fc" id="L791">                throw new IllegalStateException(AbstractHashedMap.GETVALUE_INVALID);</span>
+            }
+<span class="fc" id="L793">            return current.getValue();</span>
+        }
+
+        @Override
+        public V setValue(final V value) {
+<span class="fc" id="L798">            final HashEntry&lt;K, V&gt; current = currentEntry();</span>
+<span class="fc bfc" id="L799" title="All 2 branches covered.">            if (current == null) {</span>
+<span class="fc" id="L800">                throw new IllegalStateException(AbstractHashedMap.SETVALUE_INVALID);</span>
+            }
+<span class="fc" id="L802">            return current.setValue(value);</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets the entrySet view of the map.
+     * Changes made to the view affect this map.
+     * To simply iterate through the entries, use {@link #mapIterator()}.
+     *
+     * @return the entrySet view
+     */
+    @Override
+    public Set&lt;Map.Entry&lt;K, V&gt;&gt; entrySet() {
+<span class="fc bfc" id="L816" title="All 2 branches covered.">        if (entrySet == null) {</span>
+<span class="fc" id="L817">            entrySet = new EntrySet&lt;&gt;(this);</span>
+        }
+<span class="fc" id="L819">        return entrySet;</span>
+    }
+
+    /**
+     * Creates an entry set iterator.
+     * Subclasses can override this to return iterators with different properties.
+     *
+     * @return the entrySet iterator
+     */
+    protected Iterator&lt;Map.Entry&lt;K, V&gt;&gt; createEntrySetIterator() {
+<span class="fc bfc" id="L829" title="All 2 branches covered.">        if (size() == 0) {</span>
+<span class="fc" id="L830">            return EmptyIterator.&lt;Map.Entry&lt;K, V&gt;&gt;emptyIterator();</span>
+        }
+<span class="fc" id="L832">        return new EntrySetIterator&lt;&gt;(this);</span>
+    }
+
+    /**
+     * EntrySet implementation.
+     */
+    protected static class EntrySet&lt;K, V&gt; extends AbstractSet&lt;Map.Entry&lt;K, V&gt;&gt; {
+        /** The parent map */
+        private final AbstractHashedMap&lt;K, V&gt; parent;
+
+        protected EntrySet(final AbstractHashedMap&lt;K, V&gt; parent) {
+<span class="fc" id="L843">            super();</span>
+<span class="fc" id="L844">            this.parent = parent;</span>
+<span class="fc" id="L845">        }</span>
+
+        @Override
+        public int size() {
+<span class="fc" id="L849">            return parent.size();</span>
+        }
+
+        @Override
+        public void clear() {
+<span class="fc" id="L854">            parent.clear();</span>
+<span class="fc" id="L855">        }</span>
+
+        @Override
+        public boolean contains(final Object entry) {
+<span class="fc bfc" id="L859" title="All 2 branches covered.">            if (entry instanceof Map.Entry) {</span>
+<span class="fc" id="L860">                final Map.Entry&lt;?, ?&gt; e = (Map.Entry&lt;?, ?&gt;) entry;</span>
+<span class="fc" id="L861">                final Entry&lt;K, V&gt; match = parent.getEntry(e.getKey());</span>
+<span class="fc bfc" id="L862" title="All 4 branches covered.">                return match != null &amp;&amp; match.equals(e);</span>
+            }
+<span class="fc" id="L864">            return false;</span>
+        }
+
+        @Override
+        public boolean remove(final Object obj) {
+<span class="fc bfc" id="L869" title="All 2 branches covered.">            if (obj instanceof Map.Entry == false) {</span>
+<span class="fc" id="L870">                return false;</span>
+            }
+<span class="fc bfc" id="L872" title="All 2 branches covered.">            if (contains(obj) == false) {</span>
+<span class="fc" id="L873">                return false;</span>
+            }
+<span class="fc" id="L875">            final Map.Entry&lt;?, ?&gt; entry = (Map.Entry&lt;?, ?&gt;) obj;</span>
+<span class="fc" id="L876">            parent.remove(entry.getKey());</span>
+<span class="fc" id="L877">            return true;</span>
+        }
+
+        @Override
+        public Iterator&lt;Map.Entry&lt;K, V&gt;&gt; iterator() {
+<span class="fc" id="L882">            return parent.createEntrySetIterator();</span>
+        }
+    }
+
+    /**
+     * EntrySet iterator.
+     */
+    protected static class EntrySetIterator&lt;K, V&gt; extends HashIterator&lt;K, V&gt; implements Iterator&lt;Map.Entry&lt;K, V&gt;&gt; {
+
+        protected EntrySetIterator(final AbstractHashedMap&lt;K, V&gt; parent) {
+<span class="fc" id="L892">            super(parent);</span>
+<span class="fc" id="L893">        }</span>
+
+        @Override
+        public Map.Entry&lt;K, V&gt; next() {
+<span class="fc" id="L897">            return super.nextEntry();</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets the keySet view of the map.
+     * Changes made to the view affect this map.
+     * To simply iterate through the keys, use {@link #mapIterator()}.
+     *
+     * @return the keySet view
+     */
+    @Override
+    public Set&lt;K&gt; keySet() {
+<span class="fc bfc" id="L911" title="All 2 branches covered.">        if (keySet == null) {</span>
+<span class="fc" id="L912">            keySet = new KeySet&lt;&gt;(this);</span>
+        }
+<span class="fc" id="L914">        return keySet;</span>
+    }
+
+    /**
+     * Creates a key set iterator.
+     * Subclasses can override this to return iterators with different properties.
+     *
+     * @return the keySet iterator
+     */
+    protected Iterator&lt;K&gt; createKeySetIterator() {
+<span class="fc bfc" id="L924" title="All 2 branches covered.">        if (size() == 0) {</span>
+<span class="fc" id="L925">            return EmptyIterator.&lt;K&gt;emptyIterator();</span>
+        }
+<span class="fc" id="L927">        return new KeySetIterator&lt;&gt;(this);</span>
+    }
+
+    /**
+     * KeySet implementation.
+     */
+    protected static class KeySet&lt;K&gt; extends AbstractSet&lt;K&gt; {
+        /** The parent map */
+        private final AbstractHashedMap&lt;K, ?&gt; parent;
+
+        protected KeySet(final AbstractHashedMap&lt;K, ?&gt; parent) {
+<span class="fc" id="L938">            super();</span>
+<span class="fc" id="L939">            this.parent = parent;</span>
+<span class="fc" id="L940">        }</span>
+
+        @Override
+        public int size() {
+<span class="fc" id="L944">            return parent.size();</span>
+        }
+
+        @Override
+        public void clear() {
+<span class="fc" id="L949">            parent.clear();</span>
+<span class="fc" id="L950">        }</span>
+
+        @Override
+        public boolean contains(final Object key) {
+<span class="fc" id="L954">            return parent.containsKey(key);</span>
+        }
+
+        @Override
+        public boolean remove(final Object key) {
+<span class="fc" id="L959">            final boolean result = parent.containsKey(key);</span>
+<span class="fc" id="L960">            parent.remove(key);</span>
+<span class="fc" id="L961">            return result;</span>
+        }
+
+        @Override
+        public Iterator&lt;K&gt; iterator() {
+<span class="fc" id="L966">            return parent.createKeySetIterator();</span>
+        }
+    }
+
+    /**
+     * KeySet iterator.
+     */
+    protected static class KeySetIterator&lt;K&gt; extends HashIterator&lt;K, Object&gt; implements Iterator&lt;K&gt; {
+
+        @SuppressWarnings(&quot;unchecked&quot;)
+        protected KeySetIterator(final AbstractHashedMap&lt;K, ?&gt; parent) {
+<span class="fc" id="L977">            super((AbstractHashedMap&lt;K, Object&gt;) parent);</span>
+<span class="fc" id="L978">        }</span>
+
+        @Override
+        public K next() {
+<span class="fc" id="L982">            return super.nextEntry().getKey();</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets the values view of the map.
+     * Changes made to the view affect this map.
+     * To simply iterate through the values, use {@link #mapIterator()}.
+     *
+     * @return the values view
+     */
+    @Override
+    public Collection&lt;V&gt; values() {
+<span class="fc bfc" id="L996" title="All 2 branches covered.">        if (values == null) {</span>
+<span class="fc" id="L997">            values = new Values&lt;&gt;(this);</span>
+        }
+<span class="fc" id="L999">        return values;</span>
+    }
+
+    /**
+     * Creates a values iterator.
+     * Subclasses can override this to return iterators with different properties.
+     *
+     * @return the values iterator
+     */
+    protected Iterator&lt;V&gt; createValuesIterator() {
+<span class="fc bfc" id="L1009" title="All 2 branches covered.">        if (size() == 0) {</span>
+<span class="fc" id="L1010">            return EmptyIterator.&lt;V&gt;emptyIterator();</span>
+        }
+<span class="fc" id="L1012">        return new ValuesIterator&lt;&gt;(this);</span>
+    }
+
+    /**
+     * Values implementation.
+     */
+    protected static class Values&lt;V&gt; extends AbstractCollection&lt;V&gt; {
+        /** The parent map */
+        private final AbstractHashedMap&lt;?, V&gt; parent;
+
+        protected Values(final AbstractHashedMap&lt;?, V&gt; parent) {
+<span class="fc" id="L1023">            super();</span>
+<span class="fc" id="L1024">            this.parent = parent;</span>
+<span class="fc" id="L1025">        }</span>
+
+        @Override
+        public int size() {
+<span class="fc" id="L1029">            return parent.size();</span>
+        }
+
+        @Override
+        public void clear() {
+<span class="fc" id="L1034">            parent.clear();</span>
+<span class="fc" id="L1035">        }</span>
+
+        @Override
+        public boolean contains(final Object value) {
+<span class="fc" id="L1039">            return parent.containsValue(value);</span>
+        }
+
+        @Override
+        public Iterator&lt;V&gt; iterator() {
+<span class="fc" id="L1044">            return parent.createValuesIterator();</span>
+        }
+    }
+
+    /**
+     * Values iterator.
+     */
+    protected static class ValuesIterator&lt;V&gt; extends HashIterator&lt;Object, V&gt; implements Iterator&lt;V&gt; {
+
+        @SuppressWarnings(&quot;unchecked&quot;)
+        protected ValuesIterator(final AbstractHashedMap&lt;?, V&gt; parent) {
+<span class="fc" id="L1055">            super((AbstractHashedMap&lt;Object, V&gt;) parent);</span>
+<span class="fc" id="L1056">        }</span>
+
+        @Override
+        public V next() {
+<span class="fc" id="L1060">            return super.nextEntry().getValue();</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * HashEntry used to store the data.
+     * &lt;p&gt;
+     * If you subclass &lt;code&gt;AbstractHashedMap&lt;/code&gt; but not &lt;code&gt;HashEntry&lt;/code&gt;
+     * then you will not be able to access the protected fields.
+     * The &lt;code&gt;entryXxx()&lt;/code&gt; methods on &lt;code&gt;AbstractHashedMap&lt;/code&gt; exist
+     * to provide the necessary access.
+     */
+    protected static class HashEntry&lt;K, V&gt; implements Map.Entry&lt;K, V&gt;, KeyValue&lt;K, V&gt; {
+        /** The next entry in the hash chain */
+        protected HashEntry&lt;K, V&gt; next;
+        /** The hash code of the key */
+        protected int hashCode;
+        /** The key */
+        protected Object key;
+        /** The value */
+        protected Object value;
+
+        protected HashEntry(final HashEntry&lt;K, V&gt; next, final int hashCode, final Object key, final V value) {
+<span class="fc" id="L1084">            super();</span>
+<span class="fc" id="L1085">            this.next = next;</span>
+<span class="fc" id="L1086">            this.hashCode = hashCode;</span>
+<span class="fc" id="L1087">            this.key = key;</span>
+<span class="fc" id="L1088">            this.value = value;</span>
+<span class="fc" id="L1089">        }</span>
+
+        @Override
+        @SuppressWarnings(&quot;unchecked&quot;)
+        public K getKey() {
+<span class="fc bfc" id="L1094" title="All 2 branches covered.">            if (key == NULL) {</span>
+<span class="fc" id="L1095">                return null;</span>
+            }
+<span class="fc" id="L1097">            return (K) key;</span>
+        }
+
+        @Override
+        @SuppressWarnings(&quot;unchecked&quot;)
+        public V getValue() {
+<span class="fc" id="L1103">            return (V) value;</span>
+        }
+
+        @Override
+        @SuppressWarnings(&quot;unchecked&quot;)
+        public V setValue(final V value) {
+<span class="fc" id="L1109">            final Object old = this.value;</span>
+<span class="fc" id="L1110">            this.value = value;</span>
+<span class="fc" id="L1111">            return (V) old;</span>
+        }
+
+        @Override
+        public boolean equals(final Object obj) {
+<span class="fc bfc" id="L1116" title="All 2 branches covered.">            if (obj == this) {</span>
+<span class="fc" id="L1117">                return true;</span>
+            }
+<span class="pc bpc" id="L1119" title="1 of 2 branches missed.">            if (obj instanceof Map.Entry == false) {</span>
+<span class="nc" id="L1120">                return false;</span>
+            }
+<span class="fc" id="L1122">            final Map.Entry&lt;?, ?&gt; other = (Map.Entry&lt;?, ?&gt;) obj;</span>
+<span class="fc" id="L1123">            return</span>
+<span class="fc bfc" id="L1124" title="All 6 branches covered.">                (getKey() == null ? other.getKey() == null : getKey().equals(other.getKey())) &amp;&amp;</span>
+<span class="pc bpc" id="L1125" title="1 of 6 branches missed.">                (getValue() == null ? other.getValue() == null : getValue().equals(other.getValue()));</span>
+        }
+
+        @Override
+        public int hashCode() {
+<span class="fc bfc" id="L1130" title="All 2 branches covered.">            return (getKey() == null ? 0 : getKey().hashCode()) ^</span>
+<span class="fc bfc" id="L1131" title="All 2 branches covered.">                   (getValue() == null ? 0 : getValue().hashCode());</span>
+        }
+
+        @Override
+        public String toString() {
+<span class="fc" id="L1136">            return new StringBuilder().append(getKey()).append('=').append(getValue()).toString();</span>
+        }
+    }
+
+    /**
+     * Base Iterator
+     */
+    protected static abstract class HashIterator&lt;K, V&gt; {
+
+        /** The parent map */
+        private final AbstractHashedMap&lt;K, V&gt; parent;
+        /** The current index into the array of buckets */
+        private int hashIndex;
+        /** The last returned entry */
+        private HashEntry&lt;K, V&gt; last;
+        /** The next entry */
+        private HashEntry&lt;K, V&gt; next;
+        /** The modification count expected */
+        private int expectedModCount;
+
+        protected HashIterator(final AbstractHashedMap&lt;K, V&gt; parent) {
+<span class="fc" id="L1157">            super();</span>
+<span class="fc" id="L1158">            this.parent = parent;</span>
+<span class="fc" id="L1159">            final HashEntry&lt;K, V&gt;[] data = parent.data;</span>
+<span class="fc" id="L1160">            int i = data.length;</span>
+<span class="fc" id="L1161">            HashEntry&lt;K, V&gt; next = null;</span>
+<span class="fc bfc" id="L1162" title="All 4 branches covered.">            while (i &gt; 0 &amp;&amp; next == null) {</span>
+<span class="fc" id="L1163">                next = data[--i];</span>
+            }
+<span class="fc" id="L1165">            this.next = next;</span>
+<span class="fc" id="L1166">            this.hashIndex = i;</span>
+<span class="fc" id="L1167">            this.expectedModCount = parent.modCount;</span>
+<span class="fc" id="L1168">        }</span>
+
+        public boolean hasNext() {
+<span class="fc bfc" id="L1171" title="All 2 branches covered.">            return next != null;</span>
+        }
+
+        protected HashEntry&lt;K, V&gt; nextEntry() {
+<span class="fc bfc" id="L1175" title="All 2 branches covered.">            if (parent.modCount != expectedModCount) {</span>
+<span class="fc" id="L1176">                throw new ConcurrentModificationException();</span>
+            }
+<span class="fc" id="L1178">            final HashEntry&lt;K, V&gt; newCurrent = next;</span>
+<span class="fc bfc" id="L1179" title="All 2 branches covered.">            if (newCurrent == null)  {</span>
+<span class="fc" id="L1180">                throw new NoSuchElementException(AbstractHashedMap.NO_NEXT_ENTRY);</span>
+            }
+<span class="fc" id="L1182">            final HashEntry&lt;K, V&gt;[] data = parent.data;</span>
+<span class="fc" id="L1183">            int i = hashIndex;</span>
+<span class="fc" id="L1184">            HashEntry&lt;K, V&gt; n = newCurrent.next;</span>
+<span class="fc bfc" id="L1185" title="All 4 branches covered.">            while (n == null &amp;&amp; i &gt; 0) {</span>
+<span class="fc" id="L1186">                n = data[--i];</span>
+            }
+<span class="fc" id="L1188">            next = n;</span>
+<span class="fc" id="L1189">            hashIndex = i;</span>
+<span class="fc" id="L1190">            last = newCurrent;</span>
+<span class="fc" id="L1191">            return newCurrent;</span>
+        }
+
+        protected HashEntry&lt;K, V&gt; currentEntry() {
+<span class="fc" id="L1195">            return last;</span>
+        }
+
+        public void remove() {
+<span class="fc bfc" id="L1199" title="All 2 branches covered.">            if (last == null) {</span>
+<span class="fc" id="L1200">                throw new IllegalStateException(AbstractHashedMap.REMOVE_INVALID);</span>
+            }
+<span class="pc bpc" id="L1202" title="1 of 2 branches missed.">            if (parent.modCount != expectedModCount) {</span>
+<span class="nc" id="L1203">                throw new ConcurrentModificationException();</span>
+            }
+<span class="fc" id="L1205">            parent.remove(last.getKey());</span>
+<span class="fc" id="L1206">            last = null;</span>
+<span class="fc" id="L1207">            expectedModCount = parent.modCount;</span>
+<span class="fc" id="L1208">        }</span>
+
+        @Override
+        public String toString() {
+<span class="pc bpc" id="L1212" title="1 of 2 branches missed.">            if (last != null) {</span>
+<span class="fc" id="L1213">                return &quot;Iterator[&quot; + last.getKey() + &quot;=&quot; + last.getValue() + &quot;]&quot;;</span>
+            }
+<span class="nc" id="L1215">            return &quot;Iterator[]&quot;;</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Writes the map data to the stream. This method must be overridden if a
+     * subclass must be setup before &lt;code&gt;put()&lt;/code&gt; is used.
+     * &lt;p&gt;
+     * Serialization is not one of the JDK's nicest topics. Normal serialization will
+     * initialise the superclass before the subclass. Sometimes however, this isn't
+     * what you want, as in this case the &lt;code&gt;put()&lt;/code&gt; method on read can be
+     * affected by subclass state.
+     * &lt;p&gt;
+     * The solution adopted here is to serialize the state data of this class in
+     * this protected method. This method must be called by the
+     * &lt;code&gt;writeObject()&lt;/code&gt; of the first serializable subclass.
+     * &lt;p&gt;
+     * Subclasses may override if they have a specific field that must be present
+     * on read before this implementation will work. Generally, the read determines
+     * what must be serialized here, if anything.
+     *
+     * @param out  the output stream
+     * @throws IOException if an error occurs while writing tothe stream
+     */
+    protected void doWriteObject(final ObjectOutputStream out) throws IOException {
+<span class="fc" id="L1241">        out.writeFloat(loadFactor);</span>
+<span class="fc" id="L1242">        out.writeInt(data.length);</span>
+<span class="fc" id="L1243">        out.writeInt(size);</span>
+<span class="fc bfc" id="L1244" title="All 2 branches covered.">        for (final MapIterator&lt;K, V&gt; it = mapIterator(); it.hasNext();) {</span>
+<span class="fc" id="L1245">            out.writeObject(it.next());</span>
+<span class="fc" id="L1246">            out.writeObject(it.getValue());</span>
+        }
+<span class="fc" id="L1248">    }</span>
+
+    /**
+     * Reads the map data from the stream. This method must be overridden if a
+     * subclass must be setup before &lt;code&gt;put()&lt;/code&gt; is used.
+     * &lt;p&gt;
+     * Serialization is not one of the JDK's nicest topics. Normal serialization will
+     * initialise the superclass before the subclass. Sometimes however, this isn't
+     * what you want, as in this case the &lt;code&gt;put()&lt;/code&gt; method on read can be
+     * affected by subclass state.
+     * &lt;p&gt;
+     * The solution adopted here is to deserialize the state data of this class in
+     * this protected method. This method must be called by the
+     * &lt;code&gt;readObject()&lt;/code&gt; of the first serializable subclass.
+     * &lt;p&gt;
+     * Subclasses may override if the subclass has a specific field that must be present
+     * before &lt;code&gt;put()&lt;/code&gt; or &lt;code&gt;calculateThreshold()&lt;/code&gt; will work correctly.
+     *
+     * @param in  the input stream
+     * @throws IOException if an error occurs while reading from the stream
+     * @throws ClassNotFoundException if an object read from the stream can not be loaded
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    protected void doReadObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
+<span class="fc" id="L1272">        loadFactor = in.readFloat();</span>
+<span class="fc" id="L1273">        final int capacity = in.readInt();</span>
+<span class="fc" id="L1274">        final int size = in.readInt();</span>
+<span class="fc" id="L1275">        init();</span>
+<span class="fc" id="L1276">        threshold = calculateThreshold(capacity, loadFactor);</span>
+<span class="fc" id="L1277">        data = new HashEntry[capacity];</span>
+<span class="fc bfc" id="L1278" title="All 2 branches covered.">        for (int i = 0; i &lt; size; i++) {</span>
+<span class="fc" id="L1279">            final K key = (K) in.readObject();</span>
+<span class="fc" id="L1280">            final V value = (V) in.readObject();</span>
+<span class="fc" id="L1281">            put(key, value);</span>
+        }
+<span class="fc" id="L1283">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Clones the map without cloning the keys or values.
+     * &lt;p&gt;
+     * To implement &lt;code&gt;clone()&lt;/code&gt;, a subclass must implement the
+     * &lt;code&gt;Cloneable&lt;/code&gt; interface and make this method public.
+     *
+     * @return a shallow clone
+     * @throws InternalError if {@link AbstractMap#clone()} failed
+     */
+    @Override
+    @SuppressWarnings(&quot;unchecked&quot;)
+    protected AbstractHashedMap&lt;K, V&gt; clone() {
+        try {
+<span class="fc" id="L1299">            final AbstractHashedMap&lt;K, V&gt; cloned = (AbstractHashedMap&lt;K, V&gt;) super.clone();</span>
+<span class="fc" id="L1300">            cloned.data = new HashEntry[data.length];</span>
+<span class="fc" id="L1301">            cloned.entrySet = null;</span>
+<span class="fc" id="L1302">            cloned.keySet = null;</span>
+<span class="fc" id="L1303">            cloned.values = null;</span>
+<span class="fc" id="L1304">            cloned.modCount = 0;</span>
+<span class="fc" id="L1305">            cloned.size = 0;</span>
+<span class="fc" id="L1306">            cloned.init();</span>
+<span class="fc" id="L1307">            cloned.putAll(this);</span>
+<span class="fc" id="L1308">            return cloned;</span>
+<span class="nc" id="L1309">        } catch (final CloneNotSupportedException ex) {</span>
+<span class="nc" id="L1310">            throw new InternalError();</span>
+        }
+    }
+
+    /**
+     * Compares this map with another.
+     *
+     * @param obj  the object to compare to
+     * @return true if equal
+     */
+    @Override
+    public boolean equals(final Object obj) {
+<span class="fc bfc" id="L1322" title="All 2 branches covered.">        if (obj == this) {</span>
+<span class="fc" id="L1323">            return true;</span>
+        }
+<span class="fc bfc" id="L1325" title="All 2 branches covered.">        if (obj instanceof Map == false) {</span>
+<span class="fc" id="L1326">            return false;</span>
+        }
+<span class="fc" id="L1328">        final Map&lt;?,?&gt; map = (Map&lt;?,?&gt;) obj;</span>
+<span class="fc bfc" id="L1329" title="All 2 branches covered.">        if (map.size() != size()) {</span>
+<span class="fc" id="L1330">            return false;</span>
+        }
+<span class="fc" id="L1332">        final MapIterator&lt;?,?&gt; it = mapIterator();</span>
+        try {
+<span class="fc bfc" id="L1334" title="All 2 branches covered.">            while (it.hasNext()) {</span>
+<span class="fc" id="L1335">                final Object key = it.next();</span>
+<span class="fc" id="L1336">                final Object value = it.getValue();</span>
+<span class="fc bfc" id="L1337" title="All 2 branches covered.">                if (value == null) {</span>
+<span class="pc bpc" id="L1338" title="2 of 4 branches missed.">                    if (map.get(key) != null || map.containsKey(key) == false) {</span>
+<span class="nc" id="L1339">                        return false;</span>
+                    }
+                } else {
+<span class="pc bpc" id="L1342" title="1 of 2 branches missed.">                    if (value.equals(map.get(key)) == false) {</span>
+<span class="nc" id="L1343">                        return false;</span>
+                    }
+                }
+<span class="fc" id="L1346">            }</span>
+<span class="nc" id="L1347">        } catch (final ClassCastException ignored)   {</span>
+<span class="nc" id="L1348">            return false;</span>
+<span class="nc" id="L1349">        } catch (final NullPointerException ignored) {</span>
+<span class="nc" id="L1350">            return false;</span>
+<span class="fc" id="L1351">        }</span>
+<span class="fc" id="L1352">        return true;</span>
+    }
+
+    /**
+     * Gets the standard Map hashCode.
+     *
+     * @return the hash code defined in the Map interface
+     */
+    @Override
+    public int hashCode() {
+<span class="fc" id="L1362">        int total = 0;</span>
+<span class="fc" id="L1363">        final Iterator&lt;Map.Entry&lt;K, V&gt;&gt; it = createEntrySetIterator();</span>
+<span class="fc bfc" id="L1364" title="All 2 branches covered.">        while (it.hasNext()) {</span>
+<span class="fc" id="L1365">            total += it.next().hashCode();</span>
+        }
+<span class="fc" id="L1367">        return total;</span>
+    }
+
+    /**
+     * Gets the map as a String.
+     *
+     * @return a string version of the map
+     */
+    @Override
+    public String toString() {
+<span class="fc bfc" id="L1377" title="All 2 branches covered.">        if (size() == 0) {</span>
+<span class="fc" id="L1378">            return &quot;{}&quot;;</span>
+        }
+<span class="fc" id="L1380">        final StringBuilder buf = new StringBuilder(32 * size());</span>
+<span class="fc" id="L1381">        buf.append('{');</span>
+
+<span class="fc" id="L1383">        final MapIterator&lt;K, V&gt; it = mapIterator();</span>
+<span class="fc" id="L1384">        boolean hasNext = it.hasNext();</span>
+<span class="fc bfc" id="L1385" title="All 2 branches covered.">        while (hasNext) {</span>
+<span class="fc" id="L1386">            final K key = it.next();</span>
+<span class="fc" id="L1387">            final V value = it.getValue();</span>
+<span class="pc bpc" id="L1388" title="1 of 2 branches missed.">            buf.append(key == this ? &quot;(this Map)&quot; : key)</span>
+<span class="pc bpc" id="L1389" title="1 of 2 branches missed.">               .append('=')</span>
+<span class="fc" id="L1390">               .append(value == this ? &quot;(this Map)&quot; : value);</span>
+
+<span class="fc" id="L1392">            hasNext = it.hasNext();</span>
+<span class="fc bfc" id="L1393" title="All 2 branches covered.">            if (hasNext) {</span>
+<span class="fc" id="L1394">                buf.append(',').append(' ');</span>
+            }
+<span class="fc" id="L1396">        }</span>
+
+<span class="fc" id="L1398">        buf.append('}');</span>
+<span class="fc" id="L1399">        return buf.toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

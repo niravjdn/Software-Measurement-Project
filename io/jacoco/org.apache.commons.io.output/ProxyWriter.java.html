@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProxyWriter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons IO</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.io.output</a> &gt; <span class="el_source">ProxyWriter.java</span></div><h1>ProxyWriter.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.io.output;
+
+import java.io.FilterWriter;
+import java.io.IOException;
+import java.io.Writer;
+
+/**
+ * A Proxy stream which acts as expected, that is it passes the method
+ * calls on to the proxied stream and doesn't change which methods are
+ * being called. It is an alternative base class to FilterWriter
+ * to increase reusability, because FilterWriter changes the
+ * methods being called, such as write(char[]) to write(char[], int, int)
+ * and write(String) to write(String, int, int).
+ *
+ */
+public class ProxyWriter extends FilterWriter {
+
+    /**
+     * Constructs a new ProxyWriter.
+     *
+     * @param proxy  the Writer to delegate to
+     */
+    public ProxyWriter(final Writer proxy) {
+<span class="fc" id="L40">        super(proxy);</span>
+        // the proxy is stored in a protected superclass variable named 'out'
+<span class="fc" id="L42">    }</span>
+
+    /**
+     * Invokes the delegate's &lt;code&gt;append(char)&lt;/code&gt; method.
+     * @param c The character to write
+     * @return this writer
+     * @throws IOException if an I/O error occurs
+     * @since 2.0
+     */
+    @Override
+    public Writer append(final char c) throws IOException {
+        try {
+<span class="fc" id="L54">            beforeWrite(1);</span>
+<span class="fc" id="L55">            out.append(c);</span>
+<span class="fc" id="L56">            afterWrite(1);</span>
+<span class="fc" id="L57">        } catch (final IOException e) {</span>
+<span class="nc" id="L58">            handleIOException(e);</span>
+        }
+<span class="fc" id="L60">        return this;</span>
+    }
+
+    /**
+     * Invokes the delegate's &lt;code&gt;append(CharSequence, int, int)&lt;/code&gt; method.
+     * @param csq The character sequence to write
+     * @param start The index of the first character to write
+     * @param end  The index of the first character to write (exclusive)
+     * @return this writer
+     * @throws IOException if an I/O error occurs
+     * @since 2.0
+     */
+    @Override
+    public Writer append(final CharSequence csq, final int start, final int end) throws IOException {
+        try {
+<span class="fc" id="L75">            beforeWrite(end - start);</span>
+<span class="fc" id="L76">            out.append(csq, start, end);</span>
+<span class="fc" id="L77">            afterWrite(end - start);</span>
+<span class="fc" id="L78">        } catch (final IOException e) {</span>
+<span class="nc" id="L79">            handleIOException(e);</span>
+        }
+<span class="fc" id="L81">        return this;</span>
+    }
+
+    /**
+     * Invokes the delegate's &lt;code&gt;append(CharSequence)&lt;/code&gt; method.
+     * @param csq The character sequence to write
+     * @return this writer
+     * @throws IOException if an I/O error occurs
+     * @since 2.0
+     */
+    @Override
+    public Writer append(final CharSequence csq) throws IOException {
+        try {
+<span class="fc" id="L94">            int len = 0;</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">            if (csq != null) {</span>
+<span class="fc" id="L96">                len = csq.length();</span>
+            }
+
+<span class="fc" id="L99">            beforeWrite(len);</span>
+<span class="fc" id="L100">            out.append(csq);</span>
+<span class="fc" id="L101">            afterWrite(len);</span>
+<span class="fc" id="L102">        } catch (final IOException e) {</span>
+<span class="nc" id="L103">            handleIOException(e);</span>
+        }
+<span class="fc" id="L105">        return this;</span>
+    }
+
+    /**
+     * Invokes the delegate's &lt;code&gt;write(int)&lt;/code&gt; method.
+     * @param idx the character to write
+     * @throws IOException if an I/O error occurs
+     */
+    @Override
+    public void write(final int idx) throws IOException {
+        try {
+<span class="fc" id="L116">            beforeWrite(1);</span>
+<span class="fc" id="L117">            out.write(idx);</span>
+<span class="fc" id="L118">            afterWrite(1);</span>
+<span class="fc" id="L119">        } catch (final IOException e) {</span>
+<span class="nc" id="L120">            handleIOException(e);</span>
+        }
+<span class="fc" id="L122">    }</span>
+
+    /**
+     * Invokes the delegate's &lt;code&gt;write(char[])&lt;/code&gt; method.
+     * @param chr the characters to write
+     * @throws IOException if an I/O error occurs
+     */
+    @Override
+    public void write(final char[] chr) throws IOException {
+        try {
+<span class="fc" id="L132">            int len = 0;</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">            if (chr != null) {</span>
+<span class="fc" id="L134">                len = chr.length;</span>
+            }
+
+<span class="fc" id="L137">            beforeWrite(len);</span>
+<span class="fc" id="L138">            out.write(chr);</span>
+<span class="fc" id="L139">            afterWrite(len);</span>
+<span class="fc" id="L140">        } catch (final IOException e) {</span>
+<span class="nc" id="L141">            handleIOException(e);</span>
+        }
+<span class="fc" id="L143">    }</span>
+
+    /**
+     * Invokes the delegate's &lt;code&gt;write(char[], int, int)&lt;/code&gt; method.
+     * @param chr the characters to write
+     * @param st The start offset
+     * @param len The number of characters to write
+     * @throws IOException if an I/O error occurs
+     */
+    @Override
+    public void write(final char[] chr, final int st, final int len) throws IOException {
+        try {
+<span class="fc" id="L155">            beforeWrite(len);</span>
+<span class="fc" id="L156">            out.write(chr, st, len);</span>
+<span class="fc" id="L157">            afterWrite(len);</span>
+<span class="fc" id="L158">        } catch (final IOException e) {</span>
+<span class="nc" id="L159">            handleIOException(e);</span>
+        }
+<span class="fc" id="L161">    }</span>
+
+    /**
+     * Invokes the delegate's &lt;code&gt;write(String)&lt;/code&gt; method.
+     * @param str the string to write
+     * @throws IOException if an I/O error occurs
+     */
+    @Override
+    public void write(final String str) throws IOException {
+        try {
+<span class="fc" id="L171">            int len = 0;</span>
+<span class="fc bfc" id="L172" title="All 2 branches covered.">            if (str != null) {</span>
+<span class="fc" id="L173">                len = str.length();</span>
+            }
+
+<span class="fc" id="L176">            beforeWrite(len);</span>
+<span class="fc" id="L177">            out.write(str);</span>
+<span class="fc" id="L178">            afterWrite(len);</span>
+<span class="fc" id="L179">        } catch (final IOException e) {</span>
+<span class="nc" id="L180">            handleIOException(e);</span>
+        }
+<span class="fc" id="L182">    }</span>
+
+    /**
+     * Invokes the delegate's &lt;code&gt;write(String)&lt;/code&gt; method.
+     * @param str the string to write
+     * @param st The start offset
+     * @param len The number of characters to write
+     * @throws IOException if an I/O error occurs
+     */
+    @Override
+    public void write(final String str, final int st, final int len) throws IOException {
+        try {
+<span class="fc" id="L194">            beforeWrite(len);</span>
+<span class="fc" id="L195">            out.write(str, st, len);</span>
+<span class="fc" id="L196">            afterWrite(len);</span>
+<span class="fc" id="L197">        } catch (final IOException e) {</span>
+<span class="nc" id="L198">            handleIOException(e);</span>
+        }
+<span class="fc" id="L200">    }</span>
+
+    /**
+     * Invokes the delegate's &lt;code&gt;flush()&lt;/code&gt; method.
+     * @throws IOException if an I/O error occurs
+     */
+    @Override
+    public void flush() throws IOException {
+        try {
+<span class="fc" id="L209">            out.flush();</span>
+<span class="fc" id="L210">        } catch (final IOException e) {</span>
+<span class="nc" id="L211">            handleIOException(e);</span>
+        }
+<span class="fc" id="L213">    }</span>
+
+    /**
+     * Invokes the delegate's &lt;code&gt;close()&lt;/code&gt; method.
+     * @throws IOException if an I/O error occurs
+     */
+    @Override
+    public void close() throws IOException {
+        try {
+<span class="fc" id="L222">            out.close();</span>
+<span class="fc" id="L223">        } catch (final IOException e) {</span>
+<span class="nc" id="L224">            handleIOException(e);</span>
+        }
+<span class="fc" id="L226">    }</span>
+
+    /**
+     * Invoked by the write methods before the call is proxied. The number
+     * of chars to be written (1 for the {@link #write(int)} method, buffer
+     * length for {@link #write(char[])}, etc.) is given as an argument.
+     * &lt;p&gt;
+     * Subclasses can override this method to add common pre-processing
+     * functionality without having to override all the write methods.
+     * The default implementation does nothing.
+     *
+     * @since 2.0
+     * @param n number of chars to be written
+     * @throws IOException if the pre-processing fails
+     */
+    protected void beforeWrite(final int n) throws IOException {
+<span class="fc" id="L242">    }</span>
+
+    /**
+     * Invoked by the write methods after the proxied call has returned
+     * successfully. The number of chars written (1 for the
+     * {@link #write(int)} method, buffer length for {@link #write(char[])},
+     * etc.) is given as an argument.
+     * &lt;p&gt;
+     * Subclasses can override this method to add common post-processing
+     * functionality without having to override all the write methods.
+     * The default implementation does nothing.
+     *
+     * @since 2.0
+     * @param n number of chars written
+     * @throws IOException if the post-processing fails
+     */
+    protected void afterWrite(final int n) throws IOException {
+<span class="fc" id="L259">    }</span>
+
+    /**
+     * Handle any IOExceptions thrown.
+     * &lt;p&gt;
+     * This method provides a point to implement custom exception
+     * handling. The default behaviour is to re-throw the exception.
+     * @param e The IOException thrown
+     * @throws IOException if an I/O error occurs
+     * @since 2.0
+     */
+    protected void handleIOException(final IOException e) throws IOException {
+<span class="fc" id="L271">        throw e;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

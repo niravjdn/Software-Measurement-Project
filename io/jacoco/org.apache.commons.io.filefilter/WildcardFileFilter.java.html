@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WildcardFileFilter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons IO</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.io.filefilter</a> &gt; <span class="el_source">WildcardFileFilter.java</span></div><h1>WildcardFileFilter.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.io.filefilter;
+
+import java.io.File;
+import java.io.Serializable;
+import java.util.List;
+
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOCase;
+
+/**
+ * Filters files using the supplied wildcards.
+ * &lt;p&gt;
+ * This filter selects files and directories based on one or more wildcards.
+ * Testing is case-sensitive by default, but this can be configured.
+ * &lt;p&gt;
+ * The wildcard matcher uses the characters '?' and '*' to represent a
+ * single or multiple wildcard characters.
+ * This is the same as often found on Dos/Unix command lines.
+ * The check is case-sensitive by default.
+ * See {@link FilenameUtils#wildcardMatchOnSystem} for more information.
+ * &lt;p&gt;
+ * For example:
+ * &lt;pre&gt;
+ * File dir = new File(&quot;.&quot;);
+ * FileFilter fileFilter = new WildcardFileFilter(&quot;*test*.java~*~&quot;);
+ * File[] files = dir.listFiles(fileFilter);
+ * for (int i = 0; i &amp;lt; files.length; i++) {
+ *   System.out.println(files[i]);
+ * }
+ * &lt;/pre&gt;
+ *
+ * @since 1.3
+ */
+public class WildcardFileFilter extends AbstractFileFilter implements Serializable {
+
+    private static final long serialVersionUID = -7426486598995782105L;
+    /** The wildcards that will be used to match filenames. */
+    private final String[] wildcards;
+    /** Whether the comparison is case sensitive. */
+    private final IOCase caseSensitivity;
+
+    /**
+     * Construct a new case-sensitive wildcard filter for a single wildcard.
+     *
+     * @param wildcard  the wildcard to match
+     * @throws IllegalArgumentException if the pattern is null
+     */
+    public WildcardFileFilter(final String wildcard) {
+<span class="fc" id="L65">        this(wildcard, IOCase.SENSITIVE);</span>
+<span class="fc" id="L66">    }</span>
+
+    /**
+     * Construct a new wildcard filter for a single wildcard specifying case-sensitivity.
+     *
+     * @param wildcard  the wildcard to match, not null
+     * @param caseSensitivity  how to handle case sensitivity, null means case-sensitive
+     * @throws IllegalArgumentException if the pattern is null
+     */
+<span class="fc" id="L75">    public WildcardFileFilter(final String wildcard, final IOCase caseSensitivity) {</span>
+<span class="fc bfc" id="L76" title="All 2 branches covered.">        if (wildcard == null) {</span>
+<span class="fc" id="L77">            throw new IllegalArgumentException(&quot;The wildcard must not be null&quot;);</span>
+        }
+<span class="fc" id="L79">        this.wildcards = new String[] { wildcard };</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">        this.caseSensitivity = caseSensitivity == null ? IOCase.SENSITIVE : caseSensitivity;</span>
+<span class="fc" id="L81">    }</span>
+
+    /**
+     * Construct a new case-sensitive wildcard filter for an array of wildcards.
+     * &lt;p&gt;
+     *
+     * @param wildcards  the array of wildcards to match
+     * @throws IllegalArgumentException if the pattern array is null
+     */
+    public WildcardFileFilter(final String[] wildcards) {
+<span class="fc" id="L91">        this(wildcards, IOCase.SENSITIVE);</span>
+<span class="fc" id="L92">    }</span>
+
+    /**
+     * Construct a new wildcard filter for an array of wildcards specifying case-sensitivity.
+     * &lt;p&gt;
+     *
+     * @param wildcards  the array of wildcards to match, not null
+     * @param caseSensitivity  how to handle case sensitivity, null means case-sensitive
+     * @throws IllegalArgumentException if the pattern array is null
+     */
+<span class="fc" id="L102">    public WildcardFileFilter(final String[] wildcards, final IOCase caseSensitivity) {</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">        if (wildcards == null) {</span>
+<span class="fc" id="L104">            throw new IllegalArgumentException(&quot;The wildcard array must not be null&quot;);</span>
+        }
+<span class="fc" id="L106">        this.wildcards = new String[wildcards.length];</span>
+<span class="fc" id="L107">        System.arraycopy(wildcards, 0, this.wildcards, 0, wildcards.length);</span>
+<span class="fc bfc" id="L108" title="All 2 branches covered.">        this.caseSensitivity = caseSensitivity == null ? IOCase.SENSITIVE : caseSensitivity;</span>
+<span class="fc" id="L109">    }</span>
+
+    /**
+     * Construct a new case-sensitive wildcard filter for a list of wildcards.
+     *
+     * @param wildcards  the list of wildcards to match, not null
+     * @throws IllegalArgumentException if the pattern list is null
+     * @throws ClassCastException if the list does not contain Strings
+     */
+    public WildcardFileFilter(final List&lt;String&gt; wildcards) {
+<span class="fc" id="L119">        this(wildcards, IOCase.SENSITIVE);</span>
+<span class="fc" id="L120">    }</span>
+
+    /**
+     * Construct a new wildcard filter for a list of wildcards specifying case-sensitivity.
+     *
+     * @param wildcards  the list of wildcards to match, not null
+     * @param caseSensitivity  how to handle case sensitivity, null means case-sensitive
+     * @throws IllegalArgumentException if the pattern list is null
+     * @throws ClassCastException if the list does not contain Strings
+     */
+<span class="fc" id="L130">    public WildcardFileFilter(final List&lt;String&gt; wildcards, final IOCase caseSensitivity) {</span>
+<span class="fc bfc" id="L131" title="All 2 branches covered.">        if (wildcards == null) {</span>
+<span class="fc" id="L132">            throw new IllegalArgumentException(&quot;The wildcard list must not be null&quot;);</span>
+        }
+<span class="fc" id="L134">        this.wildcards = wildcards.toArray(new String[wildcards.size()]);</span>
+<span class="pc bpc" id="L135" title="1 of 2 branches missed.">        this.caseSensitivity = caseSensitivity == null ? IOCase.SENSITIVE : caseSensitivity;</span>
+<span class="fc" id="L136">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Checks to see if the filename matches one of the wildcards.
+     *
+     * @param dir  the file directory (ignored)
+     * @param name  the filename
+     * @return true if the filename matches one of the wildcards
+     */
+    @Override
+    public boolean accept(final File dir, final String name) {
+<span class="fc bfc" id="L148" title="All 2 branches covered.">        for (final String wildcard : wildcards) {</span>
+<span class="fc bfc" id="L149" title="All 2 branches covered.">            if (FilenameUtils.wildcardMatch(name, wildcard, caseSensitivity)) {</span>
+<span class="fc" id="L150">                return true;</span>
+            }
+        }
+<span class="fc" id="L153">        return false;</span>
+    }
+
+    /**
+     * Checks to see if the filename matches one of the wildcards.
+     *
+     * @param file  the file to check
+     * @return true if the filename matches one of the wildcards
+     */
+    @Override
+    public boolean accept(final File file) {
+<span class="fc" id="L164">        final String name = file.getName();</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">        for (final String wildcard : wildcards) {</span>
+<span class="fc bfc" id="L166" title="All 2 branches covered.">            if (FilenameUtils.wildcardMatch(name, wildcard, caseSensitivity)) {</span>
+<span class="fc" id="L167">                return true;</span>
+            }
+        }
+<span class="fc" id="L170">        return false;</span>
+    }
+
+    /**
+     * Provide a String representation of this file filter.
+     *
+     * @return a String representation
+     */
+    @Override
+    public String toString() {
+<span class="fc" id="L180">        final StringBuilder buffer = new StringBuilder();</span>
+<span class="fc" id="L181">        buffer.append(super.toString());</span>
+<span class="fc" id="L182">        buffer.append(&quot;(&quot;);</span>
+<span class="pc bpc" id="L183" title="1 of 2 branches missed.">        if (wildcards != null) {</span>
+<span class="fc bfc" id="L184" title="All 2 branches covered.">            for (int i = 0; i &lt; wildcards.length; i++) {</span>
+<span class="fc bfc" id="L185" title="All 2 branches covered.">                if (i &gt; 0) {</span>
+<span class="fc" id="L186">                    buffer.append(&quot;,&quot;);</span>
+                }
+<span class="fc" id="L188">                buffer.append(wildcards[i]);</span>
+            }
+        }
+<span class="fc" id="L191">        buffer.append(&quot;)&quot;);</span>
+<span class="fc" id="L192">        return buffer.toString();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

@@ -1,0 +1,1916 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractConfiguration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2</a> &gt; <span class="el_source">AbstractConfiguration.java</span></div><h1>AbstractConfiguration.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.commons.configuration2;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.apache.commons.configuration2.convert.ConversionHandler;
+import org.apache.commons.configuration2.convert.DefaultConversionHandler;
+import org.apache.commons.configuration2.convert.DisabledListDelimiterHandler;
+import org.apache.commons.configuration2.convert.ListDelimiterHandler;
+import org.apache.commons.configuration2.event.BaseEventSource;
+import org.apache.commons.configuration2.event.ConfigurationErrorEvent;
+import org.apache.commons.configuration2.event.ConfigurationEvent;
+import org.apache.commons.configuration2.event.EventListener;
+import org.apache.commons.configuration2.ex.ConversionException;
+import org.apache.commons.configuration2.interpol.ConfigurationInterpolator;
+import org.apache.commons.configuration2.interpol.InterpolatorSpecification;
+import org.apache.commons.configuration2.interpol.Lookup;
+import org.apache.commons.configuration2.io.ConfigurationLogger;
+import org.apache.commons.configuration2.sync.LockMode;
+import org.apache.commons.configuration2.sync.NoOpSynchronizer;
+import org.apache.commons.configuration2.sync.Synchronizer;
+import org.apache.commons.lang3.ClassUtils;
+import org.apache.commons.lang3.ObjectUtils;
+
+/**
+ * &lt;p&gt;Abstract configuration class. Provides basic functionality but does not
+ * store any data.&lt;/p&gt;
+ * &lt;p&gt;If you want to write your own Configuration class then you should
+ * implement only abstract methods from this class. A lot of functionality
+ * needed by typical implementations of the {@code Configuration}
+ * interface is already provided by this base class. Following is a list of
+ * features implemented here:&lt;/p&gt;
+ * &lt;ul&gt;&lt;li&gt;Data conversion support. The various data types required by the
+ * {@code Configuration} interface are already handled by this base class.
+ * A concrete sub class only needs to provide a generic {@code getProperty()}
+ * method.&lt;/li&gt;
+ * &lt;li&gt;Support for variable interpolation. Property values containing special
+ * variable tokens (like &lt;code&gt;${var}&lt;/code&gt;) will be replaced by their
+ * corresponding values.&lt;/li&gt;
+ * &lt;li&gt;Optional support for string lists. The values of properties to be added to this
+ * configuration are checked whether they contain a list delimiter character. If
+ * this is the case and if list splitting is enabled, the string is split and
+ * multiple values are added for this property. List splitting is controlled
+ * by a {@link ListDelimiterHandler} object which can be set using the
+ * {@link #setListDelimiterHandler(ListDelimiterHandler)} method. It is
+ * disabled per default. To enable this feature, set a suitable
+ * {@code ListDelimiterHandler}, e.g. an instance of
+ * {@link org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
+ * DefaultListDelimiterHandler} configured with the desired list delimiter character.&lt;/li&gt;
+ * &lt;li&gt;Allows specifying how missing properties are treated. Per default the
+ * get methods returning an object will return &lt;b&gt;null&lt;/b&gt; if the searched
+ * property key is not found (and no default value is provided). With the
+ * {@code setThrowExceptionOnMissing()} method this behavior can be
+ * changed to throw an exception when a requested property cannot be found.&lt;/li&gt;
+ * &lt;li&gt;Basic event support. Whenever this configuration is modified registered
+ * event listeners are notified. Refer to the various {@code EVENT_XXX}
+ * constants to get an impression about which event types are supported.&lt;/li&gt;
+ * &lt;li&gt;Support for proper synchronization based on the {@link Synchronizer}
+ * interface.&lt;/li&gt;
+ * &lt;/ul&gt;
+ * &lt;p&gt;
+ * Most methods defined by the {@code Configuration} interface are already
+ * implemented in this class. Many method implementations perform basic
+ * book-keeping tasks (e.g. firing events, handling synchronization), and then
+ * delegate to other (protected) methods executing the actual work. Subclasses
+ * override these protected methods to define or adapt behavior. The public
+ * entry point methods are final to prevent subclasses from breaking basic
+ * functionality.
+ * &lt;/p&gt;
+ *
+ * @author &lt;a href=&quot;mailto:ksh@scand.com&quot;&gt;Konstantin Shaposhnikov &lt;/a&gt;
+ * @author &lt;a href=&quot;mailto:hps@intermeta.de&quot;&gt;Henning P. Schmiedehausen &lt;/a&gt;
+ * @version $Id$
+ */
+public abstract class AbstractConfiguration extends BaseEventSource implements Configuration
+{
+    /** The list delimiter handler. */
+    private ListDelimiterHandler listDelimiterHandler;
+
+    /** The conversion handler. */
+    private ConversionHandler conversionHandler;
+
+    /**
+     * Whether the configuration should throw NoSuchElementExceptions or simply
+     * return null when a property does not exist. Defaults to return null.
+     */
+    private boolean throwExceptionOnMissing;
+
+    /** Stores a reference to the object that handles variable interpolation. */
+    private AtomicReference&lt;ConfigurationInterpolator&gt; interpolator;
+
+    /** The object responsible for synchronization. */
+    private volatile Synchronizer synchronizer;
+
+    /** The object used for dealing with encoded property values. */
+    private ConfigurationDecoder configurationDecoder;
+
+    /** Stores the logger.*/
+    private ConfigurationLogger log;
+
+    /**
+     * Creates a new instance of {@code AbstractConfiguration}.
+     */
+    public AbstractConfiguration()
+<span class="fc" id="L132">    {</span>
+<span class="fc" id="L133">        interpolator = new AtomicReference&lt;&gt;();</span>
+<span class="fc" id="L134">        initLogger(null);</span>
+<span class="fc" id="L135">        installDefaultInterpolator();</span>
+<span class="fc" id="L136">        listDelimiterHandler = DisabledListDelimiterHandler.INSTANCE;</span>
+<span class="fc" id="L137">        conversionHandler = DefaultConversionHandler.INSTANCE;</span>
+<span class="fc" id="L138">    }</span>
+
+    /**
+     * Returns the {@code ListDelimiterHandler} used by this instance.
+     *
+     * @return the {@code ListDelimiterHandler}
+     * @since 2.0
+     */
+    public ListDelimiterHandler getListDelimiterHandler()
+    {
+<span class="fc" id="L148">        return listDelimiterHandler;</span>
+    }
+
+    /**
+     * &lt;p&gt;
+     * Sets the {@code ListDelimiterHandler} to be used by this instance. This
+     * object is invoked every time when dealing with string properties that may
+     * contain a list delimiter and thus have to be split to multiple values.
+     * Per default, a {@code ListDelimiterHandler} implementation is set which
+     * does not support list splitting. This can be changed for instance by
+     * setting a {@link org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
+     * DefaultListDelimiterHandler} object.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * &lt;strong&gt;Warning:&lt;/strong&gt; Be careful when changing the list delimiter
+     * handler when the configuration has already been loaded/populated. List
+     * handling is typically applied already when properties are added to the
+     * configuration. If later another handler is set which processes lists
+     * differently, results may be unexpected; some operations may even cause
+     * exceptions.
+     * &lt;/p&gt;
+     *
+     * @param listDelimiterHandler the {@code ListDelimiterHandler} to be used
+     *        (must not be &lt;b&gt;null&lt;/b&gt;)
+     * @throws IllegalArgumentException if the {@code ListDelimiterHandler} is
+     *         &lt;b&gt;null&lt;/b&gt;
+     * @since 2.0
+     */
+    public void setListDelimiterHandler(
+            final ListDelimiterHandler listDelimiterHandler)
+    {
+<span class="fc bfc" id="L179" title="All 2 branches covered.">        if (listDelimiterHandler == null)</span>
+        {
+<span class="fc" id="L181">            throw new IllegalArgumentException(</span>
+                    &quot;List delimiter handler must not be null!&quot;);
+        }
+<span class="fc" id="L184">        this.listDelimiterHandler = listDelimiterHandler;</span>
+<span class="fc" id="L185">    }</span>
+
+    /**
+     * Returns the {@code ConversionHandler} used by this instance.
+     *
+     * @return the {@code ConversionHandler}
+     * @since 2.0
+     */
+    public ConversionHandler getConversionHandler()
+    {
+<span class="fc" id="L195">        return conversionHandler;</span>
+    }
+
+    /**
+     * Sets the {@code ConversionHandler} to be used by this instance. The
+     * {@code ConversionHandler} is responsible for every kind of data type
+     * conversion. It is consulted by all get methods returning results in
+     * specific data types. A newly created configuration uses a default
+     * {@code ConversionHandler} implementation. This can be changed while
+     * initializing the configuration (e.g. via a builder). Note that access to
+     * this property is not synchronized.
+     *
+     * @param conversionHandler the {@code ConversionHandler} to be used (must
+     *        not be &lt;b&gt;null&lt;/b&gt;)
+     * @throws IllegalArgumentException if the {@code ConversionHandler} is
+     *         &lt;b&gt;null&lt;/b&gt;
+     * @since 2.0
+     */
+    public void setConversionHandler(final ConversionHandler conversionHandler)
+    {
+<span class="fc bfc" id="L215" title="All 2 branches covered.">        if (conversionHandler == null)</span>
+        {
+<span class="fc" id="L217">            throw new IllegalArgumentException(</span>
+                    &quot;ConversionHandler must not be null!&quot;);
+        }
+<span class="fc" id="L220">        this.conversionHandler = conversionHandler;</span>
+<span class="fc" id="L221">    }</span>
+
+    /**
+     * Allows to set the {@code throwExceptionOnMissing} flag. This
+     * flag controls the behavior of property getter methods that return
+     * objects if the requested property is missing. If the flag is set to
+     * &lt;b&gt;false&lt;/b&gt; (which is the default value), these methods will return
+     * &lt;b&gt;null&lt;/b&gt;. If set to &lt;b&gt;true&lt;/b&gt;, they will throw a
+     * {@code NoSuchElementException} exception. Note that getter methods
+     * for primitive data types are not affected by this flag.
+     *
+     * @param throwExceptionOnMissing The new value for the property
+     */
+    public void setThrowExceptionOnMissing(final boolean throwExceptionOnMissing)
+    {
+<span class="fc" id="L236">        this.throwExceptionOnMissing = throwExceptionOnMissing;</span>
+<span class="fc" id="L237">    }</span>
+
+    /**
+     * Returns true if missing values throw Exceptions.
+     *
+     * @return true if missing values throw Exceptions
+     */
+    public boolean isThrowExceptionOnMissing()
+    {
+<span class="fc" id="L246">        return throwExceptionOnMissing;</span>
+    }
+
+    /**
+     * Returns the {@code ConfigurationInterpolator} object that manages the
+     * lookup objects for resolving variables.
+     *
+     * @return the {@code ConfigurationInterpolator} associated with this
+     *         configuration
+     * @since 1.4
+     */
+    @Override
+    public ConfigurationInterpolator getInterpolator()
+    {
+<span class="fc" id="L260">        return interpolator.get();</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation sets the passed in object without
+     * further modifications. A &lt;b&gt;null&lt;/b&gt; argument is allowed; this disables
+     * interpolation.
+     *
+     * @since 2.0
+     */
+    @Override
+    public final void setInterpolator(final ConfigurationInterpolator ci)
+    {
+<span class="fc" id="L273">        interpolator.set(ci);</span>
+<span class="fc" id="L274">    }</span>
+
+    /**
+     * {@inheritDoc} This implementation creates a new
+     * {@code ConfigurationInterpolator} instance and initializes it with the
+     * given {@code Lookup} objects. In addition, it adds a specialized default
+     * {@code Lookup} object which queries this {@code Configuration}.
+     *
+     * @since 2.0
+     */
+    @Override
+    public final void installInterpolator(
+            final Map&lt;String, ? extends Lookup&gt; prefixLookups,
+            final Collection&lt;? extends Lookup&gt; defLookups)
+    {
+<span class="fc" id="L289">        final InterpolatorSpecification spec =</span>
+                new InterpolatorSpecification.Builder()
+<span class="fc" id="L291">                        .withPrefixLookups(prefixLookups)</span>
+<span class="fc" id="L292">                        .withDefaultLookups(defLookups)</span>
+<span class="fc" id="L293">                        .withDefaultLookup(new ConfigurationLookup(this))</span>
+<span class="fc" id="L294">                        .create();</span>
+<span class="fc" id="L295">        setInterpolator(ConfigurationInterpolator.fromSpecification(spec));</span>
+<span class="fc" id="L296">    }</span>
+
+    /**
+     * Registers all {@code Lookup} objects in the given map at the current
+     * {@code ConfigurationInterpolator} of this configuration. The set of
+     * default lookup objects (for variables without a prefix) is not modified
+     * by this method. If this configuration does not have a
+     * {@code ConfigurationInterpolator}, a new instance is created. Note: This
+     * method is mainly intended to be used for initializing a configuration
+     * when it is created by a builder. Normal client code should better call
+     * {@link #installInterpolator(Map, Collection)} to define the
+     * {@code ConfigurationInterpolator} in a single step.
+     *
+     * @param lookups a map with new {@code Lookup} objects and their prefixes
+     *        (may be &lt;b&gt;null&lt;/b&gt;)
+     * @since 2.0
+     */
+    public void setPrefixLookups(final Map&lt;String, ? extends Lookup&gt; lookups)
+    {
+        boolean success;
+        do
+        {
+            // do this in a loop because the ConfigurationInterpolator
+            // instance may be changed by another thread
+<span class="fc" id="L320">            final ConfigurationInterpolator ciOld = getInterpolator();</span>
+<span class="fc bfc" id="L321" title="All 2 branches covered.">            final ConfigurationInterpolator ciNew =</span>
+                    (ciOld != null) ? ciOld : new ConfigurationInterpolator();
+<span class="fc" id="L323">            ciNew.registerLookups(lookups);</span>
+<span class="fc" id="L324">            success = interpolator.compareAndSet(ciOld, ciNew);</span>
+<span class="pc bpc" id="L325" title="1 of 2 branches missed.">        } while (!success);</span>
+<span class="fc" id="L326">    }</span>
+
+    /**
+     * Adds all {@code Lookup} objects in the given collection as default
+     * lookups (i.e. lookups without a variable prefix) to the
+     * {@code ConfigurationInterpolator} object of this configuration. In
+     * addition, it adds a specialized default {@code Lookup} object which
+     * queries this {@code Configuration}. The set of {@code Lookup} objects
+     * with prefixes is not modified by this method. If this configuration does
+     * not have a {@code ConfigurationInterpolator}, a new instance is created.
+     * Note: This method is mainly intended to be used for initializing a
+     * configuration when it is created by a builder. Normal client code should
+     * better call {@link #installInterpolator(Map, Collection)} to define the
+     * {@code ConfigurationInterpolator} in a single step.
+     *
+     * @param lookups the collection with default {@code Lookup} objects to be
+     *        added
+     * @since 2.0
+     */
+    public void setDefaultLookups(final Collection&lt;? extends Lookup&gt; lookups)
+    {
+        boolean success;
+        do
+        {
+<span class="fc" id="L350">            final ConfigurationInterpolator ciOld = getInterpolator();</span>
+<span class="fc bfc" id="L351" title="All 2 branches covered.">            final ConfigurationInterpolator ciNew =</span>
+                    (ciOld != null) ? ciOld : new ConfigurationInterpolator();
+<span class="fc" id="L353">            Lookup confLookup = findConfigurationLookup(ciNew);</span>
+<span class="fc bfc" id="L354" title="All 2 branches covered.">            if (confLookup == null)</span>
+            {
+<span class="fc" id="L356">                confLookup = new ConfigurationLookup(this);</span>
+            }
+            else
+            {
+<span class="fc" id="L360">                ciNew.removeDefaultLookup(confLookup);</span>
+            }
+<span class="fc" id="L362">            ciNew.addDefaultLookups(lookups);</span>
+<span class="fc" id="L363">            ciNew.addDefaultLookup(confLookup);</span>
+<span class="fc" id="L364">            success = interpolator.compareAndSet(ciOld, ciNew);</span>
+<span class="pc bpc" id="L365" title="1 of 2 branches missed.">        } while (!success);</span>
+<span class="fc" id="L366">    }</span>
+
+    /**
+     * Sets the specified {@code ConfigurationInterpolator} as the parent of
+     * this configuration's {@code ConfigurationInterpolator}. If this
+     * configuration does not have a {@code ConfigurationInterpolator}, a new
+     * instance is created. Note: This method is mainly intended to be used for
+     * initializing a configuration when it is created by a builder. Normal
+     * client code can directly update the {@code ConfigurationInterpolator}.
+     *
+     * @param parent the parent {@code ConfigurationInterpolator} to be set
+     * @since 2.0
+     */
+    public void setParentInterpolator(final ConfigurationInterpolator parent)
+    {
+        boolean success;
+        do
+        {
+<span class="fc" id="L384">            final ConfigurationInterpolator ciOld = getInterpolator();</span>
+<span class="fc bfc" id="L385" title="All 2 branches covered.">            final ConfigurationInterpolator ciNew =</span>
+                    (ciOld != null) ? ciOld : new ConfigurationInterpolator();
+<span class="fc" id="L387">            ciNew.setParentInterpolator(parent);</span>
+<span class="fc" id="L388">            success = interpolator.compareAndSet(ciOld, ciNew);</span>
+<span class="pc bpc" id="L389" title="1 of 2 branches missed.">        } while (!success);</span>
+<span class="fc" id="L390">    }</span>
+
+    /**
+     * Sets the {@code ConfigurationDecoder} for this configuration. This object
+     * is used by {@link #getEncodedString(String)}.
+     *
+     * @param configurationDecoder the {@code ConfigurationDecoder}
+     * @since 2.0
+     */
+    public void setConfigurationDecoder(
+            final ConfigurationDecoder configurationDecoder)
+    {
+<span class="fc" id="L402">        this.configurationDecoder = configurationDecoder;</span>
+<span class="fc" id="L403">    }</span>
+
+    /**
+     * Returns the {@code ConfigurationDecoder} used by this instance.
+     *
+     * @return the {@code ConfigurationDecoder}
+     * @since 2.0
+     */
+    public ConfigurationDecoder getConfigurationDecoder()
+    {
+<span class="fc" id="L413">        return configurationDecoder;</span>
+    }
+
+    /**
+     * Creates a clone of the {@code ConfigurationInterpolator} used by this
+     * instance. This method can be called by {@code clone()} implementations of
+     * derived classes. Normally, the {@code ConfigurationInterpolator} of a
+     * configuration instance must not be shared with other instances because it
+     * contains a specific {@code Lookup} object pointing to the owning
+     * configuration. This has to be taken into account when cloning a
+     * configuration. This method creates a new
+     * {@code ConfigurationInterpolator} for this configuration instance which
+     * contains all lookup objects from the original
+     * {@code ConfigurationInterpolator} except for the configuration specific
+     * lookup pointing to the passed in original configuration. This one is
+     * replaced by a corresponding {@code Lookup} referring to this
+     * configuration.
+     *
+     * @param orgConfig the original configuration from which this one was
+     *        cloned
+     * @since 2.0
+     */
+    protected void cloneInterpolator(final AbstractConfiguration orgConfig)
+    {
+<span class="fc" id="L437">        interpolator = new AtomicReference&lt;&gt;();</span>
+<span class="fc" id="L438">        final ConfigurationInterpolator orgInterpolator = orgConfig.getInterpolator();</span>
+<span class="fc" id="L439">        final List&lt;Lookup&gt; defaultLookups = orgInterpolator.getDefaultLookups();</span>
+<span class="fc" id="L440">        final Lookup lookup = findConfigurationLookup(orgInterpolator, orgConfig);</span>
+<span class="pc bpc" id="L441" title="1 of 2 branches missed.">        if (lookup != null)</span>
+        {
+<span class="fc" id="L443">            defaultLookups.remove(lookup);</span>
+        }
+
+<span class="fc" id="L446">        installInterpolator(orgInterpolator.getLookups(), defaultLookups);</span>
+<span class="fc" id="L447">    }</span>
+
+    /**
+     * Creates a default {@code ConfigurationInterpolator} which is initialized
+     * with all default {@code Lookup} objects. This method is called by the
+     * constructor. It ensures that default interpolation works for every new
+     * configuration instance.
+     */
+    private void installDefaultInterpolator()
+    {
+<span class="fc" id="L457">        installInterpolator(</span>
+<span class="fc" id="L458">                ConfigurationInterpolator.getDefaultPrefixLookups(), null);</span>
+<span class="fc" id="L459">    }</span>
+
+    /**
+     * Finds a {@code ConfigurationLookup} pointing to this configuration in the
+     * default lookups of the specified {@code ConfigurationInterpolator}. This
+     * method is called to ensure that there is exactly one default lookup
+     * querying this configuration.
+     *
+     * @param ci the {@code ConfigurationInterpolator} in question
+     * @return the found {@code Lookup} object or &lt;b&gt;null&lt;/b&gt;
+     */
+    private Lookup findConfigurationLookup(final ConfigurationInterpolator ci)
+    {
+<span class="fc" id="L472">        return findConfigurationLookup(ci, this);</span>
+    }
+
+    /**
+     * Finds a {@code ConfigurationLookup} pointing to the specified
+     * configuration in the default lookups for the specified
+     * {@code ConfigurationInterpolator}.
+     *
+     * @param ci the {@code ConfigurationInterpolator} in question
+     * @param targetConf the target configuration of the searched lookup
+     * @return the found {@code Lookup} object or &lt;b&gt;null&lt;/b&gt;
+     */
+    private static Lookup findConfigurationLookup(final ConfigurationInterpolator ci,
+            final ImmutableConfiguration targetConf)
+    {
+<span class="fc bfc" id="L487" title="All 2 branches covered.">        for (final Lookup l : ci.getDefaultLookups())</span>
+        {
+<span class="pc bpc" id="L489" title="1 of 2 branches missed.">            if (l instanceof ConfigurationLookup)</span>
+            {
+<span class="pc bpc" id="L491" title="1 of 2 branches missed.">                if (targetConf == ((ConfigurationLookup) l).getConfiguration())</span>
+                {
+<span class="fc" id="L493">                    return l;</span>
+                }
+            }
+<span class="nc" id="L496">        }</span>
+<span class="fc" id="L497">        return null;</span>
+    }
+
+    /**
+     * Returns the logger used by this configuration object.
+     *
+     * @return the logger
+     * @since 2.0
+     */
+    public ConfigurationLogger getLogger()
+    {
+<span class="fc" id="L508">        return log;</span>
+    }
+
+    /**
+     * Allows setting the logger to be used by this configuration object. This
+     * method makes it possible for clients to exactly control logging behavior.
+     * Per default a logger is set that will ignore all log messages. Derived
+     * classes that want to enable logging should call this method during their
+     * initialization with the logger to be used. It is legal to pass a
+     * &lt;b&gt;null&lt;/b&gt; logger; in this case, logging will be disabled.
+     *
+     * @param log the new logger
+     * @since 2.0
+     */
+    public void setLogger(final ConfigurationLogger log)
+    {
+<span class="fc" id="L524">        initLogger(log);</span>
+<span class="fc" id="L525">    }</span>
+
+    /**
+     * Adds a special {@link EventListener} object to this configuration that
+     * will log all internal errors. This method is intended to be used by
+     * certain derived classes, for which it is known that they can fail on
+     * property access (e.g. {@code DatabaseConfiguration}).
+     *
+     * @since 1.4
+     */
+    public final void addErrorLogListener()
+    {
+<span class="fc" id="L537">        addEventListener(ConfigurationErrorEvent.ANY,</span>
+                new EventListener&lt;ConfigurationErrorEvent&gt;()
+<span class="fc" id="L539">                {</span>
+                    @Override
+                    public void onEvent(final ConfigurationErrorEvent event)
+                    {
+<span class="nc" id="L543">                        getLogger().warn(&quot;Internal error&quot;, event.getCause());</span>
+<span class="nc" id="L544">                    }</span>
+                });
+<span class="fc" id="L546">    }</span>
+
+    /**
+     * Returns the object responsible for synchronizing this configuration. All
+     * access to this configuration - both read and write access - is controlled
+     * by this object. This implementation never returns &lt;b&gt;null&lt;/b&gt;. If no
+     * {@code Synchronizer} has been set, a {@link NoOpSynchronizer} is
+     * returned. So, per default, instances of {@code AbstractConfiguration} are
+     * not thread-safe unless a suitable {@code Synchronizer} is set!
+     *
+     * @return the {@code Synchronizer} used by this instance
+     * @since 2.0
+     */
+    @Override
+    public final Synchronizer getSynchronizer()
+    {
+<span class="fc" id="L562">        final Synchronizer sync = synchronizer;</span>
+<span class="fc bfc" id="L563" title="All 2 branches covered.">        return (sync != null) ? sync : NoOpSynchronizer.INSTANCE;</span>
+    }
+
+    /**
+     * Sets the object responsible for synchronizing this configuration. This
+     * method has to be called with a suitable {@code Synchronizer} object when
+     * initializing this configuration instance in order to make it thread-safe.
+     *
+     * @param synchronizer the new {@code Synchronizer}; can be &lt;b&gt;null&lt;/b&gt;,
+     *        then this instance uses a {@link NoOpSynchronizer}
+     * @since 2.0
+     */
+    @Override
+    public final void setSynchronizer(final Synchronizer synchronizer)
+    {
+<span class="fc" id="L578">        this.synchronizer = synchronizer;</span>
+<span class="fc" id="L579">    }</span>
+
+    /**
+     * {@inheritDoc} This implementation delegates to {@code beginRead()} or
+     * {@code beginWrite()}, depending on the {@code LockMode} argument.
+     * Subclasses can override these protected methods to perform additional
+     * steps when a configuration is locked.
+     *
+     * @since 2.0
+     * @throws NullPointerException if the argument is &lt;b&gt;null&lt;/b&gt;
+     */
+    @Override
+    public final void lock(final LockMode mode)
+    {
+<span class="pc bpc" id="L593" title="1 of 3 branches missed.">        switch (mode)</span>
+        {
+        case READ:
+<span class="fc" id="L596">            beginRead(false);</span>
+<span class="fc" id="L597">            break;</span>
+        case WRITE:
+<span class="fc" id="L599">            beginWrite(false);</span>
+<span class="fc" id="L600">            break;</span>
+        default:
+<span class="nc" id="L602">            throw new IllegalArgumentException(&quot;Unsupported LockMode: &quot; + mode);</span>
+        }
+<span class="fc" id="L604">    }</span>
+
+    /**
+     * {@inheritDoc} This implementation delegates to {@code endRead()} or
+     * {@code endWrite()}, depending on the {@code LockMode} argument.
+     * Subclasses can override these protected methods to perform additional
+     * steps when a configuration's lock is released.
+     *
+     * @throws NullPointerException if the argument is &lt;b&gt;null&lt;/b&gt;
+     */
+    @Override
+    public final void unlock(final LockMode mode)
+    {
+<span class="pc bpc" id="L617" title="1 of 3 branches missed.">        switch (mode)</span>
+        {
+        case READ:
+<span class="fc" id="L620">            endRead();</span>
+<span class="fc" id="L621">            break;</span>
+        case WRITE:
+<span class="fc" id="L623">            endWrite();</span>
+<span class="fc" id="L624">            break;</span>
+        default:
+<span class="nc" id="L626">            throw new IllegalArgumentException(&quot;Unsupported LockMode: &quot; + mode);</span>
+        }
+<span class="fc" id="L628">    }</span>
+
+    /**
+     * Notifies this configuration's {@link Synchronizer} that a read operation
+     * is about to start. This method is called by all methods which access this
+     * configuration in a read-only mode. Subclasses may override it to perform
+     * additional actions before this read operation. The boolean
+     * &lt;em&gt;optimize&lt;/em&gt; argument can be evaluated by overridden methods in
+     * derived classes. Some operations which require a lock do not need a fully
+     * initialized configuration object. By setting this flag to
+     * &lt;strong&gt;true&lt;/strong&gt;, such operations can give a corresponding hint. An
+     * overridden implementation of {@code beginRead()} can then decide to skip
+     * some initialization steps. All basic operations in this class (and most
+     * of the basic {@code Configuration} implementations) call this method with
+     * a parameter value of &lt;strong&gt;false&lt;/strong&gt;. &lt;strong&gt;In any case the
+     * inherited method must be called! Otherwise, proper synchronization is not
+     * guaranteed.&lt;/strong&gt;
+     *
+     * @param optimize a flag whether optimization can be performed
+     * @since 2.0
+     */
+    protected void beginRead(final boolean optimize)
+    {
+<span class="fc" id="L651">        getSynchronizer().beginRead();</span>
+<span class="fc" id="L652">    }</span>
+
+    /**
+     * Notifies this configuration's {@link Synchronizer} that a read operation
+     * has finished. This method is called by all methods which access this
+     * configuration in a read-only manner at the end of their execution.
+     * Subclasses may override it to perform additional actions after this read
+     * operation. &lt;strong&gt;In any case the inherited method must be called!
+     * Otherwise, the read lock will not be released.&lt;/strong&gt;
+     *
+     * @since 2.0
+     */
+    protected void endRead()
+    {
+<span class="fc" id="L666">        getSynchronizer().endRead();</span>
+<span class="fc" id="L667">    }</span>
+
+    /**
+     * Notifies this configuration's {@link Synchronizer} that an update
+     * operation is about to start. This method is called by all methods which
+     * modify this configuration. Subclasses may override it to perform
+     * additional operations before an update. For a description of the boolean
+     * &lt;em&gt;optimize&lt;/em&gt; argument refer to the documentation of
+     * {@code beginRead()}. &lt;strong&gt;In any case the inherited method must be
+     * called! Otherwise, proper synchronization is not guaranteed.&lt;/strong&gt;
+     *
+     * @param optimize a flag whether optimization can be performed
+     * @see #beginRead(boolean)
+     * @since 2.0
+     */
+    protected void beginWrite(final boolean optimize)
+    {
+<span class="fc" id="L684">        getSynchronizer().beginWrite();</span>
+<span class="fc" id="L685">    }</span>
+
+    /**
+     * Notifies this configuration's {@link Synchronizer} that an update
+     * operation has finished. This method is called by all methods which modify
+     * this configuration at the end of their execution. Subclasses may override
+     * it to perform additional operations after an update. &lt;strong&gt;In any case
+     * the inherited method must be called! Otherwise, the write lock will not
+     * be released.&lt;/strong&gt;
+     *
+     * @since 2.0
+     */
+    protected void endWrite()
+    {
+<span class="fc" id="L699">        getSynchronizer().endWrite();</span>
+<span class="fc" id="L700">    }</span>
+
+    @Override
+    public final void addProperty(final String key, final Object value)
+    {
+<span class="fc" id="L705">        beginWrite(false);</span>
+        try
+        {
+<span class="fc" id="L708">            fireEvent(ConfigurationEvent.ADD_PROPERTY, key, value, true);</span>
+<span class="fc" id="L709">            addPropertyInternal(key, value);</span>
+<span class="fc" id="L710">            fireEvent(ConfigurationEvent.ADD_PROPERTY, key, value, false);</span>
+        }
+        finally
+        {
+<span class="fc" id="L714">            endWrite();</span>
+<span class="fc" id="L715">        }</span>
+<span class="fc" id="L716">    }</span>
+
+    /**
+     * Actually adds a property to this configuration. This method is called by
+     * {@code addProperty()}. It performs list splitting if necessary and
+     * delegates to {@link #addPropertyDirect(String, Object)} for every single
+     * property value.
+     *
+     * @param key the key of the property to be added
+     * @param value the new property value
+     * @since 2.0
+     */
+    protected void addPropertyInternal(final String key, final Object value)
+    {
+<span class="fc bfc" id="L730" title="All 2 branches covered.">        for (final Object obj : getListDelimiterHandler().parse(value))</span>
+        {
+<span class="fc" id="L732">            addPropertyDirect(key, obj);</span>
+<span class="fc" id="L733">        }</span>
+<span class="fc" id="L734">    }</span>
+
+    /**
+     * Adds a key/value pair to the Configuration. Override this method to
+     * provide write access to underlying Configuration store.
+     *
+     * @param key key to use for mapping
+     * @param value object to store
+     */
+    protected abstract void addPropertyDirect(String key, Object value);
+
+    /**
+     * interpolate key names to handle ${key} stuff
+     *
+     * @param base string to interpolate
+     *
+     * @return returns the key name with the ${key} substituted
+     */
+    protected String interpolate(final String base)
+    {
+<span class="fc" id="L754">        final Object result = interpolate((Object) base);</span>
+<span class="fc bfc" id="L755" title="All 2 branches covered.">        return result == null ? null : result.toString();</span>
+    }
+
+    /**
+     * Returns the interpolated value. This implementation delegates to the
+     * current {@code ConfigurationInterpolator}. If no
+     * {@code ConfigurationInterpolator} is set, the passed in value is returned
+     * without changes.
+     *
+     * @param value the value to interpolate
+     * @return the value with variables substituted
+     */
+    protected Object interpolate(final Object value)
+    {
+<span class="fc" id="L769">        final ConfigurationInterpolator ci = getInterpolator();</span>
+<span class="pc bpc" id="L770" title="1 of 2 branches missed.">        return ci != null ? ci.interpolate(value) : value;</span>
+    }
+
+    @Override
+    public Configuration subset(final String prefix)
+    {
+<span class="fc" id="L776">        return new SubsetConfiguration(this, prefix, &quot;.&quot;);</span>
+    }
+
+    @Override
+    public ImmutableConfiguration immutableSubset(final String prefix)
+    {
+<span class="fc" id="L782">        return ConfigurationUtils.unmodifiableConfiguration(subset(prefix));</span>
+    }
+
+    @Override
+    public final void setProperty(final String key, final Object value)
+    {
+<span class="fc" id="L788">        beginWrite(false);</span>
+        try
+        {
+<span class="fc" id="L791">            fireEvent(ConfigurationEvent.SET_PROPERTY, key, value, true);</span>
+<span class="fc" id="L792">            setPropertyInternal(key, value);</span>
+<span class="fc" id="L793">            fireEvent(ConfigurationEvent.SET_PROPERTY, key, value, false);</span>
+        }
+        finally
+        {
+<span class="fc" id="L797">            endWrite();</span>
+<span class="fc" id="L798">        }</span>
+<span class="fc" id="L799">    }</span>
+
+    /**
+     * Actually sets the value of a property. This method is called by
+     * {@code setProperty()}. It provides a default implementation of this
+     * functionality by clearing the specified key and delegating to
+     * {@code addProperty()}. Subclasses should override this method if they can
+     * provide a more efficient algorithm for setting a property value.
+     *
+     * @param key the property key
+     * @param value the new property value
+     * @since 2.0
+     */
+    protected void setPropertyInternal(final String key, final Object value)
+    {
+<span class="fc" id="L814">        setDetailEvents(false);</span>
+        try
+        {
+<span class="fc" id="L817">            clearProperty(key);</span>
+<span class="fc" id="L818">            addProperty(key, value);</span>
+        }
+        finally
+        {
+<span class="fc" id="L822">            setDetailEvents(true);</span>
+<span class="fc" id="L823">        }</span>
+<span class="fc" id="L824">    }</span>
+
+    /**
+     * Removes the specified property from this configuration. This
+     * implementation performs some preparations and then delegates to
+     * {@code clearPropertyDirect()}, which will do the real work.
+     *
+     * @param key the key to be removed
+     */
+    @Override
+    public final void clearProperty(final String key)
+    {
+<span class="fc" id="L836">        beginWrite(false);</span>
+        try
+        {
+<span class="fc" id="L839">            fireEvent(ConfigurationEvent.CLEAR_PROPERTY, key, null, true);</span>
+<span class="fc" id="L840">            clearPropertyDirect(key);</span>
+<span class="fc" id="L841">            fireEvent(ConfigurationEvent.CLEAR_PROPERTY, key, null, false);</span>
+        }
+        finally
+        {
+<span class="fc" id="L845">            endWrite();</span>
+<span class="fc" id="L846">        }</span>
+<span class="fc" id="L847">    }</span>
+
+    /**
+     * Removes the specified property from this configuration. This method is
+     * called by {@code clearProperty()} after it has done some
+     * preparations. It must be overridden in sub classes.
+     *
+     * @param key the key to be removed
+     */
+    protected abstract void clearPropertyDirect(String key);
+
+    @Override
+    public final void clear()
+    {
+<span class="fc" id="L861">        beginWrite(false);</span>
+        try
+        {
+<span class="fc" id="L864">            fireEvent(ConfigurationEvent.CLEAR, null, null, true);</span>
+<span class="fc" id="L865">            clearInternal();</span>
+<span class="fc" id="L866">            fireEvent(ConfigurationEvent.CLEAR, null, null, false);</span>
+        }
+        finally
+        {
+<span class="fc" id="L870">            endWrite();</span>
+<span class="fc" id="L871">        }</span>
+<span class="fc" id="L872">    }</span>
+
+    /**
+     * Clears the whole configuration. This method is called by {@code clear()}
+     * after some preparations have been made. This base implementation uses
+     * the iterator provided by {@code getKeys()} to remove every single
+     * property. Subclasses should override this method if there is a more
+     * efficient way of clearing the configuration.
+     */
+    protected void clearInternal()
+    {
+<span class="fc" id="L883">        setDetailEvents(false);</span>
+<span class="fc" id="L884">        boolean useIterator = true;</span>
+        try
+        {
+<span class="fc" id="L887">            final Iterator&lt;String&gt; it = getKeys();</span>
+<span class="fc bfc" id="L888" title="All 2 branches covered.">            while (it.hasNext())</span>
+            {
+<span class="fc" id="L890">                final String key = it.next();</span>
+<span class="fc bfc" id="L891" title="All 2 branches covered.">                if (useIterator)</span>
+                {
+                    try
+                    {
+<span class="fc" id="L895">                        it.remove();</span>
+                    }
+<span class="fc" id="L897">                    catch (final UnsupportedOperationException usoex)</span>
+                    {
+<span class="fc" id="L899">                        useIterator = false;</span>
+<span class="fc" id="L900">                    }</span>
+                }
+
+<span class="fc bfc" id="L903" title="All 4 branches covered.">                if (useIterator &amp;&amp; containsKey(key))</span>
+                {
+<span class="fc" id="L905">                    useIterator = false;</span>
+                }
+
+<span class="fc bfc" id="L908" title="All 2 branches covered.">                if (!useIterator)</span>
+                {
+                    // workaround for Iterators that do not remove the
+                    // property
+                    // on calling remove() or do not support remove() at all
+<span class="fc" id="L913">                    clearProperty(key);</span>
+                }
+<span class="fc" id="L915">            }</span>
+        }
+        finally
+        {
+<span class="pc" id="L919">            setDetailEvents(true);</span>
+<span class="pc" id="L920">        }</span>
+<span class="fc" id="L921">    }</span>
+
+    /**
+     * {@inheritDoc} This implementation takes care of synchronization and then
+     * delegates to {@code getKeysInternal()} for obtaining the actual iterator.
+     * Note that depending on a concrete implementation, an iteration may fail
+     * if the configuration is updated concurrently.
+     */
+    @Override
+    public final Iterator&lt;String&gt; getKeys()
+    {
+<span class="fc" id="L932">        beginRead(false);</span>
+        try
+        {
+<span class="fc" id="L935">            return getKeysInternal();</span>
+        }
+        finally
+        {
+<span class="pc" id="L939">            endRead();</span>
+<span class="nc" id="L940">        }</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation returns keys that either match the
+     * prefix or start with the prefix followed by a dot ('.'). So the call
+     * {@code getKeys(&quot;db&quot;);} will find the keys {@code db},
+     * {@code db.user}, or {@code db.password}, but not the key
+     * {@code dbdriver}.
+     */
+    @Override
+    public final Iterator&lt;String&gt; getKeys(final String prefix)
+    {
+<span class="fc" id="L953">        beginRead(false);</span>
+        try
+        {
+<span class="fc" id="L956">            return getKeysInternal(prefix);</span>
+        }
+        finally
+        {
+<span class="pc" id="L960">            endRead();</span>
+<span class="nc" id="L961">        }</span>
+    }
+
+    /**
+     * Actually creates an iterator for iterating over the keys in this
+     * configuration. This method is called by {@code getKeys()}, it has to be
+     * defined by concrete subclasses.
+     *
+     * @return an {@code Iterator} with all property keys in this configuration
+     * @since 2.0
+     */
+    protected abstract Iterator&lt;String&gt; getKeysInternal();
+
+    /**
+     * Returns an {@code Iterator} with all property keys starting with the
+     * specified prefix. This method is called by {@link #getKeys(String)}. It
+     * is fully implemented by delegating to {@code getKeysInternal()} and
+     * returning a special iterator which filters for the passed in prefix.
+     * Subclasses can override it if they can provide a more efficient way to
+     * iterate over specific keys only.
+     *
+     * @param prefix the prefix for the keys to be taken into account
+     * @return an {@code Iterator} returning the filtered keys
+     * @since 2.0
+     */
+    protected Iterator&lt;String&gt; getKeysInternal(final String prefix)
+    {
+<span class="fc" id="L988">        return new PrefixedKeysIterator(getKeysInternal(), prefix);</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation ensures proper synchronization.
+     * Subclasses have to define the abstract {@code getPropertyInternal()}
+     * method which is called from here.
+     */
+    @Override
+    public final Object getProperty(final String key)
+    {
+<span class="fc" id="L999">        beginRead(false);</span>
+        try
+        {
+<span class="fc" id="L1002">            return getPropertyInternal(key);</span>
+        }
+        finally
+        {
+<span class="pc" id="L1006">            endRead();</span>
+<span class="nc" id="L1007">        }</span>
+    }
+
+    /**
+     * Actually obtains the value of the specified property. This method is
+     * called by {@code getProperty()}. Concrete subclasses must define it to
+     * fetch the value of the desired property.
+     *
+     * @param key the key of the property in question
+     * @return the (raw) value of this property
+     * @since 2.0
+     */
+    protected abstract Object getPropertyInternal(String key);
+
+    /**
+     * {@inheritDoc} This implementation handles synchronization and delegates
+     * to {@code isEmptyInternal()}.
+     */
+    @Override
+    public final boolean isEmpty()
+    {
+<span class="fc" id="L1028">        beginRead(false);</span>
+        try
+        {
+<span class="fc" id="L1031">            return isEmptyInternal();</span>
+        }
+        finally
+        {
+<span class="pc" id="L1035">            endRead();</span>
+<span class="nc" id="L1036">        }</span>
+    }
+
+    /**
+     * Actually checks whether this configuration contains data. This method is
+     * called by {@code isEmpty()}. It has to be defined by concrete subclasses.
+     *
+     * @return &lt;b&gt;true&lt;/b&gt; if this configuration contains no data, &lt;b&gt;false&lt;/b&gt;
+     *         otherwise
+     * @since 2.0
+     */
+    protected abstract boolean isEmptyInternal();
+
+    /**
+     * {@inheritDoc} This implementation handles synchronization and delegates
+     * to {@code sizeInternal()}.
+     */
+    @Override
+    public final int size()
+    {
+<span class="fc" id="L1056">        beginRead(false);</span>
+        try
+        {
+<span class="fc" id="L1059">            return sizeInternal();</span>
+        }
+        finally
+        {
+<span class="pc" id="L1063">            endRead();</span>
+<span class="nc" id="L1064">        }</span>
+    }
+
+    /**
+     * Actually calculates the size of this configuration. This method is called
+     * by {@code size()} with a read lock held. The base implementation provided
+     * here calculates the size based on the iterator returned by
+     * {@code getKeys()}. Sub classes which can determine the size in a more
+     * efficient way should override this method.
+     *
+     * @return the size of this configuration (i.e. the number of keys)
+     */
+    protected int sizeInternal()
+    {
+<span class="fc" id="L1078">        int size = 0;</span>
+<span class="fc bfc" id="L1079" title="All 2 branches covered.">        for (final Iterator&lt;String&gt; keyIt = getKeysInternal(); keyIt.hasNext(); size++)</span>
+        {
+<span class="fc" id="L1081">            keyIt.next();</span>
+        }
+<span class="fc" id="L1083">        return size;</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation handles synchronization and delegates
+     * to {@code containsKeyInternal()}.
+     */
+    @Override
+    public final boolean containsKey(final String key)
+    {
+<span class="fc" id="L1093">        beginRead(false);</span>
+        try
+        {
+<span class="fc" id="L1096">            return containsKeyInternal(key);</span>
+        }
+        finally
+        {
+<span class="pc" id="L1100">            endRead();</span>
+<span class="nc" id="L1101">        }</span>
+    }
+
+    /**
+     * Actually checks whether the specified key is contained in this
+     * configuration. This method is called by {@code containsKey()}. It has to
+     * be defined by concrete subclasses.
+     *
+     * @param key the key in question
+     * @return &lt;b&gt;true&lt;/b&gt; if this key is contained in this configuration,
+     *         &lt;b&gt;false&lt;/b&gt; otherwise
+     * @since 2.0
+     */
+    protected abstract boolean containsKeyInternal(String key);
+
+    @Override
+    public Properties getProperties(final String key)
+    {
+<span class="fc" id="L1119">        return getProperties(key, null);</span>
+    }
+
+    /**
+     * Get a list of properties associated with the given configuration key.
+     *
+     * @param key The configuration key.
+     * @param defaults Any default values for the returned
+     * {@code Properties} object. Ignored if {@code null}.
+     *
+     * @return The associated properties if key is found.
+     *
+     * @throws ConversionException is thrown if the key maps to an object that
+     * is not a String/List of Strings.
+     *
+     * @throws IllegalArgumentException if one of the tokens is malformed (does
+     * not contain an equals sign).
+     */
+    public Properties getProperties(final String key, final Properties defaults)
+    {
+        /*
+         * Grab an array of the tokens for this key.
+         */
+<span class="fc" id="L1142">        final String[] tokens = getStringArray(key);</span>
+
+        /*
+         * Each token is of the form 'key=value'.
+         */
+<span class="pc bpc" id="L1147" title="1 of 2 branches missed.">        final Properties props = defaults == null ? new Properties() : new Properties(defaults);</span>
+<span class="fc bfc" id="L1148" title="All 2 branches covered.">        for (final String token : tokens)</span>
+        {
+<span class="fc" id="L1150">            final int equalSign = token.indexOf('=');</span>
+<span class="pc bpc" id="L1151" title="1 of 2 branches missed.">            if (equalSign &gt; 0)</span>
+            {
+<span class="fc" id="L1153">                final String pkey = token.substring(0, equalSign).trim();</span>
+<span class="fc" id="L1154">                final String pvalue = token.substring(equalSign + 1).trim();</span>
+<span class="fc" id="L1155">                props.put(pkey, pvalue);</span>
+<span class="fc" id="L1156">            }</span>
+<span class="nc bnc" id="L1157" title="All 4 branches missed.">            else if (tokens.length == 1 &amp;&amp; &quot;&quot;.equals(token))</span>
+            {
+                // Semantically equivalent to an empty Properties
+                // object.
+<span class="nc" id="L1161">                break;</span>
+            }
+            else
+            {
+<span class="nc" id="L1165">                throw new IllegalArgumentException('\'' + token + &quot;' does not contain an equals sign&quot;);</span>
+            }
+        }
+<span class="fc" id="L1168">        return props;</span>
+    }
+
+    @Override
+    public boolean getBoolean(final String key)
+    {
+<span class="fc" id="L1174">        final Boolean b = convert(Boolean.class, key, null, true);</span>
+<span class="fc" id="L1175">        return checkNonNullValue(key, b).booleanValue();</span>
+    }
+
+    @Override
+    public boolean getBoolean(final String key, final boolean defaultValue)
+    {
+<span class="fc" id="L1181">        return getBoolean(key, Boolean.valueOf(defaultValue)).booleanValue();</span>
+    }
+
+    /**
+     * Obtains the value of the specified key and tries to convert it into a
+     * {@code Boolean} object. If the property has no value, the passed
+     * in default value will be used.
+     *
+     * @param key the key of the property
+     * @param defaultValue the default value
+     * @return the value of this key converted to a {@code Boolean}
+     * @throws ConversionException if the value cannot be converted to a
+     * {@code Boolean}
+     */
+    @Override
+    public Boolean getBoolean(final String key, final Boolean defaultValue)
+    {
+<span class="fc" id="L1198">        return convert(Boolean.class, key, defaultValue, false);</span>
+    }
+
+    @Override
+    public byte getByte(final String key)
+    {
+<span class="fc" id="L1204">        final Byte b = convert(Byte.class, key, null, true);</span>
+<span class="fc" id="L1205">        return checkNonNullValue(key, b).byteValue();</span>
+    }
+
+    @Override
+    public byte getByte(final String key, final byte defaultValue)
+    {
+<span class="fc" id="L1211">        return getByte(key, Byte.valueOf(defaultValue)).byteValue();</span>
+    }
+
+    @Override
+    public Byte getByte(final String key, final Byte defaultValue)
+    {
+<span class="fc" id="L1217">        return convert(Byte.class, key, defaultValue, false);</span>
+    }
+
+    @Override
+    public double getDouble(final String key)
+    {
+<span class="fc" id="L1223">        final Double d = convert(Double.class, key, null, true);</span>
+<span class="fc" id="L1224">        return checkNonNullValue(key, d).doubleValue();</span>
+    }
+
+    @Override
+    public double getDouble(final String key, final double defaultValue)
+    {
+<span class="fc" id="L1230">        return getDouble(key, Double.valueOf(defaultValue)).doubleValue();</span>
+    }
+
+    @Override
+    public Double getDouble(final String key, final Double defaultValue)
+    {
+<span class="fc" id="L1236">        return convert(Double.class, key, defaultValue, false);</span>
+    }
+
+    @Override
+    public float getFloat(final String key)
+    {
+<span class="fc" id="L1242">        final Float f = convert(Float.class, key, null, true);</span>
+<span class="fc" id="L1243">        return checkNonNullValue(key, f).floatValue();</span>
+    }
+
+    @Override
+    public float getFloat(final String key, final float defaultValue)
+    {
+<span class="fc" id="L1249">        return getFloat(key, Float.valueOf(defaultValue)).floatValue();</span>
+    }
+
+    @Override
+    public Float getFloat(final String key, final Float defaultValue)
+    {
+<span class="fc" id="L1255">        return convert(Float.class, key, defaultValue, false);</span>
+    }
+
+    @Override
+    public int getInt(final String key)
+    {
+<span class="fc" id="L1261">        final Integer i = convert(Integer.class, key, null, true);</span>
+<span class="fc" id="L1262">        return checkNonNullValue(key, i).intValue();</span>
+    }
+
+    @Override
+    public int getInt(final String key, final int defaultValue)
+    {
+<span class="fc" id="L1268">        return getInteger(key, Integer.valueOf(defaultValue)).intValue();</span>
+    }
+
+    @Override
+    public Integer getInteger(final String key, final Integer defaultValue)
+    {
+<span class="fc" id="L1274">        return convert(Integer.class, key, defaultValue, false);</span>
+    }
+
+    @Override
+    public long getLong(final String key)
+    {
+<span class="fc" id="L1280">        final Long l = convert(Long.class, key, null, true);</span>
+<span class="fc" id="L1281">        return checkNonNullValue(key, l).longValue();</span>
+    }
+
+    @Override
+    public long getLong(final String key, final long defaultValue)
+    {
+<span class="fc" id="L1287">        return getLong(key, Long.valueOf(defaultValue)).longValue();</span>
+    }
+
+    @Override
+    public Long getLong(final String key, final Long defaultValue)
+    {
+<span class="fc" id="L1293">        return convert(Long.class, key, defaultValue, false);</span>
+    }
+
+    @Override
+    public short getShort(final String key)
+    {
+<span class="fc" id="L1299">        final Short s = convert(Short.class, key, null, true);</span>
+<span class="fc" id="L1300">        return checkNonNullValue(key, s).shortValue();</span>
+    }
+
+    @Override
+    public short getShort(final String key, final short defaultValue)
+    {
+<span class="fc" id="L1306">        return getShort(key, Short.valueOf(defaultValue)).shortValue();</span>
+    }
+
+    @Override
+    public Short getShort(final String key, final Short defaultValue)
+    {
+<span class="fc" id="L1312">        return convert(Short.class, key, defaultValue, false);</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     * @see #setThrowExceptionOnMissing(boolean)
+     */
+    @Override
+    public BigDecimal getBigDecimal(final String key)
+    {
+<span class="fc" id="L1322">        return convert(BigDecimal.class, key, null, true);</span>
+    }
+
+    @Override
+    public BigDecimal getBigDecimal(final String key, final BigDecimal defaultValue)
+    {
+<span class="fc" id="L1328">        return convert(BigDecimal.class, key, defaultValue, false);</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     * @see #setThrowExceptionOnMissing(boolean)
+     */
+    @Override
+    public BigInteger getBigInteger(final String key)
+    {
+<span class="fc" id="L1338">        return convert(BigInteger.class, key, null, true);</span>
+    }
+
+    @Override
+    public BigInteger getBigInteger(final String key, final BigInteger defaultValue)
+    {
+<span class="fc" id="L1344">        return convert(BigInteger.class, key, defaultValue, false);</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     * @see #setThrowExceptionOnMissing(boolean)
+     */
+    @Override
+    public String getString(final String key)
+    {
+<span class="fc" id="L1354">        return convert(String.class, key, null, true);</span>
+    }
+
+    @Override
+    public String getString(final String key, final String defaultValue)
+    {
+<span class="fc" id="L1360">        final String result = convert(String.class, key, null, false);</span>
+<span class="fc bfc" id="L1361" title="All 2 branches covered.">        return (result != null) ? result : interpolate(defaultValue);</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation delegates to {@link #getString(String)}
+     * in order to obtain the value of the passed in key. This value is passed
+     * to the decoder. Because {@code getString()} is used behind the scenes all
+     * standard features like handling of missing keys and interpolation work as
+     * expected.
+     */
+    @Override
+    public String getEncodedString(final String key, final ConfigurationDecoder decoder)
+    {
+<span class="fc bfc" id="L1374" title="All 2 branches covered.">        if (decoder == null)</span>
+        {
+<span class="fc" id="L1376">            throw new IllegalArgumentException(</span>
+                    &quot;ConfigurationDecoder must not be null!&quot;);
+        }
+
+<span class="fc" id="L1380">        final String value = getString(key);</span>
+<span class="fc bfc" id="L1381" title="All 2 branches covered.">        return (value != null) ? decoder.decode(value) : null;</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation makes use of the
+     * {@code ConfigurationDecoder} set for this configuration. If no such
+     * object has been set, an {@code IllegalStateException} exception is
+     * thrown.
+     *
+     * @throws IllegalStateException if no {@code ConfigurationDecoder} is set
+     * @see #setConfigurationDecoder(ConfigurationDecoder)
+     */
+    @Override
+    public String getEncodedString(final String key)
+    {
+<span class="fc" id="L1396">        final ConfigurationDecoder decoder = getConfigurationDecoder();</span>
+<span class="fc bfc" id="L1397" title="All 2 branches covered.">        if (decoder == null)</span>
+        {
+<span class="fc" id="L1399">            throw new IllegalStateException(</span>
+                    &quot;No default ConfigurationDecoder defined!&quot;);
+        }
+<span class="fc" id="L1402">        return getEncodedString(key, decoder);</span>
+    }
+
+    /**
+     * Get an array of strings associated with the given configuration key.
+     * If the key doesn't map to an existing object, an empty array is returned.
+     * When a property is added to a configuration, it is checked whether it
+     * contains multiple values. This is obvious if the added object is a list
+     * or an array. For strings the association {@link ListDelimiterHandler} is
+     * consulted to find out whether the string can be split into multiple
+     * values.
+     *
+     * @param key The configuration key.
+     * @return The associated string array if key is found.
+     *
+     * @throws ConversionException is thrown if the key maps to an
+     *         object that is not a String/List of Strings.
+     * @see #setListDelimiterHandler(ListDelimiterHandler)
+     */
+    @Override
+    public String[] getStringArray(final String key)
+    {
+<span class="fc" id="L1424">        final String[] result = (String[]) getArray(String.class, key);</span>
+<span class="fc bfc" id="L1425" title="All 2 branches covered.">        return (result == null) ? new String[0] : result;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     * @see #getStringArray(String)
+     */
+    @Override
+    public List&lt;Object&gt; getList(final String key)
+    {
+<span class="fc" id="L1435">        return getList(key, new ArrayList&lt;&gt;());</span>
+    }
+
+    @Override
+    public List&lt;Object&gt; getList(final String key, final List&lt;?&gt; defaultValue)
+    {
+<span class="fc" id="L1441">        final Object value = getProperty(key);</span>
+        List&lt;Object&gt; list;
+
+<span class="fc bfc" id="L1444" title="All 2 branches covered.">        if (value instanceof String)</span>
+        {
+<span class="fc" id="L1446">            list = new ArrayList&lt;&gt;(1);</span>
+<span class="fc" id="L1447">            list.add(interpolate((String) value));</span>
+        }
+<span class="fc bfc" id="L1449" title="All 2 branches covered.">        else if (value instanceof List)</span>
+        {
+<span class="fc" id="L1451">            list = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L1452">            final List&lt;?&gt; l = (List&lt;?&gt;) value;</span>
+
+            // add the interpolated elements in the new list
+<span class="fc bfc" id="L1455" title="All 2 branches covered.">            for (final Object elem : l)</span>
+            {
+<span class="fc" id="L1457">                list.add(interpolate(elem));</span>
+<span class="fc" id="L1458">            }</span>
+<span class="fc" id="L1459">        }</span>
+<span class="fc bfc" id="L1460" title="All 2 branches covered.">        else if (value == null)</span>
+        {
+            // This is okay because we just return this list to the caller
+            @SuppressWarnings(&quot;unchecked&quot;)
+            final
+<span class="fc" id="L1465">            List&lt;Object&gt; resultList = (List&lt;Object&gt;) defaultValue;</span>
+<span class="fc" id="L1466">            list = resultList;</span>
+<span class="fc" id="L1467">        }</span>
+<span class="fc bfc" id="L1468" title="All 2 branches covered.">        else if (value.getClass().isArray())</span>
+        {
+<span class="fc" id="L1470">            return Arrays.asList((Object[]) value);</span>
+        }
+<span class="pc bpc" id="L1472" title="1 of 2 branches missed.">        else if (isScalarValue(value))</span>
+        {
+<span class="fc" id="L1474">            return Collections.singletonList((Object) value.toString());</span>
+        }
+        else
+        {
+<span class="nc" id="L1478">            throw new ConversionException('\'' + key + &quot;' doesn't map to a List object: &quot; + value + &quot;, a &quot;</span>
+<span class="nc" id="L1479">                    + value.getClass().getName());</span>
+        }
+<span class="fc" id="L1481">        return list;</span>
+    }
+
+    @Override
+    public &lt;T&gt; T get(final Class&lt;T&gt; cls, final String key)
+    {
+<span class="fc" id="L1487">        return convert(cls, key, null, true);</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation delegates to the
+     * {@link ConversionHandler} to perform the actual type conversion.
+     */
+    @Override
+    public &lt;T&gt; T get(final Class&lt;T&gt; cls, final String key, final T defaultValue)
+    {
+<span class="fc" id="L1497">        return convert(cls, key, defaultValue, false);</span>
+    }
+
+    @Override
+    public Object getArray(final Class&lt;?&gt; cls, final String key)
+    {
+<span class="fc" id="L1503">        return getArray(cls, key, null);</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation delegates to the
+     * {@link ConversionHandler} to perform the actual type conversion. If this
+     * results in a &lt;b&gt;null&lt;/b&gt; result (because the property is undefined), the
+     * default value is returned. It is checked whether the default value is an
+     * array with the correct component type. If not, an exception is thrown.
+     *
+     * @throws IllegalArgumentException if the default value is not a compatible
+     *         array
+     */
+    @Override
+    public Object getArray(final Class&lt;?&gt; cls, final String key, final Object defaultValue)
+    {
+<span class="fc" id="L1519">        return convertToArray(cls, key, defaultValue);</span>
+    }
+
+    @Override
+    public &lt;T&gt; List&lt;T&gt; getList(final Class&lt;T&gt; cls, final String key)
+    {
+<span class="fc" id="L1525">        return getList(cls, key, null);</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation delegates to the generic
+     * {@code getCollection()}. As target collection a newly created
+     * {@code ArrayList} is passed in.
+     */
+    @Override
+    public &lt;T&gt; List&lt;T&gt; getList(final Class&lt;T&gt; cls, final String key, final List&lt;T&gt; defaultValue)
+    {
+<span class="fc" id="L1536">        final List&lt;T&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L1537" title="All 2 branches covered.">        if (getCollection(cls, key, result, defaultValue) == null)</span>
+        {
+<span class="fc" id="L1539">            return null;</span>
+        }
+<span class="fc" id="L1541">        return result;</span>
+    }
+
+    @Override
+    public &lt;T&gt; Collection&lt;T&gt; getCollection(final Class&lt;T&gt; cls, final String key,
+            final Collection&lt;T&gt; target)
+    {
+<span class="fc" id="L1548">        return getCollection(cls, key, target, null);</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation delegates to the
+     * {@link ConversionHandler} to perform the actual conversion. If no target
+     * collection is provided, an {@code ArrayList} is created.
+     */
+    @Override
+    public &lt;T&gt; Collection&lt;T&gt; getCollection(final Class&lt;T&gt; cls, final String key,
+            final Collection&lt;T&gt; target, final Collection&lt;T&gt; defaultValue)
+    {
+<span class="fc" id="L1560">        final Object src = getProperty(key);</span>
+<span class="fc bfc" id="L1561" title="All 2 branches covered.">        if (src == null)</span>
+        {
+<span class="fc" id="L1563">            return handleDefaultCollection(target, defaultValue);</span>
+        }
+
+<span class="fc bfc" id="L1566" title="All 2 branches covered.">        final Collection&lt;T&gt; targetCol =</span>
+                (target != null) ? target : new ArrayList&lt;&gt;();
+<span class="fc" id="L1568">        getConversionHandler().toCollection(src, cls, getInterpolator(),</span>
+                targetCol);
+<span class="fc" id="L1570">        return targetCol;</span>
+    }
+
+    /**
+     * Checks whether the specified object is a scalar value. This method is
+     * called by {@code getList()} and {@code getStringArray()} if the
+     * property requested is not a string, a list, or an array. If it returns
+     * &lt;b&gt;true&lt;/b&gt;, the calling method transforms the value to a string and
+     * returns a list or an array with this single element. This implementation
+     * returns &lt;b&gt;true&lt;/b&gt; if the value is of a wrapper type for a primitive
+     * type.
+     *
+     * @param value the value to be checked
+     * @return a flag whether the value is a scalar
+     * @since 1.7
+     */
+    protected boolean isScalarValue(final Object value)
+    {
+<span class="pc bpc" id="L1588" title="1 of 2 branches missed.">        return ClassUtils.wrapperToPrimitive(value.getClass()) != null;</span>
+    }
+
+    /**
+     * Copies the content of the specified configuration into this
+     * configuration. If the specified configuration contains a key that is also
+     * present in this configuration, the value of this key will be replaced by
+     * the new value. &lt;em&gt;Note:&lt;/em&gt; This method won't work well when copying
+     * hierarchical configurations because it is not able to copy information
+     * about the properties' structure (i.e. the parent-child-relationships will
+     * get lost). So when dealing with hierarchical configuration objects their
+     * {@link BaseHierarchicalConfiguration#clone() clone()} methods
+     * should be used.
+     *
+     * @param c the configuration to copy (can be &lt;b&gt;null&lt;/b&gt;, then this
+     * operation will have no effect)
+     * @since 1.5
+     */
+    public void copy(final Configuration c)
+    {
+<span class="fc bfc" id="L1608" title="All 2 branches covered.">        if (c != null)</span>
+        {
+<span class="fc" id="L1610">            c.lock(LockMode.READ);</span>
+            try
+            {
+<span class="fc bfc" id="L1613" title="All 2 branches covered.">                for (final Iterator&lt;String&gt; it = c.getKeys(); it.hasNext();)</span>
+                {
+<span class="fc" id="L1615">                    final String key = it.next();</span>
+<span class="fc" id="L1616">                    final Object value = encodeForCopy(c.getProperty(key));</span>
+<span class="fc" id="L1617">                    setProperty(key, value);</span>
+<span class="fc" id="L1618">                }</span>
+            }
+            finally
+            {
+<span class="pc" id="L1622">                c.unlock(LockMode.READ);</span>
+<span class="pc" id="L1623">            }</span>
+        }
+<span class="fc" id="L1625">    }</span>
+
+    /**
+     * Appends the content of the specified configuration to this configuration.
+     * The values of all properties contained in the specified configuration
+     * will be appended to this configuration. So if a property is already
+     * present in this configuration, its new value will be a union of the
+     * values in both configurations. &lt;em&gt;Note:&lt;/em&gt; This method won't work
+     * well when appending hierarchical configurations because it is not able to
+     * copy information about the properties' structure (i.e. the
+     * parent-child-relationships will get lost). So when dealing with
+     * hierarchical configuration objects their
+     * {@link BaseHierarchicalConfiguration#clone() clone()} methods
+     * should be used.
+     *
+     * @param c the configuration to be appended (can be &lt;b&gt;null&lt;/b&gt;, then this
+     * operation will have no effect)
+     * @since 1.5
+     */
+    public void append(final Configuration c)
+    {
+<span class="fc bfc" id="L1646" title="All 2 branches covered.">        if (c != null)</span>
+        {
+<span class="fc" id="L1648">            c.lock(LockMode.READ);</span>
+            try
+            {
+<span class="fc bfc" id="L1651" title="All 2 branches covered.">                for (final Iterator&lt;String&gt; it = c.getKeys(); it.hasNext();)</span>
+                {
+<span class="fc" id="L1653">                    final String key = it.next();</span>
+<span class="fc" id="L1654">                    final Object value = encodeForCopy(c.getProperty(key));</span>
+<span class="fc" id="L1655">                    addProperty(key, value);</span>
+<span class="fc" id="L1656">                }</span>
+            }
+            finally
+            {
+<span class="pc" id="L1660">                c.unlock(LockMode.READ);</span>
+<span class="pc" id="L1661">            }</span>
+        }
+<span class="fc" id="L1663">    }</span>
+
+    /**
+     * Returns a configuration with the same content as this configuration, but
+     * with all variables replaced by their actual values. This method tries to
+     * clone the configuration and then perform interpolation on all properties.
+     * So property values of the form &lt;code&gt;${var}&lt;/code&gt; will be resolved as
+     * far as possible (if a variable cannot be resolved, it remains unchanged).
+     * This operation is useful if the content of a configuration is to be
+     * exported or processed by an external component that does not support
+     * variable interpolation.
+     *
+     * @return a configuration with all variables interpolated
+     * @throws org.apache.commons.configuration2.ex.ConfigurationRuntimeException if this
+     * configuration cannot be cloned
+     * @since 1.5
+     */
+    public Configuration interpolatedConfiguration()
+    {
+        // first clone this configuration
+<span class="fc" id="L1683">        final AbstractConfiguration c = (AbstractConfiguration) ConfigurationUtils</span>
+<span class="fc" id="L1684">                .cloneConfiguration(this);</span>
+
+        // now perform interpolation
+<span class="fc" id="L1687">        c.setListDelimiterHandler(new DisabledListDelimiterHandler());</span>
+<span class="fc bfc" id="L1688" title="All 2 branches covered.">        for (final Iterator&lt;String&gt; it = getKeys(); it.hasNext();)</span>
+        {
+<span class="fc" id="L1690">            final String key = it.next();</span>
+<span class="fc" id="L1691">            c.setProperty(key, getList(key));</span>
+<span class="fc" id="L1692">        }</span>
+
+<span class="fc" id="L1694">        c.setListDelimiterHandler(getListDelimiterHandler());</span>
+<span class="fc" id="L1695">        return c;</span>
+    }
+
+    /**
+     * Initializes the logger. Supports &lt;b&gt;null&lt;/b&gt; input. This method can be
+     * called by derived classes in order to enable logging.
+     *
+     * @param log the logger
+     * @since 2.0
+     */
+    protected final void initLogger(final ConfigurationLogger log)
+    {
+<span class="fc bfc" id="L1707" title="All 2 branches covered.">        this.log = (log != null) ? log : ConfigurationLogger.newDummyLogger();</span>
+<span class="fc" id="L1708">    }</span>
+
+    /**
+     * Encodes a property value so that it can be added to this configuration.
+     * This method deals with list delimiters. The passed in object has to be
+     * escaped so that an add operation yields the same result. If it is a list,
+     * all of its values have to be escaped.
+     *
+     * @param value the value to be encoded
+     * @return the encoded value
+     */
+    private Object encodeForCopy(final Object value)
+    {
+<span class="fc bfc" id="L1721" title="All 2 branches covered.">        if (value instanceof Collection)</span>
+        {
+<span class="fc" id="L1723">            return encodeListForCopy((Collection&lt;?&gt;) value);</span>
+        }
+<span class="fc" id="L1725">        return getListDelimiterHandler().escape(value,</span>
+                ListDelimiterHandler.NOOP_TRANSFORMER);
+    }
+
+    /**
+     * Encodes a list with property values so that it can be added to this
+     * configuration. This method calls {@code encodeForCopy()} for all list
+     * elements.
+     *
+     * @param values the list to be encoded
+     * @return a list with encoded elements
+     */
+    private Object encodeListForCopy(final Collection&lt;?&gt; values)
+    {
+<span class="fc" id="L1739">        final List&lt;Object&gt; result = new ArrayList&lt;&gt;(values.size());</span>
+<span class="fc bfc" id="L1740" title="All 2 branches covered.">        for (final Object value : values)</span>
+        {
+<span class="fc" id="L1742">            result.add(encodeForCopy(value));</span>
+<span class="fc" id="L1743">        }</span>
+<span class="fc" id="L1744">        return result;</span>
+    }
+
+    /**
+     * Obtains the property value for the specified key and converts it to the
+     * given target class.
+     *
+     * @param &lt;T&gt; the target type of the conversion
+     * @param cls the target class
+     * @param key the key of the desired property
+     * @param defaultValue a default value
+     * @return the converted value of this property
+     * @throws ConversionException if the conversion cannot be performed
+     */
+    private &lt;T&gt; T getAndConvertProperty(final Class&lt;T&gt; cls, final String key, final T defaultValue)
+    {
+<span class="fc" id="L1760">        final Object value = getProperty(key);</span>
+        try
+        {
+<span class="fc" id="L1763">            return ObjectUtils.defaultIfNull(</span>
+<span class="fc" id="L1764">                    getConversionHandler().to(value, cls, getInterpolator()),</span>
+                    defaultValue);
+        }
+<span class="fc" id="L1767">        catch (final ConversionException cex)</span>
+        {
+            // improve error message
+<span class="fc" id="L1770">            throw new ConversionException(</span>
+<span class="fc" id="L1771">                    String.format(</span>
+                            &quot;Key '%s' cannot be converted to class %s. Value is: '%s'.&quot;,
+<span class="fc" id="L1773">                            key, cls.getName(), String.valueOf(value)), cex.getCause());</span>
+        }
+    }
+
+    /**
+     * Helper method for obtaining a property value with a type conversion.
+     *
+     * @param &lt;T&gt; the target type of the conversion
+     * @param cls the target class
+     * @param key the key of the desired property
+     * @param defValue a default value
+     * @param throwOnMissing a flag whether an exception should be thrown for a
+     *        missing value
+     * @return the converted value
+     */
+    private &lt;T&gt; T convert(final Class&lt;T&gt; cls, final String key, final T defValue,
+            final boolean throwOnMissing)
+    {
+<span class="fc bfc" id="L1791" title="All 2 branches covered.">        if (cls.isArray())</span>
+        {
+<span class="fc" id="L1793">            return cls.cast(convertToArray(cls.getComponentType(), key, defValue));</span>
+        }
+
+<span class="fc" id="L1796">        final T result = getAndConvertProperty(cls, key, defValue);</span>
+<span class="fc bfc" id="L1797" title="All 2 branches covered.">        if (result == null)</span>
+        {
+<span class="fc bfc" id="L1799" title="All 4 branches covered.">            if (throwOnMissing &amp;&amp; isThrowExceptionOnMissing())</span>
+            {
+<span class="nc" id="L1801">                throwMissingPropertyException(key);</span>
+            }
+<span class="fc" id="L1803">            return defValue;</span>
+        }
+
+<span class="fc" id="L1806">        return result;</span>
+    }
+
+    /**
+     * Performs a conversion to an array result class. This implementation
+     * delegates to the {@link ConversionHandler} to perform the actual type
+     * conversion. If this results in a &lt;b&gt;null&lt;/b&gt; result (because the property
+     * is undefined), the default value is returned. It is checked whether the
+     * default value is an array with the correct component type. If not, an
+     * exception is thrown.
+     *
+     * @param cls the component class of the array
+     * @param key the configuration key
+     * @param defaultValue an optional default value
+     * @return the converted array
+     * @throws IllegalArgumentException if the default value is not a compatible
+     *         array
+     */
+    private Object convertToArray(final Class&lt;?&gt; cls, final String key, final Object defaultValue)
+    {
+<span class="fc" id="L1826">        checkDefaultValueArray(cls, defaultValue);</span>
+<span class="fc" id="L1827">        return ObjectUtils.defaultIfNull(getConversionHandler().toArray(</span>
+<span class="fc" id="L1828">                getProperty(key), cls, getInterpolator()), defaultValue);</span>
+    }
+
+    /**
+     * Checks an object provided as default value for the {@code getArray()}
+     * method. Throws an exception if this is not an array with the correct
+     * component type.
+     *
+     * @param cls the component class for the array
+     * @param defaultValue the default value object to be checked
+     * @throws IllegalArgumentException if this is not a valid default object
+     */
+    private static void checkDefaultValueArray(final Class&lt;?&gt; cls, final Object defaultValue)
+    {
+<span class="fc bfc" id="L1842" title="All 2 branches covered.">        if (defaultValue != null</span>
+<span class="fc bfc" id="L1843" title="All 2 branches covered.">                &amp;&amp; (!defaultValue.getClass().isArray() || !cls</span>
+<span class="fc bfc" id="L1844" title="All 2 branches covered.">                        .isAssignableFrom(defaultValue.getClass()</span>
+<span class="fc" id="L1845">                                .getComponentType())))</span>
+        {
+<span class="fc" id="L1847">            throw new IllegalArgumentException(</span>
+<span class="fc" id="L1848">                    &quot;The type of the default value (&quot; + defaultValue.getClass()</span>
+                            + &quot;)&quot; + &quot; is not an array of the specified class (&quot;
+                            + cls + &quot;)&quot;);
+        }
+<span class="fc" id="L1852">    }</span>
+
+    /**
+     * Handles the default collection for a collection conversion. This method
+     * fills the target collection with the content of the default collection.
+     * Both collections may be &lt;b&gt;null&lt;/b&gt;.
+     *
+     * @param target the target collection
+     * @param defaultValue the default collection
+     * @return the initialized target collection
+     */
+    private static &lt;T&gt; Collection&lt;T&gt; handleDefaultCollection(final Collection&lt;T&gt; target,
+            final Collection&lt;T&gt; defaultValue)
+    {
+<span class="fc bfc" id="L1866" title="All 2 branches covered.">        if (defaultValue == null)</span>
+        {
+<span class="fc" id="L1868">            return null;</span>
+        }
+
+        Collection&lt;T&gt; result;
+<span class="fc bfc" id="L1872" title="All 2 branches covered.">        if (target == null)</span>
+        {
+<span class="fc" id="L1874">            result = new ArrayList&lt;&gt;(defaultValue);</span>
+        }
+        else
+        {
+<span class="fc" id="L1878">            target.addAll(defaultValue);</span>
+<span class="fc" id="L1879">            result = target;</span>
+        }
+<span class="fc" id="L1881">        return result;</span>
+    }
+
+    /**
+     * Checks whether the specified value is &lt;b&gt;null&lt;/b&gt; and throws an exception
+     * in this case. This method is used by conversion methods returning
+     * primitive Java types. Here values to be returned must not be &lt;b&gt;null&lt;/b&gt;.
+     *
+     * @param &lt;T&gt; the type of the object to be checked
+     * @param key the key which caused the problem
+     * @param value the value to be checked
+     * @return the passed in value for chaining this method call
+     * @throws NoSuchElementException if the value is &lt;b&gt;null&lt;/b&gt;
+     */
+    private static &lt;T&gt; T checkNonNullValue(final String key, final T value)
+    {
+<span class="fc bfc" id="L1897" title="All 2 branches covered.">        if (value == null)</span>
+        {
+<span class="nc" id="L1899">            throwMissingPropertyException(key);</span>
+        }
+<span class="fc" id="L1901">        return value;</span>
+    }
+
+    /**
+     * Helper method for throwing an exception for a key that does not map to an
+     * existing object.
+     *
+     * @param key the key (to be part of the error message)
+     */
+    private static void throwMissingPropertyException(final String key)
+    {
+<span class="fc" id="L1912">        throw new NoSuchElementException(String.format(</span>
+                &quot;Key '%s' does not map to an existing object!&quot;, key));
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

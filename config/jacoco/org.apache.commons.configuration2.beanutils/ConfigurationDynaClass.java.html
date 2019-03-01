@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConfigurationDynaClass.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2.beanutils</a> &gt; <span class="el_source">ConfigurationDynaClass.java</span></div><h1>ConfigurationDynaClass.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.commons.configuration2.beanutils;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import org.apache.commons.beanutils.DynaBean;
+import org.apache.commons.beanutils.DynaClass;
+import org.apache.commons.beanutils.DynaProperty;
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+/**
+ * The {@code ConfigurationDynaClass} dynamically determines properties for
+ * a {@code ConfigurationDynaBean} from a wrapped configuration-collection
+ * {@link org.apache.commons.configuration2.Configuration} instance.
+ *
+ * @author &lt;a href=&quot;mailto:ricardo.gladwell@btinternet.com&quot;&gt;Ricardo Gladwell&lt;/a&gt;
+ * @version $Id$
+ * @since 1.0-rc1
+ */
+public class ConfigurationDynaClass implements DynaClass
+{
+    /** The logger.*/
+<span class="fc" id="L43">    private static final Log LOG = LogFactory.getLog(ConfigurationDynaClass.class);</span>
+
+    /** Stores the associated configuration.*/
+    private final Configuration configuration;
+
+    /**
+     * Construct an instance of a {@code ConfigurationDynaClass}
+     * wrapping the specified {@code Configuration} instance.
+     * @param configuration {@code Configuration} instance.
+     */
+    public ConfigurationDynaClass(final Configuration configuration)
+    {
+<span class="fc" id="L55">        super();</span>
+<span class="pc bpc" id="L56" title="1 of 2 branches missed.">        if (LOG.isTraceEnabled())</span>
+        {
+<span class="nc" id="L58">            LOG.trace(&quot;ConfigurationDynaClass(&quot; + configuration + &quot;)&quot;);</span>
+        }
+<span class="fc" id="L60">        this.configuration = configuration;</span>
+<span class="fc" id="L61">    }</span>
+
+    @Override
+    public DynaProperty getDynaProperty(final String name)
+    {
+<span class="pc bpc" id="L66" title="1 of 2 branches missed.">        if (LOG.isTraceEnabled())</span>
+        {
+<span class="nc" id="L68">            LOG.trace(&quot;getDynaProperty(&quot; + name + &quot;)&quot;);</span>
+        }
+
+<span class="fc bfc" id="L71" title="All 2 branches covered.">        if (name == null)</span>
+        {
+<span class="fc" id="L73">            throw new IllegalArgumentException(&quot;Property name must not be null!&quot;);</span>
+        }
+
+<span class="fc" id="L76">        final Object value = configuration.getProperty(name);</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        if (value == null)</span>
+        {
+<span class="fc" id="L79">            return null;</span>
+        }
+<span class="fc" id="L81">        Class&lt;?&gt; type = value.getClass();</span>
+
+<span class="fc bfc" id="L83" title="All 2 branches covered.">        if (type == Byte.class)</span>
+        {
+<span class="fc" id="L85">            type = Byte.TYPE;</span>
+        }
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        if (type == Character.class)</span>
+        {
+<span class="fc" id="L89">            type = Character.TYPE;</span>
+        }
+<span class="fc bfc" id="L91" title="All 2 branches covered.">        else if (type == Boolean.class)</span>
+        {
+<span class="fc" id="L93">            type = Boolean.TYPE;</span>
+        }
+<span class="fc bfc" id="L95" title="All 2 branches covered.">        else if (type == Double.class)</span>
+        {
+<span class="fc" id="L97">            type = Double.TYPE;</span>
+        }
+<span class="fc bfc" id="L99" title="All 2 branches covered.">        else if (type == Float.class)</span>
+        {
+<span class="fc" id="L101">            type = Float.TYPE;</span>
+        }
+<span class="fc bfc" id="L103" title="All 2 branches covered.">        else if (type == Integer.class)</span>
+        {
+<span class="fc" id="L105">            type = Integer.TYPE;</span>
+        }
+<span class="fc bfc" id="L107" title="All 2 branches covered.">        else if (type == Long.class)</span>
+        {
+<span class="fc" id="L109">            type = Long.TYPE;</span>
+        }
+<span class="fc bfc" id="L111" title="All 2 branches covered.">        else if (type == Short.class)</span>
+        {
+<span class="fc" id="L113">            type = Short.TYPE;</span>
+        }
+
+<span class="fc" id="L116">        return new DynaProperty(name, type);</span>
+    }
+
+    @Override
+    public DynaProperty[] getDynaProperties()
+    {
+<span class="pc bpc" id="L122" title="1 of 2 branches missed.">        if (LOG.isTraceEnabled())</span>
+        {
+<span class="nc" id="L124">            LOG.trace(&quot;getDynaProperties()&quot;);</span>
+        }
+
+<span class="fc" id="L127">        final Iterator&lt;String&gt; keys = configuration.getKeys();</span>
+<span class="fc" id="L128">        final List&lt;DynaProperty&gt; properties = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">        while (keys.hasNext())</span>
+        {
+<span class="fc" id="L131">            final String key = keys.next();</span>
+<span class="fc" id="L132">            final DynaProperty property = getDynaProperty(key);</span>
+<span class="fc" id="L133">            properties.add(property);</span>
+<span class="fc" id="L134">        }</span>
+
+<span class="fc" id="L136">        final DynaProperty[] propertyArray = new DynaProperty[properties.size()];</span>
+<span class="fc" id="L137">        properties.toArray(propertyArray);</span>
+<span class="pc bpc" id="L138" title="1 of 2 branches missed.">        if (LOG.isDebugEnabled())</span>
+        {
+<span class="fc" id="L140">            LOG.debug(&quot;Found &quot; + properties.size() + &quot; properties.&quot;);</span>
+        }
+
+<span class="fc" id="L143">        return propertyArray;</span>
+    }
+
+    @Override
+    public String getName()
+    {
+<span class="nc" id="L149">        return ConfigurationDynaBean.class.getName();</span>
+    }
+
+    @Override
+    public DynaBean newInstance() throws IllegalAccessException, InstantiationException
+    {
+<span class="nc" id="L155">        return new ConfigurationDynaBean(configuration);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

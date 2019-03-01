@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConfigurationPropertiesFactoryBean.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2.spring</a> &gt; <span class="el_source">ConfigurationPropertiesFactoryBean.java</span></div><h1>ConfigurationPropertiesFactoryBean.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.commons.configuration2.spring;
+
+import java.net.URL;
+import java.util.Properties;
+
+import org.apache.commons.configuration2.CompositeConfiguration;
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.configuration2.ConfigurationConverter;
+import org.apache.commons.configuration2.builder.fluent.Configurations;
+import org.apache.commons.lang3.ArrayUtils;
+import org.springframework.beans.factory.FactoryBean;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.core.io.Resource;
+import org.springframework.util.Assert;
+
+/**
+ * &lt;p&gt;FactoryBean which wraps a Commons CompositeConfiguration object for usage
+ * with PropertiesLoaderSupport. This allows the compositeConfiguration object to behave
+ * like a normal java.util.Properties object which can be passed on to
+ * setProperties() method allowing PropertyOverrideConfigurer and
+ * PropertyPlaceholderConfigurer to take advantage of Commons Configuration.
+ * &lt;/p&gt;
+ * &lt;p&gt;Internally a CompositeConfiguration object is used for merging multiple
+ * Configuration objects.&lt;/p&gt;
+ *
+ * @see java.util.Properties
+ * @see org.springframework.core.io.support.PropertiesLoaderSupport
+ *
+ */
+public class ConfigurationPropertiesFactoryBean implements InitializingBean, FactoryBean&lt;Properties&gt;
+{
+
+    /** internal CompositeConfiguration containing the merged configuration objects **/
+    private CompositeConfiguration compositeConfiguration;
+
+    /** supplied configurations that will be merged in compositeConfiguration **/
+    private Configuration[] configurations;
+
+    /** Spring resources for loading configurations **/
+    private Resource[] locations;
+
+    /** @see org.apache.commons.configuration2.AbstractConfiguration#throwExceptionOnMissing **/
+<span class="fc" id="L60">    private boolean throwExceptionOnMissing = true;</span>
+
+    public ConfigurationPropertiesFactoryBean()
+<span class="fc" id="L63">    {</span>
+<span class="fc" id="L64">    }</span>
+
+    public ConfigurationPropertiesFactoryBean(final Configuration configuration)
+<span class="fc" id="L67">    {</span>
+<span class="fc" id="L68">        Assert.notNull(configuration, &quot;configuration&quot;);</span>
+<span class="fc" id="L69">        this.compositeConfiguration = new CompositeConfiguration(configuration);</span>
+<span class="fc" id="L70">    }</span>
+
+    /**
+     * @see org.springframework.beans.factory.FactoryBean#getObject()
+     */
+    @Override
+    public Properties getObject() throws Exception
+    {
+<span class="fc bfc" id="L78" title="All 2 branches covered.">        return (compositeConfiguration != null) ? ConfigurationConverter.getProperties(compositeConfiguration) : null;</span>
+    }
+
+    /**
+     * @see org.springframework.beans.factory.FactoryBean#getObjectType()
+     */
+    @Override
+    public Class&lt;?&gt; getObjectType()
+    {
+<span class="nc" id="L87">        return java.util.Properties.class;</span>
+    }
+
+    /**
+     * @see org.springframework.beans.factory.FactoryBean#isSingleton()
+     */
+    @Override
+    public boolean isSingleton()
+    {
+<span class="nc" id="L96">        return true;</span>
+    }
+
+    /**
+     * @see org.springframework.beans.factory.InitializingBean#afterPropertiesSet()
+     */
+    @Override
+    public void afterPropertiesSet() throws Exception
+    {
+<span class="pc bpc" id="L105" title="1 of 6 branches missed.">        if (compositeConfiguration == null &amp;&amp; ArrayUtils.isEmpty(configurations) &amp;&amp; ArrayUtils.isEmpty(locations))</span>
+        {
+<span class="fc" id="L107">            throw new IllegalArgumentException(&quot;no configuration object or location specified&quot;);</span>
+        }
+
+<span class="fc bfc" id="L110" title="All 2 branches covered.">        if (compositeConfiguration == null)</span>
+        {
+<span class="fc" id="L112">            compositeConfiguration = new CompositeConfiguration();</span>
+        }
+
+<span class="fc" id="L115">        compositeConfiguration.setThrowExceptionOnMissing(throwExceptionOnMissing);</span>
+
+<span class="fc bfc" id="L117" title="All 2 branches covered.">        if (configurations != null)</span>
+        {
+<span class="fc bfc" id="L119" title="All 2 branches covered.">            for (final Configuration configuration : configurations)</span>
+            {
+<span class="fc" id="L121">                compositeConfiguration.addConfiguration(configuration);</span>
+            }
+        }
+
+<span class="fc bfc" id="L125" title="All 2 branches covered.">        if (locations != null)</span>
+        {
+<span class="fc bfc" id="L127" title="All 2 branches covered.">            for (final Resource location : locations)</span>
+            {
+<span class="fc" id="L129">                final URL url = location.getURL();</span>
+<span class="fc" id="L130">                final Configuration props = new Configurations().properties(url);</span>
+<span class="fc" id="L131">                compositeConfiguration.addConfiguration(props);</span>
+            }
+        }
+<span class="fc" id="L134">    }</span>
+
+    public Configuration[] getConfigurations()
+    {
+<span class="fc" id="L138">        return defensiveCopy(configurations);</span>
+    }
+
+    /**
+     * Set the commons configurations objects which will be used as properties.
+     *
+     * @param configurations commons configurations objects which will be used as properties.
+     */
+    public void setConfigurations(final Configuration[] configurations)
+    {
+<span class="fc" id="L148">        this.configurations = defensiveCopy(configurations);</span>
+<span class="fc" id="L149">    }</span>
+
+    public Resource[] getLocations()
+    {
+<span class="fc" id="L153">        return defensiveCopy(locations);</span>
+    }
+
+    /**
+     * Shortcut for loading compositeConfiguration from Spring resources. It will
+     * internally create a PropertiesConfiguration object based on the URL
+     * retrieved from the given Resources.
+     *
+     * @param locations resources of configuration files
+     */
+    public void setLocations(final Resource[] locations)
+    {
+<span class="fc" id="L165">        this.locations = defensiveCopy(locations);</span>
+<span class="fc" id="L166">    }</span>
+
+    public boolean isThrowExceptionOnMissing()
+    {
+<span class="nc" id="L170">        return throwExceptionOnMissing;</span>
+    }
+
+    /**
+     * Set the underlying Commons CompositeConfiguration throwExceptionOnMissing flag.
+     *
+     * @see org.apache.commons.configuration2.AbstractConfiguration#setThrowExceptionOnMissing(boolean)
+     * @param throwExceptionOnMissing The new value for the property
+     */
+    public void setThrowExceptionOnMissing(final boolean throwExceptionOnMissing)
+    {
+<span class="nc" id="L181">        this.throwExceptionOnMissing = throwExceptionOnMissing;</span>
+<span class="nc" id="L182">    }</span>
+
+    public CompositeConfiguration getConfiguration()
+    {
+<span class="fc" id="L186">        return compositeConfiguration;</span>
+    }
+
+    /**
+     * Creates a defensive copy of the specified array. Handles null values
+     * correctly.
+     *
+     * @param src the source array
+     * @param &lt;T&gt; the type of the array
+     * @return the defensive copy of the array
+     */
+    private static &lt;T&gt; T[] defensiveCopy(final T[] src)
+    {
+<span class="fc bfc" id="L199" title="All 2 branches covered.">        return (src != null) ? src.clone() : null;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

@@ -1,0 +1,1284 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Flat3Map.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.map</a> &gt; <span class="el_source">Flat3Map.java</span></div><h1>Flat3Map.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.map;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.AbstractCollection;
+import java.util.AbstractSet;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
+
+import org.apache.commons.collections4.IterableMap;
+import org.apache.commons.collections4.MapIterator;
+import org.apache.commons.collections4.ResettableIterator;
+import org.apache.commons.collections4.iterators.EmptyIterator;
+import org.apache.commons.collections4.iterators.EmptyMapIterator;
+
+/**
+ * A &lt;code&gt;Map&lt;/code&gt; implementation that stores data in simple fields until
+ * the size is greater than 3.
+ * &lt;p&gt;
+ * This map is designed for performance and can outstrip HashMap.
+ * It also has good garbage collection characteristics.
+ * &lt;ul&gt;
+ * &lt;li&gt;Optimised for operation at size 3 or less.
+ * &lt;li&gt;Still works well once size 3 exceeded.
+ * &lt;li&gt;Gets at size 3 or less are about 0-10% faster than HashMap,
+ * &lt;li&gt;Puts at size 3 or less are over 4 times faster than HashMap.
+ * &lt;li&gt;Performance 5% slower than HashMap once size 3 exceeded once.
+ * &lt;/ul&gt;
+ * The design uses two distinct modes of operation - flat and delegate.
+ * While the map is size 3 or less, operations map straight onto fields using
+ * switch statements. Once size 4 is reached, the map switches to delegate mode
+ * and only switches back when cleared. In delegate mode, all operations are
+ * forwarded straight to a HashMap resulting in the 5% performance loss.
+ * &lt;p&gt;
+ * The performance gains on puts are due to not needing to create a Map Entry
+ * object. This is a large saving not only in performance but in garbage collection.
+ * &lt;p&gt;
+ * Whilst in flat mode this map is also easy for the garbage collector to dispatch.
+ * This is because it contains no complex objects or arrays which slow the progress.
+ * &lt;p&gt;
+ * Do not use &lt;code&gt;Flat3Map&lt;/code&gt; if the size is likely to grow beyond 3.
+ * &lt;p&gt;
+ * &lt;strong&gt;Note that Flat3Map is not synchronized and is not thread-safe.&lt;/strong&gt;
+ * If you wish to use this map from multiple threads concurrently, you must use
+ * appropriate synchronization. The simplest approach is to wrap this map
+ * using {@link java.util.Collections#synchronizedMap(Map)}. This class may throw
+ * exceptions when accessed by concurrent threads without synchronization.
+ *
+ * @param &lt;K&gt; the type of the keys in this map
+ * @param &lt;V&gt; the type of the values in this map
+ * @since 3.0
+ */
+public class Flat3Map&lt;K, V&gt; implements IterableMap&lt;K, V&gt;, Serializable, Cloneable {
+
+    /** Serialization version */
+    private static final long serialVersionUID = -6701087419741928296L;
+
+    /** The size of the map, used while in flat mode */
+    private transient int size;
+    /** Hash, used while in flat mode */
+    private transient int hash1;
+    /** Hash, used while in flat mode */
+    private transient int hash2;
+    /** Hash, used while in flat mode */
+    private transient int hash3;
+    /** Key, used while in flat mode */
+    private transient K key1;
+    /** Key, used while in flat mode */
+    private transient K key2;
+    /** Key, used while in flat mode */
+    private transient K key3;
+    /** Value, used while in flat mode */
+    private transient V value1;
+    /** Value, used while in flat mode */
+    private transient V value2;
+    /** Value, used while in flat mode */
+    private transient V value3;
+    /** Map, used while in delegate mode */
+    private transient AbstractHashedMap&lt;K, V&gt; delegateMap;
+
+    /**
+     * Constructor.
+     */
+    public Flat3Map() {
+<span class="fc" id="L106">        super();</span>
+<span class="fc" id="L107">    }</span>
+
+    /**
+     * Constructor copying elements from another map.
+     *
+     * @param map  the map to copy
+     * @throws NullPointerException if the map is null
+     */
+    public Flat3Map(final Map&lt;? extends K, ? extends V&gt; map) {
+<span class="fc" id="L116">        super();</span>
+<span class="fc" id="L117">        putAll(map);</span>
+<span class="fc" id="L118">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets the value mapped to the key specified.
+     *
+     * @param key  the key
+     * @return the mapped value, null if no match
+     */
+    @Override
+    public V get(final Object key) {
+<span class="fc bfc" id="L129" title="All 2 branches covered.">        if (delegateMap != null) {</span>
+<span class="fc" id="L130">            return delegateMap.get(key);</span>
+        }
+<span class="fc bfc" id="L132" title="All 2 branches covered.">        if (key == null) {</span>
+<span class="fc bfc" id="L133" title="All 4 branches covered.">            switch (size) {</span>
+                // drop through
+                case 3:
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">                    if (key3 == null) {</span>
+<span class="fc" id="L137">                        return value3;</span>
+                    }
+                case 2:
+<span class="fc bfc" id="L140" title="All 2 branches covered.">                    if (key2 == null) {</span>
+<span class="fc" id="L141">                        return value2;</span>
+                    }
+                case 1:
+<span class="fc bfc" id="L144" title="All 2 branches covered.">                    if (key1 == null) {</span>
+<span class="fc" id="L145">                        return value1;</span>
+                    }
+            }
+        } else {
+<span class="fc bfc" id="L149" title="All 2 branches covered.">            if (size &gt; 0) {</span>
+<span class="fc" id="L150">                final int hashCode = key.hashCode();</span>
+<span class="pc bpc" id="L151" title="1 of 4 branches missed.">                switch (size) {</span>
+                    // drop through
+                    case 3:
+<span class="pc bpc" id="L154" title="1 of 4 branches missed.">                        if (hash3 == hashCode &amp;&amp; key.equals(key3)) {</span>
+<span class="fc" id="L155">                            return value3;</span>
+                        }
+                    case 2:
+<span class="pc bpc" id="L158" title="1 of 4 branches missed.">                        if (hash2 == hashCode &amp;&amp; key.equals(key2)) {</span>
+<span class="fc" id="L159">                            return value2;</span>
+                        }
+                    case 1:
+<span class="pc bpc" id="L162" title="1 of 4 branches missed.">                        if (hash1 == hashCode &amp;&amp; key.equals(key1)) {</span>
+<span class="fc" id="L163">                            return value1;</span>
+                        }
+                }
+            }
+        }
+<span class="fc" id="L168">        return null;</span>
+    }
+
+    /**
+     * Gets the size of the map.
+     *
+     * @return the size
+     */
+    @Override
+    public int size() {
+<span class="fc bfc" id="L178" title="All 2 branches covered.">        if (delegateMap != null) {</span>
+<span class="fc" id="L179">            return delegateMap.size();</span>
+        }
+<span class="fc" id="L181">        return size;</span>
+    }
+
+    /**
+     * Checks whether the map is currently empty.
+     *
+     * @return true if the map is currently size zero
+     */
+    @Override
+    public boolean isEmpty() {
+<span class="fc bfc" id="L191" title="All 2 branches covered.">        return size() == 0;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Checks whether the map contains the specified key.
+     *
+     * @param key  the key to search for
+     * @return true if the map contains the key
+     */
+    @Override
+    public boolean containsKey(final Object key) {
+<span class="fc bfc" id="L203" title="All 2 branches covered.">        if (delegateMap != null) {</span>
+<span class="fc" id="L204">            return delegateMap.containsKey(key);</span>
+        }
+<span class="fc bfc" id="L206" title="All 2 branches covered.">        if (key == null) {</span>
+<span class="fc bfc" id="L207" title="All 4 branches covered.">            switch (size) {  // drop through</span>
+                case 3:
+<span class="pc bpc" id="L209" title="1 of 2 branches missed.">                    if (key3 == null) {</span>
+<span class="fc" id="L210">                        return true;</span>
+                    }
+                case 2:
+<span class="pc bpc" id="L213" title="1 of 2 branches missed.">                    if (key2 == null) {</span>
+<span class="fc" id="L214">                        return true;</span>
+                    }
+                case 1:
+<span class="pc bpc" id="L217" title="1 of 2 branches missed.">                    if (key1 == null) {</span>
+<span class="fc" id="L218">                        return true;</span>
+                    }
+            }
+        } else {
+<span class="fc bfc" id="L222" title="All 2 branches covered.">            if (size &gt; 0) {</span>
+<span class="fc" id="L223">                final int hashCode = key.hashCode();</span>
+<span class="pc bpc" id="L224" title="1 of 4 branches missed.">                switch (size) {  // drop through</span>
+                    case 3:
+<span class="pc bpc" id="L226" title="1 of 4 branches missed.">                        if (hash3 == hashCode &amp;&amp; key.equals(key3)) {</span>
+<span class="fc" id="L227">                            return true;</span>
+                        }
+                    case 2:
+<span class="pc bpc" id="L230" title="1 of 4 branches missed.">                        if (hash2 == hashCode &amp;&amp; key.equals(key2)) {</span>
+<span class="fc" id="L231">                            return true;</span>
+                        }
+                    case 1:
+<span class="pc bpc" id="L234" title="1 of 4 branches missed.">                        if (hash1 == hashCode &amp;&amp; key.equals(key1)) {</span>
+<span class="fc" id="L235">                            return true;</span>
+                        }
+                }
+            }
+        }
+<span class="fc" id="L240">        return false;</span>
+    }
+
+    /**
+     * Checks whether the map contains the specified value.
+     *
+     * @param value  the value to search for
+     * @return true if the map contains the key
+     */
+    @Override
+    public boolean containsValue(final Object value) {
+<span class="fc bfc" id="L251" title="All 2 branches covered.">        if (delegateMap != null) {</span>
+<span class="fc" id="L252">            return delegateMap.containsValue(value);</span>
+        }
+<span class="fc bfc" id="L254" title="All 2 branches covered.">        if (value == null) {  // drop through</span>
+<span class="fc bfc" id="L255" title="All 4 branches covered.">            switch (size) {</span>
+                case 3:
+<span class="pc bpc" id="L257" title="1 of 2 branches missed.">                    if (value3 == null) {</span>
+<span class="fc" id="L258">                        return true;</span>
+                    }
+                case 2:
+<span class="pc bpc" id="L261" title="1 of 2 branches missed.">                    if (value2 == null) {</span>
+<span class="fc" id="L262">                        return true;</span>
+                    }
+                case 1:
+<span class="pc bpc" id="L265" title="1 of 2 branches missed.">                    if (value1 == null) {</span>
+<span class="fc" id="L266">                        return true;</span>
+                    }
+            }
+        } else {
+<span class="fc bfc" id="L270" title="All 4 branches covered.">            switch (size) {  // drop through</span>
+                case 3:
+<span class="pc bpc" id="L272" title="1 of 2 branches missed.">                    if (value.equals(value3)) {</span>
+<span class="fc" id="L273">                        return true;</span>
+                    }
+                case 2:
+<span class="pc bpc" id="L276" title="1 of 2 branches missed.">                    if (value.equals(value2)) {</span>
+<span class="fc" id="L277">                        return true;</span>
+                    }
+                case 1:
+<span class="pc bpc" id="L280" title="1 of 2 branches missed.">                    if (value.equals(value1)) {</span>
+<span class="fc" id="L281">                        return true;</span>
+                    }
+            }
+        }
+<span class="fc" id="L285">        return false;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Puts a key-value mapping into this map.
+     *
+     * @param key  the key to add
+     * @param value  the value to add
+     * @return the value previously mapped to this key, null if none
+     */
+    @Override
+    public V put(final K key, final V value) {
+<span class="fc bfc" id="L298" title="All 2 branches covered.">        if (delegateMap != null) {</span>
+<span class="fc" id="L299">            return delegateMap.put(key, value);</span>
+        }
+        // change existing mapping
+<span class="fc bfc" id="L302" title="All 2 branches covered.">        if (key == null) {</span>
+<span class="fc bfc" id="L303" title="All 4 branches covered.">            switch (size) {  // drop through</span>
+                case 3:
+<span class="pc bpc" id="L305" title="1 of 2 branches missed.">                    if (key3 == null) {</span>
+<span class="fc" id="L306">                        final V old = value3;</span>
+<span class="fc" id="L307">                        value3 = value;</span>
+<span class="fc" id="L308">                        return old;</span>
+                    }
+                case 2:
+<span class="fc bfc" id="L311" title="All 2 branches covered.">                    if (key2 == null) {</span>
+<span class="fc" id="L312">                        final V old = value2;</span>
+<span class="fc" id="L313">                        value2 = value;</span>
+<span class="fc" id="L314">                        return old;</span>
+                    }
+                case 1:
+<span class="fc bfc" id="L317" title="All 2 branches covered.">                    if (key1 == null) {</span>
+<span class="fc" id="L318">                        final V old = value1;</span>
+<span class="fc" id="L319">                        value1 = value;</span>
+<span class="fc" id="L320">                        return old;</span>
+                    }
+            }
+        } else {
+<span class="fc bfc" id="L324" title="All 2 branches covered.">            if (size &gt; 0) {</span>
+<span class="fc" id="L325">                final int hashCode = key.hashCode();</span>
+<span class="pc bpc" id="L326" title="1 of 4 branches missed.">                switch (size) {  // drop through</span>
+                    case 3:
+<span class="pc bpc" id="L328" title="1 of 4 branches missed.">                        if (hash3 == hashCode &amp;&amp; key.equals(key3)) {</span>
+<span class="fc" id="L329">                            final V old = value3;</span>
+<span class="fc" id="L330">                            value3 = value;</span>
+<span class="fc" id="L331">                            return old;</span>
+                        }
+                    case 2:
+<span class="pc bpc" id="L334" title="1 of 4 branches missed.">                        if (hash2 == hashCode &amp;&amp; key.equals(key2)) {</span>
+<span class="fc" id="L335">                            final V old = value2;</span>
+<span class="fc" id="L336">                            value2 = value;</span>
+<span class="fc" id="L337">                            return old;</span>
+                        }
+                    case 1:
+<span class="pc bpc" id="L340" title="1 of 4 branches missed.">                        if (hash1 == hashCode &amp;&amp; key.equals(key1)) {</span>
+<span class="fc" id="L341">                            final V old = value1;</span>
+<span class="fc" id="L342">                            value1 = value;</span>
+<span class="fc" id="L343">                            return old;</span>
+                        }
+                }
+            }
+        }
+
+        // add new mapping
+<span class="fc bfc" id="L350" title="All 4 branches covered.">        switch (size) {</span>
+            default:
+<span class="fc" id="L352">                convertToMap();</span>
+<span class="fc" id="L353">                delegateMap.put(key, value);</span>
+<span class="fc" id="L354">                return null;</span>
+            case 2:
+<span class="fc bfc" id="L356" title="All 2 branches covered.">                hash3 = key == null ? 0 : key.hashCode();</span>
+<span class="fc" id="L357">                key3 = key;</span>
+<span class="fc" id="L358">                value3 = value;</span>
+<span class="fc" id="L359">                break;</span>
+            case 1:
+<span class="fc bfc" id="L361" title="All 2 branches covered.">                hash2 = key == null ? 0 : key.hashCode();</span>
+<span class="fc" id="L362">                key2 = key;</span>
+<span class="fc" id="L363">                value2 = value;</span>
+<span class="fc" id="L364">                break;</span>
+            case 0:
+<span class="fc bfc" id="L366" title="All 2 branches covered.">                hash1 = key == null ? 0 : key.hashCode();</span>
+<span class="fc" id="L367">                key1 = key;</span>
+<span class="fc" id="L368">                value1 = value;</span>
+                break;
+        }
+<span class="fc" id="L371">        size++;</span>
+<span class="fc" id="L372">        return null;</span>
+    }
+
+    /**
+     * Puts all the values from the specified map into this map.
+     *
+     * @param map  the map to add
+     * @throws NullPointerException if the map is null
+     */
+    @Override
+    public void putAll(final Map&lt;? extends K, ? extends V&gt; map) {
+<span class="fc" id="L383">        final int size = map.size();</span>
+<span class="fc bfc" id="L384" title="All 2 branches covered.">        if (size == 0) {</span>
+<span class="fc" id="L385">            return;</span>
+        }
+<span class="pc bpc" id="L387" title="1 of 2 branches missed.">        if (delegateMap != null) {</span>
+<span class="nc" id="L388">            delegateMap.putAll(map);</span>
+<span class="nc" id="L389">            return;</span>
+        }
+<span class="fc bfc" id="L391" title="All 2 branches covered.">        if (size &lt; 4) {</span>
+<span class="fc bfc" id="L392" title="All 2 branches covered.">            for (final Map.Entry&lt;? extends K, ? extends V&gt; entry : map.entrySet()) {</span>
+<span class="fc" id="L393">                put(entry.getKey(), entry.getValue());</span>
+<span class="fc" id="L394">            }</span>
+        } else {
+<span class="fc" id="L396">            convertToMap();</span>
+<span class="fc" id="L397">            delegateMap.putAll(map);</span>
+        }
+<span class="fc" id="L399">    }</span>
+
+    /**
+     * Converts the flat map data to a map.
+     */
+    private void convertToMap() {
+<span class="fc" id="L405">        delegateMap = createDelegateMap();</span>
+<span class="pc bpc" id="L406" title="2 of 5 branches missed.">        switch (size) {  // drop through</span>
+            case 3:
+<span class="fc" id="L408">                delegateMap.put(key3, value3);</span>
+            case 2:
+<span class="fc" id="L410">                delegateMap.put(key2, value2);</span>
+            case 1:
+<span class="fc" id="L412">                delegateMap.put(key1, value1);</span>
+            case 0:
+<span class="fc" id="L414">                break;</span>
+            default:
+<span class="nc" id="L416">                throw new IllegalStateException(&quot;Invalid map index: &quot; + size);</span>
+        }
+
+<span class="fc" id="L419">        size = 0;</span>
+<span class="fc" id="L420">        hash1 = hash2 = hash3 = 0;</span>
+<span class="fc" id="L421">        key1 = key2 = key3 = null;</span>
+<span class="fc" id="L422">        value1 = value2 = value3 = null;</span>
+<span class="fc" id="L423">    }</span>
+
+    /**
+     * Create an instance of the map used for storage when in delegation mode.
+     * &lt;p&gt;
+     * This can be overridden by subclasses to provide a different map implementation.
+     * Not every AbstractHashedMap is suitable, identity and reference based maps
+     * would be poor choices.
+     *
+     * @return a new AbstractHashedMap or subclass
+     * @since 3.1
+     */
+    protected AbstractHashedMap&lt;K, V&gt; createDelegateMap() {
+<span class="fc" id="L436">        return new HashedMap&lt;&gt;();</span>
+    }
+
+    /**
+     * Removes the specified mapping from this map.
+     *
+     * @param key  the mapping to remove
+     * @return the value mapped to the removed key, null if key not in map
+     */
+    @Override
+    public V remove(final Object key) {
+<span class="fc bfc" id="L447" title="All 2 branches covered.">        if (delegateMap != null) {</span>
+<span class="fc" id="L448">            return delegateMap.remove(key);</span>
+        }
+<span class="fc bfc" id="L450" title="All 2 branches covered.">        if (size == 0) {</span>
+<span class="fc" id="L451">            return null;</span>
+        }
+<span class="fc bfc" id="L453" title="All 2 branches covered.">        if (key == null) {</span>
+<span class="pc bpc" id="L454" title="1 of 4 branches missed.">            switch (size) {  // drop through</span>
+                case 3:
+<span class="fc bfc" id="L456" title="All 2 branches covered.">                    if (key3 == null) {</span>
+<span class="fc" id="L457">                        final V old = value3;</span>
+<span class="fc" id="L458">                        hash3 = 0;</span>
+<span class="fc" id="L459">                        key3 = null;</span>
+<span class="fc" id="L460">                        value3 = null;</span>
+<span class="fc" id="L461">                        size = 2;</span>
+<span class="fc" id="L462">                        return old;</span>
+                    }
+<span class="pc bpc" id="L464" title="1 of 2 branches missed.">                    if (key2 == null) {</span>
+<span class="nc" id="L465">                        final V old = value2;</span>
+<span class="nc" id="L466">                        hash2 = hash3;</span>
+<span class="nc" id="L467">                        key2 = key3;</span>
+<span class="nc" id="L468">                        value2 = value3;</span>
+<span class="nc" id="L469">                        hash3 = 0;</span>
+<span class="nc" id="L470">                        key3 = null;</span>
+<span class="nc" id="L471">                        value3 = null;</span>
+<span class="nc" id="L472">                        size = 2;</span>
+<span class="nc" id="L473">                        return old;</span>
+                    }
+<span class="pc bpc" id="L475" title="1 of 2 branches missed.">                    if (key1 == null) {</span>
+<span class="nc" id="L476">                        final V old = value1;</span>
+<span class="nc" id="L477">                        hash1 = hash3;</span>
+<span class="nc" id="L478">                        key1 = key3;</span>
+<span class="nc" id="L479">                        value1 = value3;</span>
+<span class="nc" id="L480">                        hash3 = 0;</span>
+<span class="nc" id="L481">                        key3 = null;</span>
+<span class="nc" id="L482">                        value3 = null;</span>
+<span class="nc" id="L483">                        size = 2;</span>
+<span class="nc" id="L484">                        return old;</span>
+                    }
+<span class="fc" id="L486">                    return null;</span>
+                case 2:
+<span class="fc bfc" id="L488" title="All 2 branches covered.">                    if (key2 == null) {</span>
+<span class="fc" id="L489">                        final V old = value2;</span>
+<span class="fc" id="L490">                        hash2 = 0;</span>
+<span class="fc" id="L491">                        key2 = null;</span>
+<span class="fc" id="L492">                        value2 = null;</span>
+<span class="fc" id="L493">                        size = 1;</span>
+<span class="fc" id="L494">                        return old;</span>
+                    }
+<span class="fc bfc" id="L496" title="All 2 branches covered.">                    if (key1 == null) {</span>
+<span class="fc" id="L497">                        final V old = value1;</span>
+<span class="fc" id="L498">                        hash1 = hash2;</span>
+<span class="fc" id="L499">                        key1 = key2;</span>
+<span class="fc" id="L500">                        value1 = value2;</span>
+<span class="fc" id="L501">                        hash2 = 0;</span>
+<span class="fc" id="L502">                        key2 = null;</span>
+<span class="fc" id="L503">                        value2 = null;</span>
+<span class="fc" id="L504">                        size = 1;</span>
+<span class="fc" id="L505">                        return old;</span>
+                    }
+<span class="fc" id="L507">                    return null;</span>
+                case 1:
+<span class="fc bfc" id="L509" title="All 2 branches covered.">                    if (key1 == null) {</span>
+<span class="fc" id="L510">                        final V old = value1;</span>
+<span class="fc" id="L511">                        hash1 = 0;</span>
+<span class="fc" id="L512">                        key1 = null;</span>
+<span class="fc" id="L513">                        value1 = null;</span>
+<span class="fc" id="L514">                        size = 0;</span>
+<span class="fc" id="L515">                        return old;</span>
+                    }
+            }
+        } else {
+<span class="pc bpc" id="L519" title="1 of 2 branches missed.">            if (size &gt; 0) {</span>
+<span class="fc" id="L520">                final int hashCode = key.hashCode();</span>
+<span class="pc bpc" id="L521" title="1 of 4 branches missed.">                switch (size) {  // drop through</span>
+                    case 3:
+<span class="pc bpc" id="L523" title="1 of 4 branches missed.">                        if (hash3 == hashCode &amp;&amp; key.equals(key3)) {</span>
+<span class="fc" id="L524">                            final V old = value3;</span>
+<span class="fc" id="L525">                            hash3 = 0;</span>
+<span class="fc" id="L526">                            key3 = null;</span>
+<span class="fc" id="L527">                            value3 = null;</span>
+<span class="fc" id="L528">                            size = 2;</span>
+<span class="fc" id="L529">                            return old;</span>
+                        }
+<span class="pc bpc" id="L531" title="1 of 4 branches missed.">                        if (hash2 == hashCode &amp;&amp; key.equals(key2)) {</span>
+<span class="fc" id="L532">                            final V old = value2;</span>
+<span class="fc" id="L533">                            hash2 = hash3;</span>
+<span class="fc" id="L534">                            key2 = key3;</span>
+<span class="fc" id="L535">                            value2 = value3;</span>
+<span class="fc" id="L536">                            hash3 = 0;</span>
+<span class="fc" id="L537">                            key3 = null;</span>
+<span class="fc" id="L538">                            value3 = null;</span>
+<span class="fc" id="L539">                            size = 2;</span>
+<span class="fc" id="L540">                            return old;</span>
+                        }
+<span class="pc bpc" id="L542" title="1 of 4 branches missed.">                        if (hash1 == hashCode &amp;&amp; key.equals(key1)) {</span>
+<span class="fc" id="L543">                            final V old = value1;</span>
+<span class="fc" id="L544">                            hash1 = hash3;</span>
+<span class="fc" id="L545">                            key1 = key3;</span>
+<span class="fc" id="L546">                            value1 = value3;</span>
+<span class="fc" id="L547">                            hash3 = 0;</span>
+<span class="fc" id="L548">                            key3 = null;</span>
+<span class="fc" id="L549">                            value3 = null;</span>
+<span class="fc" id="L550">                            size = 2;</span>
+<span class="fc" id="L551">                            return old;</span>
+                        }
+<span class="fc" id="L553">                        return null;</span>
+                    case 2:
+<span class="pc bpc" id="L555" title="1 of 4 branches missed.">                        if (hash2 == hashCode &amp;&amp; key.equals(key2)) {</span>
+<span class="fc" id="L556">                            final V old = value2;</span>
+<span class="fc" id="L557">                            hash2 = 0;</span>
+<span class="fc" id="L558">                            key2 = null;</span>
+<span class="fc" id="L559">                            value2 = null;</span>
+<span class="fc" id="L560">                            size = 1;</span>
+<span class="fc" id="L561">                            return old;</span>
+                        }
+<span class="pc bpc" id="L563" title="1 of 4 branches missed.">                        if (hash1 == hashCode &amp;&amp; key.equals(key1)) {</span>
+<span class="fc" id="L564">                            final V old = value1;</span>
+<span class="fc" id="L565">                            hash1 = hash2;</span>
+<span class="fc" id="L566">                            key1 = key2;</span>
+<span class="fc" id="L567">                            value1 = value2;</span>
+<span class="fc" id="L568">                            hash2 = 0;</span>
+<span class="fc" id="L569">                            key2 = null;</span>
+<span class="fc" id="L570">                            value2 = null;</span>
+<span class="fc" id="L571">                            size = 1;</span>
+<span class="fc" id="L572">                            return old;</span>
+                        }
+<span class="fc" id="L574">                        return null;</span>
+                    case 1:
+<span class="pc bpc" id="L576" title="2 of 4 branches missed.">                        if (hash1 == hashCode &amp;&amp; key.equals(key1)) {</span>
+<span class="fc" id="L577">                            final V old = value1;</span>
+<span class="fc" id="L578">                            hash1 = 0;</span>
+<span class="fc" id="L579">                            key1 = null;</span>
+<span class="fc" id="L580">                            value1 = null;</span>
+<span class="fc" id="L581">                            size = 0;</span>
+<span class="fc" id="L582">                            return old;</span>
+                        }
+                }
+            }
+        }
+<span class="fc" id="L587">        return null;</span>
+    }
+
+    /**
+     * Clears the map, resetting the size to zero and nullifying references
+     * to avoid garbage collection issues.
+     */
+    @Override
+    public void clear() {
+<span class="fc bfc" id="L596" title="All 2 branches covered.">        if (delegateMap != null) {</span>
+<span class="fc" id="L597">            delegateMap.clear();  // should aid gc</span>
+<span class="fc" id="L598">            delegateMap = null;  // switch back to flat mode</span>
+        } else {
+<span class="fc" id="L600">            size = 0;</span>
+<span class="fc" id="L601">            hash1 = hash2 = hash3 = 0;</span>
+<span class="fc" id="L602">            key1 = key2 = key3 = null;</span>
+<span class="fc" id="L603">            value1 = value2 = value3 = null;</span>
+        }
+<span class="fc" id="L605">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets an iterator over the map.
+     * Changes made to the iterator affect this map.
+     * &lt;p&gt;
+     * A MapIterator returns the keys in the map. It also provides convenient
+     * methods to get the key and value, and set the value.
+     * It avoids the need to create an entrySet/keySet/values object.
+     * It also avoids creating the Map Entry object.
+     *
+     * @return the map iterator
+     */
+    @Override
+    public MapIterator&lt;K, V&gt; mapIterator() {
+<span class="fc bfc" id="L621" title="All 2 branches covered.">        if (delegateMap != null) {</span>
+<span class="fc" id="L622">            return delegateMap.mapIterator();</span>
+        }
+<span class="fc bfc" id="L624" title="All 2 branches covered.">        if (size == 0) {</span>
+<span class="fc" id="L625">            return EmptyMapIterator.&lt;K, V&gt;emptyMapIterator();</span>
+        }
+<span class="fc" id="L627">        return new FlatMapIterator&lt;&gt;(this);</span>
+    }
+
+    /**
+     * FlatMapIterator
+     */
+    static class FlatMapIterator&lt;K, V&gt; implements MapIterator&lt;K, V&gt;, ResettableIterator&lt;K&gt; {
+        private final Flat3Map&lt;K, V&gt; parent;
+<span class="fc" id="L635">        private int nextIndex = 0;</span>
+<span class="fc" id="L636">        private boolean canRemove = false;</span>
+
+        FlatMapIterator(final Flat3Map&lt;K, V&gt; parent) {
+<span class="fc" id="L639">            super();</span>
+<span class="fc" id="L640">            this.parent = parent;</span>
+<span class="fc" id="L641">        }</span>
+
+        @Override
+        public boolean hasNext() {
+<span class="fc bfc" id="L645" title="All 2 branches covered.">            return nextIndex &lt; parent.size;</span>
+        }
+
+        @Override
+        public K next() {
+<span class="pc bpc" id="L650" title="1 of 2 branches missed.">            if (hasNext() == false) {</span>
+<span class="nc" id="L651">                throw new NoSuchElementException(AbstractHashedMap.NO_NEXT_ENTRY);</span>
+            }
+<span class="fc" id="L653">            canRemove = true;</span>
+<span class="fc" id="L654">            nextIndex++;</span>
+<span class="fc" id="L655">            return getKey();</span>
+        }
+
+        @Override
+        public void remove() {
+<span class="nc bnc" id="L660" title="All 2 branches missed.">            if (canRemove == false) {</span>
+<span class="nc" id="L661">                throw new IllegalStateException(AbstractHashedMap.REMOVE_INVALID);</span>
+            }
+<span class="nc" id="L663">            parent.remove(getKey());</span>
+<span class="nc" id="L664">            nextIndex--;</span>
+<span class="nc" id="L665">            canRemove = false;</span>
+<span class="nc" id="L666">        }</span>
+
+        @Override
+        public K getKey() {
+<span class="pc bpc" id="L670" title="1 of 2 branches missed.">            if (canRemove == false) {</span>
+<span class="nc" id="L671">                throw new IllegalStateException(AbstractHashedMap.GETKEY_INVALID);</span>
+            }
+<span class="pc bpc" id="L673" title="1 of 4 branches missed.">            switch (nextIndex) {</span>
+                case 3:
+<span class="fc" id="L675">                    return parent.key3;</span>
+                case 2:
+<span class="fc" id="L677">                    return parent.key2;</span>
+                case 1:
+<span class="fc" id="L679">                    return parent.key1;</span>
+            }
+<span class="nc" id="L681">            throw new IllegalStateException(&quot;Invalid map index: &quot; + nextIndex);</span>
+        }
+
+        @Override
+        public V getValue() {
+<span class="pc bpc" id="L686" title="1 of 2 branches missed.">            if (canRemove == false) {</span>
+<span class="nc" id="L687">                throw new IllegalStateException(AbstractHashedMap.GETVALUE_INVALID);</span>
+            }
+<span class="pc bpc" id="L689" title="1 of 4 branches missed.">            switch (nextIndex) {</span>
+                case 3:
+<span class="fc" id="L691">                    return parent.value3;</span>
+                case 2:
+<span class="fc" id="L693">                    return parent.value2;</span>
+                case 1:
+<span class="fc" id="L695">                    return parent.value1;</span>
+            }
+<span class="nc" id="L697">            throw new IllegalStateException(&quot;Invalid map index: &quot; + nextIndex);</span>
+        }
+
+        @Override
+        public V setValue(final V value) {
+<span class="pc bpc" id="L702" title="1 of 2 branches missed.">            if (canRemove == false) {</span>
+<span class="nc" id="L703">                throw new IllegalStateException(AbstractHashedMap.SETVALUE_INVALID);</span>
+            }
+<span class="fc" id="L705">            final V old = getValue();</span>
+<span class="pc bpc" id="L706" title="1 of 4 branches missed.">            switch (nextIndex) {</span>
+                case 3:
+<span class="fc" id="L708">                    parent.value3 = value;</span>
+<span class="fc" id="L709">                    break;</span>
+                case 2:
+<span class="fc" id="L711">                    parent.value2 = value;</span>
+<span class="fc" id="L712">                    break;</span>
+                case 1:
+<span class="fc" id="L714">                    parent.value1 = value;</span>
+<span class="fc" id="L715">                    break;</span>
+                default:
+<span class="nc" id="L717">                    throw new IllegalStateException(&quot;Invalid map index: &quot; + nextIndex);</span>
+            }
+<span class="fc" id="L719">            return old;</span>
+        }
+
+        @Override
+        public void reset() {
+<span class="nc" id="L724">            nextIndex = 0;</span>
+<span class="nc" id="L725">            canRemove = false;</span>
+<span class="nc" id="L726">        }</span>
+
+        @Override
+        public String toString() {
+<span class="nc bnc" id="L730" title="All 2 branches missed.">            if (canRemove) {</span>
+<span class="nc" id="L731">                return &quot;Iterator[&quot; + getKey() + &quot;=&quot; + getValue() + &quot;]&quot;;</span>
+            }
+<span class="nc" id="L733">            return &quot;Iterator[]&quot;;</span>
+        }
+    }
+
+    /**
+     * Gets the entrySet view of the map.
+     * Changes made to the view affect this map.
+     * &lt;p&gt;
+     * NOTE: from 4.0, the returned Map Entry will be an independent object and will
+     * not change anymore as the iterator progresses. To avoid this additional object
+     * creation and simply iterate through the entries, use {@link #mapIterator()}.
+     *
+     * @return the entrySet view
+     */
+    @Override
+    public Set&lt;Map.Entry&lt;K, V&gt;&gt; entrySet() {
+<span class="fc bfc" id="L749" title="All 2 branches covered.">        if (delegateMap != null) {</span>
+<span class="fc" id="L750">            return delegateMap.entrySet();</span>
+        }
+<span class="fc" id="L752">        return new EntrySet&lt;&gt;(this);</span>
+    }
+
+    /**
+     * EntrySet
+     */
+    static class EntrySet&lt;K, V&gt; extends AbstractSet&lt;Map.Entry&lt;K, V&gt;&gt; {
+        private final Flat3Map&lt;K, V&gt; parent;
+
+        EntrySet(final Flat3Map&lt;K, V&gt; parent) {
+<span class="fc" id="L762">            super();</span>
+<span class="fc" id="L763">            this.parent = parent;</span>
+<span class="fc" id="L764">        }</span>
+
+        @Override
+        public int size() {
+<span class="fc" id="L768">            return parent.size();</span>
+        }
+
+        @Override
+        public void clear() {
+<span class="fc" id="L773">            parent.clear();</span>
+<span class="fc" id="L774">        }</span>
+
+        @Override
+        public boolean remove(final Object obj) {
+<span class="pc bpc" id="L778" title="1 of 2 branches missed.">            if (obj instanceof Map.Entry == false) {</span>
+<span class="nc" id="L779">                return false;</span>
+            }
+<span class="fc" id="L781">            final Map.Entry&lt;?, ?&gt; entry = (Map.Entry&lt;?, ?&gt;) obj;</span>
+<span class="fc" id="L782">            final Object key = entry.getKey();</span>
+<span class="fc" id="L783">            final boolean result = parent.containsKey(key);</span>
+<span class="fc" id="L784">            parent.remove(key);</span>
+<span class="fc" id="L785">            return result;</span>
+        }
+
+        @Override
+        public Iterator&lt;Map.Entry&lt;K, V&gt;&gt; iterator() {
+<span class="fc bfc" id="L790" title="All 2 branches covered.">            if (parent.delegateMap != null) {</span>
+<span class="fc" id="L791">                return parent.delegateMap.entrySet().iterator();</span>
+            }
+<span class="fc bfc" id="L793" title="All 2 branches covered.">            if (parent.size() == 0) {</span>
+<span class="fc" id="L794">                return EmptyIterator.&lt;Map.Entry&lt;K, V&gt;&gt;emptyIterator();</span>
+            }
+<span class="fc" id="L796">            return new EntrySetIterator&lt;&gt;(parent);</span>
+        }
+    }
+
+    static class FlatMapEntry&lt;K, V&gt; implements Map.Entry&lt;K, V&gt; {
+        private final Flat3Map&lt;K, V&gt; parent;
+        private final int index;
+        private volatile boolean removed;
+
+<span class="fc" id="L805">        public FlatMapEntry(final Flat3Map&lt;K, V&gt; parent, final int index) {</span>
+<span class="fc" id="L806">            this.parent = parent;</span>
+<span class="fc" id="L807">            this.index = index;</span>
+<span class="fc" id="L808">            this.removed = false;</span>
+<span class="fc" id="L809">        }</span>
+
+        /**
+         * Used by the iterator that created this entry to indicate that
+         * {@link java.util.Iterator#remove()} has been called.
+         * &lt;p&gt;
+         * As a consequence, all subsequent call to {@link #getKey()},
+         * {@link #setValue(Object)} and {@link #getValue()} will fail.
+         *
+         * @param flag the new value of the removed flag
+         */
+        void setRemoved(final boolean flag) {
+<span class="nc" id="L821">            this.removed = flag;</span>
+<span class="nc" id="L822">        }</span>
+
+        @Override
+        public K getKey() {
+<span class="pc bpc" id="L826" title="1 of 2 branches missed.">            if (removed) {</span>
+<span class="nc" id="L827">                throw new IllegalStateException(AbstractHashedMap.GETKEY_INVALID);</span>
+            }
+<span class="pc bpc" id="L829" title="1 of 4 branches missed.">            switch (index) {</span>
+                case 3:
+<span class="fc" id="L831">                    return parent.key3;</span>
+                case 2:
+<span class="fc" id="L833">                    return parent.key2;</span>
+                case 1:
+<span class="fc" id="L835">                    return parent.key1;</span>
+            }
+<span class="nc" id="L837">            throw new IllegalStateException(&quot;Invalid map index: &quot; + index);</span>
+        }
+
+        @Override
+        public V getValue() {
+<span class="pc bpc" id="L842" title="1 of 2 branches missed.">            if (removed) {</span>
+<span class="nc" id="L843">                throw new IllegalStateException(AbstractHashedMap.GETVALUE_INVALID);</span>
+            }
+<span class="pc bpc" id="L845" title="1 of 4 branches missed.">            switch (index) {</span>
+                case 3:
+<span class="fc" id="L847">                    return parent.value3;</span>
+                case 2:
+<span class="fc" id="L849">                    return parent.value2;</span>
+                case 1:
+<span class="fc" id="L851">                    return parent.value1;</span>
+            }
+<span class="nc" id="L853">            throw new IllegalStateException(&quot;Invalid map index: &quot; + index);</span>
+        }
+
+        @Override
+        public V setValue(final V value) {
+<span class="pc bpc" id="L858" title="1 of 2 branches missed.">            if (removed) {</span>
+<span class="nc" id="L859">                throw new IllegalStateException(AbstractHashedMap.SETVALUE_INVALID);</span>
+            }
+<span class="fc" id="L861">            final V old = getValue();</span>
+<span class="pc bpc" id="L862" title="1 of 4 branches missed.">            switch (index) {</span>
+                case 3:
+<span class="fc" id="L864">                    parent.value3 = value;</span>
+<span class="fc" id="L865">                    break;</span>
+                case 2:
+<span class="fc" id="L867">                    parent.value2 = value;</span>
+<span class="fc" id="L868">                    break;</span>
+                case 1:
+<span class="fc" id="L870">                    parent.value1 = value;</span>
+<span class="fc" id="L871">                    break;</span>
+                default:
+<span class="nc" id="L873">                    throw new IllegalStateException(&quot;Invalid map index: &quot; + index);</span>
+            }
+<span class="fc" id="L875">            return old;</span>
+        }
+
+        @Override
+        public boolean equals(final Object obj) {
+<span class="nc bnc" id="L880" title="All 2 branches missed.">            if (removed) {</span>
+<span class="nc" id="L881">                return false;</span>
+            }
+<span class="nc bnc" id="L883" title="All 2 branches missed.">            if (obj instanceof Map.Entry == false) {</span>
+<span class="nc" id="L884">                return false;</span>
+            }
+<span class="nc" id="L886">            final Map.Entry&lt;?, ?&gt; other = (Map.Entry&lt;?, ?&gt;) obj;</span>
+<span class="nc" id="L887">            final Object key = getKey();</span>
+<span class="nc" id="L888">            final Object value = getValue();</span>
+<span class="nc bnc" id="L889" title="All 8 branches missed.">            return (key == null ? other.getKey() == null : key.equals(other.getKey())) &amp;&amp;</span>
+<span class="nc bnc" id="L890" title="All 4 branches missed.">                   (value == null ? other.getValue() == null : value.equals(other.getValue()));</span>
+        }
+
+        @Override
+        public int hashCode() {
+<span class="pc bpc" id="L895" title="1 of 2 branches missed.">            if (removed) {</span>
+<span class="nc" id="L896">                return 0;</span>
+            }
+<span class="fc" id="L898">            final Object key = getKey();</span>
+<span class="fc" id="L899">            final Object value = getValue();</span>
+<span class="pc bpc" id="L900" title="2 of 4 branches missed.">            return (key == null ? 0 : key.hashCode()) ^</span>
+<span class="fc" id="L901">                   (value == null ? 0 : value.hashCode());</span>
+        }
+
+        @Override
+        public String toString() {
+<span class="pc bpc" id="L906" title="1 of 2 branches missed.">            if (!removed) {</span>
+<span class="fc" id="L907">                return getKey() + &quot;=&quot; + getValue();</span>
+            }
+<span class="nc" id="L909">            return &quot;&quot;;</span>
+        }
+
+    }
+
+    static abstract class EntryIterator&lt;K, V&gt; {
+        private final Flat3Map&lt;K, V&gt; parent;
+<span class="fc" id="L916">        private int nextIndex = 0;</span>
+<span class="fc" id="L917">        private FlatMapEntry&lt;K, V&gt; currentEntry = null;</span>
+
+        /**
+         * Create a new Flat3Map.EntryIterator.
+         */
+<span class="fc" id="L922">        public EntryIterator(final Flat3Map&lt;K, V&gt; parent) {</span>
+<span class="fc" id="L923">            this.parent = parent;</span>
+<span class="fc" id="L924">        }</span>
+
+        public boolean hasNext() {
+<span class="fc bfc" id="L927" title="All 2 branches covered.">            return nextIndex &lt; parent.size;</span>
+        }
+
+        public Map.Entry&lt;K, V&gt; nextEntry() {
+<span class="pc bpc" id="L931" title="1 of 2 branches missed.">            if (!hasNext()) {</span>
+<span class="nc" id="L932">                throw new NoSuchElementException(AbstractHashedMap.NO_NEXT_ENTRY);</span>
+            }
+<span class="fc" id="L934">            currentEntry = new FlatMapEntry&lt;&gt;(parent, ++nextIndex);</span>
+<span class="fc" id="L935">            return currentEntry;</span>
+        }
+
+        public void remove() {
+<span class="nc bnc" id="L939" title="All 2 branches missed.">            if (currentEntry == null) {</span>
+<span class="nc" id="L940">                throw new IllegalStateException(AbstractHashedMap.REMOVE_INVALID);</span>
+            }
+<span class="nc" id="L942">            currentEntry.setRemoved(true);</span>
+<span class="nc" id="L943">            parent.remove(currentEntry.getKey());</span>
+<span class="nc" id="L944">            nextIndex--;</span>
+<span class="nc" id="L945">            currentEntry = null;</span>
+<span class="nc" id="L946">        }</span>
+
+    }
+
+    /**
+     * EntrySetIterator and MapEntry
+     */
+    static class EntrySetIterator&lt;K, V&gt; extends EntryIterator&lt;K, V&gt; implements Iterator&lt;Map.Entry&lt;K, V&gt;&gt; {
+        EntrySetIterator(final Flat3Map&lt;K, V&gt; parent) {
+<span class="fc" id="L955">            super(parent);</span>
+<span class="fc" id="L956">        }</span>
+
+        @Override
+        public Map.Entry&lt;K, V&gt; next() {
+<span class="fc" id="L960">            return nextEntry();</span>
+        }
+    }
+
+    /**
+     * Gets the keySet view of the map.
+     * Changes made to the view affect this map.
+     * To simply iterate through the keys, use {@link #mapIterator()}.
+     *
+     * @return the keySet view
+     */
+    @Override
+    public Set&lt;K&gt; keySet() {
+<span class="fc bfc" id="L973" title="All 2 branches covered.">        if (delegateMap != null) {</span>
+<span class="fc" id="L974">            return delegateMap.keySet();</span>
+        }
+<span class="fc" id="L976">        return new KeySet&lt;&gt;(this);</span>
+    }
+
+    /**
+     * KeySet
+     */
+    static class KeySet&lt;K&gt; extends AbstractSet&lt;K&gt; {
+        private final Flat3Map&lt;K, ?&gt; parent;
+
+        KeySet(final Flat3Map&lt;K, ?&gt; parent) {
+<span class="fc" id="L986">            super();</span>
+<span class="fc" id="L987">            this.parent = parent;</span>
+<span class="fc" id="L988">        }</span>
+
+        @Override
+        public int size() {
+<span class="fc" id="L992">            return parent.size();</span>
+        }
+
+        @Override
+        public void clear() {
+<span class="fc" id="L997">            parent.clear();</span>
+<span class="fc" id="L998">        }</span>
+
+        @Override
+        public boolean contains(final Object key) {
+<span class="fc" id="L1002">            return parent.containsKey(key);</span>
+        }
+
+        @Override
+        public boolean remove(final Object key) {
+<span class="fc" id="L1007">            final boolean result = parent.containsKey(key);</span>
+<span class="fc" id="L1008">            parent.remove(key);</span>
+<span class="fc" id="L1009">            return result;</span>
+        }
+
+        @Override
+        public Iterator&lt;K&gt; iterator() {
+<span class="fc bfc" id="L1014" title="All 2 branches covered.">            if (parent.delegateMap != null) {</span>
+<span class="fc" id="L1015">                return parent.delegateMap.keySet().iterator();</span>
+            }
+<span class="fc bfc" id="L1017" title="All 2 branches covered.">            if (parent.size() == 0) {</span>
+<span class="fc" id="L1018">                return EmptyIterator.&lt;K&gt;emptyIterator();</span>
+            }
+<span class="fc" id="L1020">            return new KeySetIterator&lt;&gt;(parent);</span>
+        }
+    }
+
+    /**
+     * KeySetIterator
+     */
+    static class KeySetIterator&lt;K&gt; extends EntryIterator&lt;K, Object&gt; implements Iterator&lt;K&gt;{
+
+        @SuppressWarnings(&quot;unchecked&quot;)
+        KeySetIterator(final Flat3Map&lt;K, ?&gt; parent) {
+<span class="fc" id="L1031">            super((Flat3Map&lt;K, Object&gt;) parent);</span>
+<span class="fc" id="L1032">        }</span>
+
+        @Override
+        public K next() {
+<span class="fc" id="L1036">            return nextEntry().getKey();</span>
+        }
+    }
+
+    /**
+     * Gets the values view of the map.
+     * Changes made to the view affect this map.
+     * To simply iterate through the values, use {@link #mapIterator()}.
+     *
+     * @return the values view
+     */
+    @Override
+    public Collection&lt;V&gt; values() {
+<span class="fc bfc" id="L1049" title="All 2 branches covered.">        if (delegateMap != null) {</span>
+<span class="fc" id="L1050">            return delegateMap.values();</span>
+        }
+<span class="fc" id="L1052">        return new Values&lt;&gt;(this);</span>
+    }
+
+    /**
+     * Values
+     */
+    static class Values&lt;V&gt; extends AbstractCollection&lt;V&gt; {
+        private final Flat3Map&lt;?, V&gt; parent;
+
+        Values(final Flat3Map&lt;?, V&gt; parent) {
+<span class="fc" id="L1062">            super();</span>
+<span class="fc" id="L1063">            this.parent = parent;</span>
+<span class="fc" id="L1064">        }</span>
+
+        @Override
+        public int size() {
+<span class="fc" id="L1068">            return parent.size();</span>
+        }
+
+        @Override
+        public void clear() {
+<span class="fc" id="L1073">            parent.clear();</span>
+<span class="fc" id="L1074">        }</span>
+
+        @Override
+        public boolean contains(final Object value) {
+<span class="fc" id="L1078">            return parent.containsValue(value);</span>
+        }
+
+        @Override
+        public Iterator&lt;V&gt; iterator() {
+<span class="pc bpc" id="L1083" title="1 of 2 branches missed.">            if (parent.delegateMap != null) {</span>
+<span class="nc" id="L1084">                return parent.delegateMap.values().iterator();</span>
+            }
+<span class="fc bfc" id="L1086" title="All 2 branches covered.">            if (parent.size() == 0) {</span>
+<span class="fc" id="L1087">                return EmptyIterator.&lt;V&gt;emptyIterator();</span>
+            }
+<span class="fc" id="L1089">            return new ValuesIterator&lt;&gt;(parent);</span>
+        }
+    }
+
+    /**
+     * ValuesIterator
+     */
+    static class ValuesIterator&lt;V&gt; extends EntryIterator&lt;Object, V&gt; implements Iterator&lt;V&gt; {
+
+        @SuppressWarnings(&quot;unchecked&quot;)
+        ValuesIterator(final Flat3Map&lt;?, V&gt; parent) {
+<span class="fc" id="L1100">            super((Flat3Map&lt;Object, V&gt;) parent);</span>
+<span class="fc" id="L1101">        }</span>
+
+        @Override
+        public V next() {
+<span class="fc" id="L1105">            return nextEntry().getValue();</span>
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Write the map out using a custom routine.
+     *
+     * @param out  the output stream
+     * @throws IOException if an error occurs while writing to the stream
+     */
+    private void writeObject(final ObjectOutputStream out) throws IOException {
+<span class="fc" id="L1117">        out.defaultWriteObject();</span>
+<span class="fc" id="L1118">        out.writeInt(size());</span>
+<span class="fc bfc" id="L1119" title="All 2 branches covered.">        for (final MapIterator&lt;?, ?&gt; it = mapIterator(); it.hasNext();) {</span>
+<span class="fc" id="L1120">            out.writeObject(it.next());  // key</span>
+<span class="fc" id="L1121">            out.writeObject(it.getValue());  // value</span>
+        }
+<span class="fc" id="L1123">    }</span>
+
+    /**
+     * Read the map in using a custom routine.
+     *
+     * @param in the input stream
+     * @throws IOException if an error occurs while reading from the stream
+     * @throws ClassNotFoundException if an object read from the stream can not be loaded
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
+<span class="fc" id="L1134">        in.defaultReadObject();</span>
+<span class="fc" id="L1135">        final int count = in.readInt();</span>
+<span class="fc bfc" id="L1136" title="All 2 branches covered.">        if (count &gt; 3) {</span>
+<span class="fc" id="L1137">            delegateMap = createDelegateMap();</span>
+        }
+<span class="fc bfc" id="L1139" title="All 2 branches covered.">        for (int i = count; i &gt; 0; i--) {</span>
+<span class="fc" id="L1140">            put((K) in.readObject(), (V) in.readObject());</span>
+        }
+<span class="fc" id="L1142">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Clones the map without cloning the keys or values.
+     *
+     * @return a shallow clone
+     * @since 3.1
+     */
+    @Override
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public Flat3Map&lt;K, V&gt; clone() {
+        try {
+<span class="fc" id="L1155">            final Flat3Map&lt;K, V&gt; cloned = (Flat3Map&lt;K, V&gt;) super.clone();</span>
+<span class="fc bfc" id="L1156" title="All 2 branches covered.">            if (cloned.delegateMap != null) {</span>
+<span class="fc" id="L1157">                cloned.delegateMap = cloned.delegateMap.clone();</span>
+            }
+<span class="fc" id="L1159">            return cloned;</span>
+<span class="nc" id="L1160">        } catch (final CloneNotSupportedException ex) {</span>
+<span class="nc" id="L1161">            throw new InternalError();</span>
+        }
+    }
+
+    /**
+     * Compares this map with another.
+     *
+     * @param obj  the object to compare to
+     * @return true if equal
+     */
+    @Override
+    public boolean equals(final Object obj) {
+<span class="fc bfc" id="L1173" title="All 2 branches covered.">        if (obj == this) {</span>
+<span class="fc" id="L1174">            return true;</span>
+        }
+<span class="fc bfc" id="L1176" title="All 2 branches covered.">        if (delegateMap != null) {</span>
+<span class="fc" id="L1177">            return delegateMap.equals(obj);</span>
+        }
+<span class="fc bfc" id="L1179" title="All 2 branches covered.">        if (obj instanceof Map == false) {</span>
+<span class="fc" id="L1180">            return false;</span>
+        }
+<span class="fc" id="L1182">        final Map&lt;?, ?&gt; other = (Map&lt;?, ?&gt;) obj;</span>
+<span class="pc bpc" id="L1183" title="1 of 2 branches missed.">        if (size != other.size()) {</span>
+<span class="nc" id="L1184">            return false;</span>
+        }
+<span class="fc bfc" id="L1186" title="All 2 branches covered.">        if (size &gt; 0) {</span>
+<span class="fc" id="L1187">            Object otherValue = null;</span>
+<span class="pc bpc" id="L1188" title="1 of 4 branches missed.">            switch (size) {  // drop through</span>
+                case 3:
+<span class="pc bpc" id="L1190" title="1 of 2 branches missed.">                    if (other.containsKey(key3) == false) {</span>
+<span class="nc" id="L1191">                        return false;</span>
+                    }
+<span class="fc" id="L1193">                    otherValue = other.get(key3);</span>
+<span class="pc bpc" id="L1194" title="4 of 6 branches missed.">                    if (value3 == null ? otherValue != null : !value3.equals(otherValue)) {</span>
+<span class="nc" id="L1195">                        return false;</span>
+                    }
+                case 2:
+<span class="fc bfc" id="L1198" title="All 2 branches covered.">                    if (other.containsKey(key2) == false) {</span>
+<span class="fc" id="L1199">                        return false;</span>
+                    }
+<span class="fc" id="L1201">                    otherValue = other.get(key2);</span>
+<span class="pc bpc" id="L1202" title="3 of 6 branches missed.">                    if (value2 == null ? otherValue != null : !value2.equals(otherValue)) {</span>
+<span class="fc" id="L1203">                        return false;</span>
+                    }
+                case 1:
+<span class="pc bpc" id="L1206" title="1 of 2 branches missed.">                    if (other.containsKey(key1) == false) {</span>
+<span class="nc" id="L1207">                        return false;</span>
+                    }
+<span class="fc" id="L1209">                    otherValue = other.get(key1);</span>
+<span class="pc bpc" id="L1210" title="4 of 6 branches missed.">                    if (value1 == null ? otherValue != null : !value1.equals(otherValue)) {</span>
+<span class="nc" id="L1211">                        return false;</span>
+                    }
+            }
+        }
+<span class="fc" id="L1215">        return true;</span>
+    }
+
+    /**
+     * Gets the standard Map hashCode.
+     *
+     * @return the hash code defined in the Map interface
+     */
+    @Override
+    public int hashCode() {
+<span class="fc bfc" id="L1225" title="All 2 branches covered.">        if (delegateMap != null) {</span>
+<span class="fc" id="L1226">            return delegateMap.hashCode();</span>
+        }
+<span class="fc" id="L1228">        int total = 0;</span>
+<span class="pc bpc" id="L1229" title="1 of 5 branches missed.">        switch (size) {  // drop through</span>
+            case 3:
+<span class="pc bpc" id="L1231" title="1 of 2 branches missed.">                total += hash3 ^ (value3 == null ? 0 : value3.hashCode());</span>
+            case 2:
+<span class="pc bpc" id="L1233" title="1 of 2 branches missed.">                total += hash2 ^ (value2 == null ? 0 : value2.hashCode());</span>
+            case 1:
+<span class="pc bpc" id="L1235" title="1 of 2 branches missed.">                total += hash1 ^ (value1 == null ? 0 : value1.hashCode());</span>
+            case 0:
+<span class="fc" id="L1237">                break;</span>
+            default:
+<span class="nc" id="L1239">                throw new IllegalStateException(&quot;Invalid map index: &quot; + size);</span>
+        }
+<span class="fc" id="L1241">        return total;</span>
+    }
+
+    /**
+     * Gets the map as a String.
+     *
+     * @return a string version of the map
+     */
+    @Override
+    public String toString() {
+<span class="fc bfc" id="L1251" title="All 2 branches covered.">        if (delegateMap != null) {</span>
+<span class="fc" id="L1252">            return delegateMap.toString();</span>
+        }
+<span class="fc bfc" id="L1254" title="All 2 branches covered.">        if (size == 0) {</span>
+<span class="fc" id="L1255">            return &quot;{}&quot;;</span>
+        }
+<span class="fc" id="L1257">        final StringBuilder buf = new StringBuilder(128);</span>
+<span class="fc" id="L1258">        buf.append('{');</span>
+<span class="pc bpc" id="L1259" title="1 of 4 branches missed.">        switch (size) {  // drop through</span>
+            case 3:
+<span class="pc bpc" id="L1261" title="1 of 2 branches missed.">                buf.append(key3 == this ? &quot;(this Map)&quot; : key3);</span>
+<span class="fc" id="L1262">                buf.append('=');</span>
+<span class="pc bpc" id="L1263" title="1 of 2 branches missed.">                buf.append(value3 == this ? &quot;(this Map)&quot; : value3);</span>
+<span class="fc" id="L1264">                buf.append(',');</span>
+            case 2:
+<span class="pc bpc" id="L1266" title="1 of 2 branches missed.">                buf.append(key2 == this ? &quot;(this Map)&quot; : key2);</span>
+<span class="fc" id="L1267">                buf.append('=');</span>
+<span class="pc bpc" id="L1268" title="1 of 2 branches missed.">                buf.append(value2 == this ? &quot;(this Map)&quot; : value2);</span>
+<span class="fc" id="L1269">                buf.append(',');</span>
+            case 1:
+<span class="pc bpc" id="L1271" title="1 of 2 branches missed.">                buf.append(key1 == this ? &quot;(this Map)&quot; : key1);</span>
+<span class="fc" id="L1272">                buf.append('=');</span>
+<span class="pc bpc" id="L1273" title="1 of 2 branches missed.">                buf.append(value1 == this ? &quot;(this Map)&quot; : value1);</span>
+<span class="fc" id="L1274">                break;</span>
+            // case 0: has already been dealt with
+            default:
+<span class="nc" id="L1277">                throw new IllegalStateException(&quot;Invalid map index: &quot; + size);</span>
+        }
+<span class="fc" id="L1279">        buf.append('}');</span>
+<span class="fc" id="L1280">        return buf.toString();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

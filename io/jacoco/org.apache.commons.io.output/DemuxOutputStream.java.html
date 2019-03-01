@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DemuxOutputStream.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons IO</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.io.output</a> &gt; <span class="el_source">DemuxOutputStream.java</span></div><h1>DemuxOutputStream.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.io.output;
+
+import java.io.IOException;
+import java.io.OutputStream;
+
+/**
+ * Forwards data to a stream that has been associated with this thread.
+ *
+ */
+<span class="fc" id="L26">public class DemuxOutputStream extends OutputStream {</span>
+<span class="fc" id="L27">    private final InheritableThreadLocal&lt;OutputStream&gt; outputStreamThreadLocal = new InheritableThreadLocal&lt;&gt;();</span>
+
+    /**
+     * Binds the specified stream to the current thread.
+     *
+     * @param output
+     *            the stream to bind
+     * @return the OutputStream that was previously active
+     */
+    public OutputStream bindStream(final OutputStream output) {
+<span class="fc" id="L37">        final OutputStream stream = outputStreamThreadLocal.get();</span>
+<span class="fc" id="L38">        outputStreamThreadLocal.set(output);</span>
+<span class="fc" id="L39">        return stream;</span>
+    }
+
+    /**
+     * Closes stream associated with current thread.
+     *
+     * @throws IOException
+     *             if an error occurs
+     */
+    @Override
+    public void close() throws IOException {
+<span class="nc" id="L50">        final OutputStream output = outputStreamThreadLocal.get();</span>
+<span class="nc bnc" id="L51" title="All 2 branches missed.">        if (null != output) {</span>
+<span class="nc" id="L52">            output.close();</span>
+        }
+<span class="nc" id="L54">    }</span>
+
+    /**
+     * Flushes stream associated with current thread.
+     *
+     * @throws IOException
+     *             if an error occurs
+     */
+    @Override
+    public void flush() throws IOException {
+        @SuppressWarnings(&quot;resource&quot;)
+<span class="nc" id="L65">        final OutputStream output = outputStreamThreadLocal.get();</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">        if (null != output) {</span>
+<span class="nc" id="L67">            output.flush();</span>
+        }
+<span class="nc" id="L69">    }</span>
+
+    /**
+     * Writes byte to stream associated with current thread.
+     *
+     * @param ch
+     *            the byte to write to stream
+     * @throws IOException
+     *             if an error occurs
+     */
+    @Override
+    public void write(final int ch) throws IOException {
+        @SuppressWarnings(&quot;resource&quot;)
+<span class="fc" id="L82">        final OutputStream output = outputStreamThreadLocal.get();</span>
+<span class="pc bpc" id="L83" title="1 of 2 branches missed.">        if (null != output) {</span>
+<span class="fc" id="L84">            output.write(ch);</span>
+        }
+<span class="fc" id="L86">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MultiKey.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.keyvalue</a> &gt; <span class="el_source">MultiKey.java</span></div><h1>MultiKey.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.keyvalue;
+
+import java.io.Serializable;
+import java.util.Arrays;
+
+/**
+ * A &lt;code&gt;MultiKey&lt;/code&gt; allows multiple map keys to be merged together.
+ * &lt;p&gt;
+ * The purpose of this class is to avoid the need to write code to handle
+ * maps of maps. An example might be the need to look up a file name by
+ * key and locale. The typical solution might be nested maps. This class
+ * can be used instead by creating an instance passing in the key and locale.
+ * &lt;p&gt;
+ * Example usage:
+ * &lt;pre&gt;
+ * // populate map with data mapping key+locale to localizedText
+ * Map map = new HashMap();
+ * MultiKey multiKey = new MultiKey(key, locale);
+ * map.put(multiKey, localizedText);
+ *
+ * // later retrieve the localized text
+ * MultiKey multiKey = new MultiKey(key, locale);
+ * String localizedText = (String) map.get(multiKey);
+ * &lt;/pre&gt;
+ *
+ * @since 3.0
+ */
+public class MultiKey&lt;K&gt; implements Serializable {
+    // This class could implement List, but that would confuse it's purpose
+
+    /** Serialisation version */
+    private static final long serialVersionUID = 4465448607415788805L;
+
+    /** The individual keys */
+    private final K[] keys;
+    /** The cached hashCode */
+    private transient int hashCode;
+
+    /**
+     * Constructor taking two keys.
+     * &lt;p&gt;
+     * The keys should be immutable
+     * If they are not then they must not be changed after adding to the MultiKey.
+     *
+     * @param key1  the first key
+     * @param key2  the second key
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public MultiKey(final K key1, final K key2) {
+<span class="fc" id="L66">        this((K[]) new Object[] { key1, key2 }, false);</span>
+<span class="fc" id="L67">    }</span>
+
+    /**
+     * Constructor taking three keys.
+     * &lt;p&gt;
+     * The keys should be immutable
+     * If they are not then they must not be changed after adding to the MultiKey.
+     *
+     * @param key1  the first key
+     * @param key2  the second key
+     * @param key3  the third key
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public MultiKey(final K key1, final K key2, final K key3) {
+<span class="fc" id="L81">        this((K[]) new Object[] {key1, key2, key3}, false);</span>
+<span class="fc" id="L82">    }</span>
+
+    /**
+     * Constructor taking four keys.
+     * &lt;p&gt;
+     * The keys should be immutable
+     * If they are not then they must not be changed after adding to the MultiKey.
+     *
+     * @param key1  the first key
+     * @param key2  the second key
+     * @param key3  the third key
+     * @param key4  the fourth key
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public MultiKey(final K key1, final K key2, final K key3, final K key4) {
+<span class="fc" id="L97">        this((K[]) new Object[] {key1, key2, key3, key4}, false);</span>
+<span class="fc" id="L98">    }</span>
+
+    /**
+     * Constructor taking five keys.
+     * &lt;p&gt;
+     * The keys should be immutable
+     * If they are not then they must not be changed after adding to the MultiKey.
+     *
+     * @param key1  the first key
+     * @param key2  the second key
+     * @param key3  the third key
+     * @param key4  the fourth key
+     * @param key5  the fifth key
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public MultiKey(final K key1, final K key2, final K key3, final K key4, final K key5) {
+<span class="fc" id="L114">        this((K[]) new Object[] {key1, key2, key3, key4, key5}, false);</span>
+<span class="fc" id="L115">    }</span>
+
+    /**
+     * Constructor taking an array of keys which is cloned.
+     * &lt;p&gt;
+     * The keys should be immutable
+     * If they are not then they must not be changed after adding to the MultiKey.
+     * &lt;p&gt;
+     * This is equivalent to &lt;code&gt;new MultiKey(keys, true)&lt;/code&gt;.
+     *
+     * @param keys  the array of keys, not null
+     * @throws IllegalArgumentException if the key array is null
+     */
+    public MultiKey(final K[] keys) {
+<span class="fc" id="L129">        this(keys, true);</span>
+<span class="fc" id="L130">    }</span>
+
+    /**
+     * Constructor taking an array of keys, optionally choosing whether to clone.
+     * &lt;p&gt;
+     * &lt;b&gt;If the array is not cloned, then it must not be modified.&lt;/b&gt;
+     * &lt;p&gt;
+     * This method is public for performance reasons only, to avoid a clone.
+     * The hashcode is calculated once here in this method.
+     * Therefore, changing the array passed in would not change the hashcode but
+     * would change the equals method, which is a bug.
+     * &lt;p&gt;
+     * This is the only fully safe usage of this constructor, as the object array
+     * is never made available in a variable:
+     * &lt;pre&gt;
+     * new MultiKey(new Object[] {...}, false);
+     * &lt;/pre&gt;
+     * &lt;p&gt;
+     * The keys should be immutable
+     * If they are not then they must not be changed after adding to the MultiKey.
+     *
+     * @param keys  the array of keys, not null
+     * @param makeClone  true to clone the array, false to assign it
+     * @throws IllegalArgumentException if the key array is null
+     * @since 3.1
+     */
+    public MultiKey(final K[] keys, final boolean makeClone) {
+<span class="fc" id="L157">        super();</span>
+<span class="fc bfc" id="L158" title="All 2 branches covered.">        if (keys == null) {</span>
+<span class="fc" id="L159">            throw new IllegalArgumentException(&quot;The array of keys must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L161" title="All 2 branches covered.">        if (makeClone) {</span>
+<span class="fc" id="L162">            this.keys = keys.clone();</span>
+        } else {
+<span class="fc" id="L164">            this.keys = keys;</span>
+        }
+
+<span class="fc" id="L167">        calculateHashCode(keys);</span>
+<span class="fc" id="L168">    }</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Gets a clone of the array of keys.
+     * &lt;p&gt;
+     * The keys should be immutable
+     * If they are not then they must not be changed.
+     *
+     * @return the individual keys
+     */
+    public K[] getKeys() {
+<span class="fc" id="L180">        return keys.clone();</span>
+    }
+
+    /**
+     * Gets the key at the specified index.
+     * &lt;p&gt;
+     * The key should be immutable.
+     * If it is not then it must not be changed.
+     *
+     * @param index  the index to retrieve
+     * @return the key at the index
+     * @throws IndexOutOfBoundsException if the index is invalid
+     * @since 3.1
+     */
+    public K getKey(final int index) {
+<span class="fc" id="L195">        return keys[index];</span>
+    }
+
+    /**
+     * Gets the size of the list of keys.
+     *
+     * @return the size of the list of keys
+     * @since 3.1
+     */
+    public int size() {
+<span class="fc" id="L205">        return keys.length;</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Compares this object to another.
+     * &lt;p&gt;
+     * To be equal, the other object must be a &lt;code&gt;MultiKey&lt;/code&gt; with the
+     * same number of keys which are also equal.
+     *
+     * @param other  the other object to compare to
+     * @return true if equal
+     */
+    @Override
+    public boolean equals(final Object other) {
+<span class="fc bfc" id="L220" title="All 2 branches covered.">        if (other == this) {</span>
+<span class="fc" id="L221">            return true;</span>
+        }
+<span class="fc bfc" id="L223" title="All 2 branches covered.">        if (other instanceof MultiKey) {</span>
+<span class="fc" id="L224">            final MultiKey&lt;?&gt; otherMulti = (MultiKey&lt;?&gt;) other;</span>
+<span class="fc" id="L225">            return Arrays.equals(keys, otherMulti.keys);</span>
+        }
+<span class="fc" id="L227">        return false;</span>
+    }
+
+    /**
+     * Gets the combined hash code that is computed from all the keys.
+     * &lt;p&gt;
+     * This value is computed once and then cached, so elements should not
+     * change their hash codes once created (note that this is the same
+     * constraint that would be used if the individual keys elements were
+     * themselves {@link java.util.Map Map} keys.
+     *
+     * @return the hash code
+     */
+    @Override
+    public int hashCode() {
+<span class="fc" id="L242">        return hashCode;</span>
+    }
+
+    /**
+     * Gets a debugging string version of the key.
+     *
+     * @return a debugging string
+     */
+    @Override
+    public String toString() {
+<span class="fc" id="L252">        return &quot;MultiKey&quot; + Arrays.toString(keys);</span>
+    }
+
+    /**
+     * Calculate the hash code of the instance using the provided keys.
+     * @param keys the keys to calculate the hash code for
+     */
+    private void calculateHashCode(final Object[] keys)
+    {
+<span class="fc" id="L261">        int total = 0;</span>
+<span class="fc bfc" id="L262" title="All 2 branches covered.">        for (final Object key : keys) {</span>
+<span class="fc bfc" id="L263" title="All 2 branches covered.">            if (key != null) {</span>
+<span class="fc" id="L264">                total ^= key.hashCode();</span>
+            }
+        }
+<span class="fc" id="L267">        hashCode = total;</span>
+<span class="fc" id="L268">    }</span>
+
+    /**
+     * Recalculate the hash code after deserialization. The hash code of some
+     * keys might have change (hash codes based on the system hash code are
+     * only stable for the same process).
+     * @return the instance with recalculated hash code
+     */
+    protected Object readResolve() {
+<span class="fc" id="L277">        calculateHashCode(keys);</span>
+<span class="fc" id="L278">        return this;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

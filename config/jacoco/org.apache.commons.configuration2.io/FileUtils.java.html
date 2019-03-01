@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FileUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2.io</a> &gt; <span class="el_source">FileUtils.java</span></div><h1>FileUtils.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.configuration2.io;
+
+import java.io.File;
+import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+
+/**
+ * This class is a subset of org.apache.commons.io.FileUtils,
+ * git-svn-id: https://svn.apache.org/repos/asf/commons/proper/io/trunk@1423916 13f79535-47bb-0310-9956-ffa450edef68.
+ * The subset is determined by {@link FileLocatorUtils}.
+ * The copied constants and methods are &lt;em&gt;literally&lt;/em&gt; copied.&lt;br /&gt;
+ *
+ * See CONFIGURATION-521 for a discussion.
+ * @version $Id$
+ */
+<span class="nc" id="L33">class FileUtils {</span>
+    /**
+     * The UTF-8 character set, used to decode octets in URLs.
+     */
+<span class="fc" id="L37">    private static final Charset UTF8 = Charset.forName(&quot;UTF-8&quot;);</span>
+
+    //-----------------------------------------------------------------------
+    /**
+     * Convert from a &lt;code&gt;URL&lt;/code&gt; to a &lt;code&gt;File&lt;/code&gt;.
+     * &lt;p&gt;
+     * From version 1.1 this method will decode the URL.
+     * Syntax such as &lt;code&gt;file:///my%20docs/file.txt&lt;/code&gt; will be
+     * correctly decoded to &lt;code&gt;/my docs/file.txt&lt;/code&gt;. Starting with version
+     * 1.5, this method uses UTF-8 to decode percent-encoded octets to characters.
+     * Additionally, malformed percent-encoded octets are handled leniently by
+     * passing them through literally.
+     *
+     * @param url  the file URL to convert, {@code null} returns {@code null}
+     * @return the equivalent &lt;code&gt;File&lt;/code&gt; object, or {@code null}
+     *  if the URL's protocol is not &lt;code&gt;file&lt;/code&gt;
+     */
+    public static File toFile(final URL url) {
+<span class="fc bfc" id="L55" title="All 4 branches covered.">        if (url == null || !&quot;file&quot;.equalsIgnoreCase(url.getProtocol())) {</span>
+<span class="fc" id="L56">            return null;</span>
+        }
+<span class="fc" id="L58">        String filename = url.getFile().replace('/', File.separatorChar);</span>
+<span class="fc" id="L59">        filename = decodeUrl(filename);</span>
+<span class="fc" id="L60">        return new File(filename);</span>
+    }
+
+    /**
+     * Decodes the specified URL as per RFC 3986, i.e. transforms
+     * percent-encoded octets to characters by decoding with the UTF-8 character
+     * set. This function is primarily intended for usage with
+     * {@link java.net.URL} which unfortunately does not enforce proper URLs. As
+     * such, this method will leniently accept invalid characters or malformed
+     * percent-encoded octets and simply pass them literally through to the
+     * result string. Except for rare edge cases, this will make unencoded URLs
+     * pass through unaltered.
+     *
+     * @param url  The URL to decode, may be {@code null}.
+     * @return The decoded URL or {@code null} if the input was
+     *         {@code null}.
+     */
+    static String decodeUrl(final String url) {
+<span class="fc" id="L78">        String decoded = url;</span>
+<span class="pc bpc" id="L79" title="1 of 4 branches missed.">        if (url != null &amp;&amp; url.indexOf('%') &gt;= 0) {</span>
+<span class="fc" id="L80">            final int n = url.length();</span>
+<span class="fc" id="L81">            final StringBuffer buffer = new StringBuffer();</span>
+<span class="fc" id="L82">            final ByteBuffer bytes = ByteBuffer.allocate(n);</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">            for (int i = 0; i &lt; n;) {</span>
+<span class="fc bfc" id="L84" title="All 2 branches covered.">                if (url.charAt(i) == '%') {</span>
+                    try {
+                        do {
+<span class="fc" id="L87">                            final byte octet = (byte) Integer.parseInt(url.substring(i + 1, i + 3), 16);</span>
+<span class="fc" id="L88">                            bytes.put(octet);</span>
+<span class="fc" id="L89">                            i += 3;</span>
+<span class="pc bpc" id="L90" title="2 of 4 branches missed.">                        } while (i &lt; n &amp;&amp; url.charAt(i) == '%');</span>
+                        continue;
+<span class="nc" id="L92">                    } catch (final RuntimeException e) {</span>
+                        // malformed percent-encoded octet, fall through and
+                        // append characters literally
+                    } finally {
+<span class="pc bpc" id="L96" title="5 of 6 branches missed.">                        if (bytes.position() &gt; 0) {</span>
+<span class="pc" id="L97">                            bytes.flip();</span>
+<span class="pc" id="L98">                            buffer.append(UTF8.decode(bytes).toString());</span>
+<span class="pc" id="L99">                            bytes.clear();</span>
+                        }
+<span class="nc" id="L101">                    }</span>
+                }
+<span class="fc" id="L103">                buffer.append(url.charAt(i++));</span>
+            }
+<span class="fc" id="L105">            decoded = buffer.toString();</span>
+        }
+<span class="fc" id="L107">        return decoded;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

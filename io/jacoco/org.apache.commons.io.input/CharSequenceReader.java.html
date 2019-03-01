@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CharSequenceReader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons IO</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.io.input</a> &gt; <span class="el_source">CharSequenceReader.java</span></div><h1>CharSequenceReader.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.io.input;
+
+import static org.apache.commons.io.IOUtils.EOF;
+
+import java.io.Reader;
+import java.io.Serializable;
+
+/**
+ * {@link Reader} implementation that can read from String, StringBuffer,
+ * StringBuilder or CharBuffer.
+ * &lt;p&gt;
+ * &lt;strong&gt;Note:&lt;/strong&gt; Supports {@link #mark(int)} and {@link #reset()}.
+ *
+ * @since 1.4
+ */
+public class CharSequenceReader extends Reader implements Serializable {
+
+    private static final long serialVersionUID = 3724187752191401220L;
+    private final CharSequence charSequence;
+    private int idx;
+    private int mark;
+
+    /**
+     * Construct a new instance with the specified character sequence.
+     *
+     * @param charSequence The character sequence, may be {@code null}
+     */
+<span class="fc" id="L44">    public CharSequenceReader(final CharSequence charSequence) {</span>
+<span class="pc bpc" id="L45" title="1 of 2 branches missed.">        this.charSequence = charSequence != null ? charSequence : &quot;&quot;;</span>
+<span class="fc" id="L46">    }</span>
+
+    /**
+     * Close resets the file back to the start and removes any marked position.
+     */
+    @Override
+    public void close() {
+<span class="fc" id="L53">        idx = 0;</span>
+<span class="fc" id="L54">        mark = 0;</span>
+<span class="fc" id="L55">    }</span>
+
+    /**
+     * Mark the current position.
+     *
+     * @param readAheadLimit ignored
+     */
+    @Override
+    public void mark(final int readAheadLimit) {
+<span class="fc" id="L64">        mark = idx;</span>
+<span class="fc" id="L65">    }</span>
+
+    /**
+     * Mark is supported (returns true).
+     *
+     * @return {@code true}
+     */
+    @Override
+    public boolean markSupported() {
+<span class="fc" id="L74">        return true;</span>
+    }
+
+    /**
+     * Read a single character.
+     *
+     * @return the next character from the character sequence
+     * or -1 if the end has been reached.
+     */
+    @Override
+    public int read() {
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        if (idx &gt;= charSequence.length()) {</span>
+<span class="fc" id="L86">            return EOF;</span>
+        } else {
+<span class="fc" id="L88">            return charSequence.charAt(idx++);</span>
+        }
+    }
+
+    /**
+     * Read the specified number of characters into the array.
+     *
+     * @param array The array to store the characters in
+     * @param offset The starting position in the array to store
+     * @param length The maximum number of characters to read
+     * @return The number of characters read or -1 if there are
+     * no more
+     */
+    @Override
+    public int read(final char[] array, final int offset, final int length) {
+<span class="fc bfc" id="L103" title="All 2 branches covered.">        if (idx &gt;= charSequence.length()) {</span>
+<span class="fc" id="L104">            return EOF;</span>
+        }
+<span class="pc bpc" id="L106" title="1 of 2 branches missed.">        if (array == null) {</span>
+<span class="nc" id="L107">            throw new NullPointerException(&quot;Character array is missing&quot;);</span>
+        }
+<span class="pc bpc" id="L109" title="3 of 6 branches missed.">        if (length &lt; 0 || offset &lt; 0 || offset + length &gt; array.length) {</span>
+<span class="nc" id="L110">            throw new IndexOutOfBoundsException(&quot;Array Size=&quot; + array.length +</span>
+<span class="nc" id="L111">                    &quot;, offset=&quot; + offset + &quot;, length=&quot; + length);</span>
+        }
+<span class="fc" id="L113">        int count = 0;</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">        for (int i = 0; i &lt; length; i++) {</span>
+<span class="fc" id="L115">            final int c = read();</span>
+<span class="fc bfc" id="L116" title="All 2 branches covered.">            if (c == EOF) {</span>
+<span class="fc" id="L117">                return count;</span>
+            }
+<span class="fc" id="L119">            array[offset + i] = (char)c;</span>
+<span class="fc" id="L120">            count++;</span>
+        }
+<span class="fc" id="L122">        return count;</span>
+    }
+
+    /**
+     * Reset the reader to the last marked position (or the beginning if
+     * mark has not been called).
+     */
+    @Override
+    public void reset() {
+<span class="fc" id="L131">        idx = mark;</span>
+<span class="fc" id="L132">    }</span>
+
+    /**
+     * Skip the specified number of characters.
+     *
+     * @param n The number of characters to skip
+     * @return The actual number of characters skipped
+     */
+    @Override
+    public long skip(final long n) {
+<span class="pc bpc" id="L142" title="1 of 2 branches missed.">        if (n &lt; 0) {</span>
+<span class="nc" id="L143">            throw new IllegalArgumentException(</span>
+<span class="nc" id="L144">                    &quot;Number of characters to skip is less than zero: &quot; + n);</span>
+        }
+<span class="fc bfc" id="L146" title="All 2 branches covered.">        if (idx &gt;= charSequence.length()) {</span>
+<span class="fc" id="L147">            return EOF;</span>
+        }
+<span class="fc" id="L149">        final int dest = (int)Math.min(charSequence.length(), idx + n);</span>
+<span class="fc" id="L150">        final int count = dest - idx;</span>
+<span class="fc" id="L151">        idx = dest;</span>
+<span class="fc" id="L152">        return count;</span>
+    }
+
+    /**
+     * Return a String representation of the underlying
+     * character sequence.
+     *
+     * @return The contents of the character sequence
+     */
+    @Override
+    public String toString() {
+<span class="nc" id="L163">        return charSequence.toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

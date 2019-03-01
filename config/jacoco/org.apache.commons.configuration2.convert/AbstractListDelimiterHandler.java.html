@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractListDelimiterHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2.convert</a> &gt; <span class="el_source">AbstractListDelimiterHandler.java</span></div><h1>AbstractListDelimiterHandler.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.configuration2.convert;
+
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
+
+/**
+ * &lt;p&gt;
+ * An abstract base class for concrete {@code ListDelimiterHandler}
+ * implementations.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * This base class provides a fully functional implementation for parsing a
+ * value object which can deal with different cases like collections, arrays,
+ * iterators, etc. This logic is typically needed by every concrete subclass.
+ * Other methods are partly implemented handling special corner cases like
+ * &lt;b&gt;null&lt;/b&gt; values; concrete subclasses do not have do implement the
+ * corresponding checks.
+ * &lt;/p&gt;
+ *
+ * @version $Id$
+ * @since 2.0
+ */
+<span class="fc" id="L42">public abstract class AbstractListDelimiterHandler implements</span>
+        ListDelimiterHandler
+{
+    /**
+     * {@inheritDoc} Depending on the type of the passed in object the following
+     * things happen:
+     * &lt;ul&gt;
+     * &lt;li&gt;Strings are checked for delimiter characters and split if necessary.
+     * This is done by calling the {@code split()} method.&lt;/li&gt;
+     * &lt;li&gt;For objects implementing the {@code Iterable} interface, the
+     * corresponding {@code Iterator} is obtained, and contained elements are
+     * added to the resulting iteration.&lt;/li&gt;
+     * &lt;li&gt;Arrays are treated as {@code Iterable} objects.&lt;/li&gt;
+     * &lt;li&gt;All other types are directly inserted.&lt;/li&gt;
+     * &lt;li&gt;Recursive combinations are supported, e.g. a collection containing an
+     * array that contains strings: The resulting collection will only contain
+     * primitive objects.&lt;/li&gt;
+     * &lt;/ul&gt;
+     */
+    @Override
+    public Iterable&lt;?&gt; parse(final Object value)
+    {
+<span class="fc" id="L64">        return flatten(value);</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation handles the case that the passed in
+     * string is &lt;b&gt;null&lt;/b&gt;. In this case, an empty collection is returned.
+     * Otherwise, this method delegates to {@link #splitString(String, boolean)}.
+     */
+    @Override
+    public Collection&lt;String&gt; split(final String s, final boolean trim)
+    {
+<span class="pc bpc" id="L75" title="1 of 2 branches missed.">        if (s == null)</span>
+        {
+<span class="nc" id="L77">            return new ArrayList&lt;&gt;(0);</span>
+        }
+<span class="fc" id="L79">        return splitString(s, trim);</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation checks whether the object to be escaped
+     * is a string. If yes, it delegates to {@link #escapeString(String)},
+     * otherwise no escaping is performed. Eventually, the passed in transformer
+     * is invoked so that additional encoding can be performed.
+     */
+    @Override
+    public Object escape(final Object value, final ValueTransformer transformer)
+    {
+<span class="fc bfc" id="L91" title="All 2 branches covered.">        final Object escValue =</span>
+<span class="fc" id="L92">                (value instanceof String) ? escapeString((String) value)</span>
+                        : value;
+<span class="fc" id="L94">        return transformer.transformValue(escValue);</span>
+    }
+
+    /**
+     * Actually splits the passed in string which is guaranteed to be not
+     * &lt;b&gt;null&lt;/b&gt;. This method is called by the base implementation of the
+     * {@code split()} method. Here the actual splitting logic has to be
+     * implemented.
+     *
+     * @param s the string to be split (not &lt;b&gt;null&lt;/b&gt;)
+     * @param trim a flag whether the single components have to be trimmed
+     * @return a collection with the extracted components of the passed in
+     *         string
+     */
+    protected abstract Collection&lt;String&gt; splitString(String s, boolean trim);
+
+    /**
+     * Escapes the specified string. This method is called by {@code escape()}
+     * if the passed in object is a string. Concrete subclasses have to
+     * implement their specific escaping logic here, so that the list delimiters
+     * they support are properly escaped.
+     *
+     * @param s the string to be escaped (not &lt;b&gt;null&lt;/b&gt;)
+     * @return the escaped string
+     */
+    protected abstract String escapeString(String s);
+
+    /**
+     * Extracts all values contained in the specified object up to the given
+     * limit. The passed in object is evaluated (if necessary in a recursive
+     * way). If it is a complex object (e.g. a collection or an array), all its
+     * elements are processed recursively and added to a target collection. The
+     * process stops if the limit is reached, but depending on the input object,
+     * it might be exceeded. (The limit is just an indicator to stop the process
+     * to avoid unnecessary work if the caller is only interested in a few
+     * values.)
+     *
+     * @param value the value to be processed
+     * @param limit the limit for aborting the processing
+     * @return a &amp;quot;flat&amp;quot; collection containing all primitive values of
+     *         the passed in object
+     */
+    Collection&lt;?&gt; flatten(final Object value, final int limit)
+    {
+<span class="fc bfc" id="L138" title="All 2 branches covered.">        if (value instanceof String)</span>
+        {
+<span class="fc" id="L140">            return split((String) value, true);</span>
+        }
+
+<span class="fc" id="L143">        final Collection&lt;Object&gt; result = new LinkedList&lt;&gt;();</span>
+<span class="fc bfc" id="L144" title="All 2 branches covered.">        if (value instanceof Iterable)</span>
+        {
+<span class="fc" id="L146">            flattenIterator(result, ((Iterable&lt;?&gt;) value).iterator(), limit);</span>
+        }
+<span class="fc bfc" id="L148" title="All 2 branches covered.">        else if (value instanceof Iterator)</span>
+        {
+<span class="fc" id="L150">            flattenIterator(result, (Iterator&lt;?&gt;) value, limit);</span>
+        }
+<span class="fc bfc" id="L152" title="All 2 branches covered.">        else if (value != null)</span>
+        {
+<span class="fc bfc" id="L154" title="All 2 branches covered.">            if (value.getClass().isArray())</span>
+            {
+<span class="fc" id="L156">                for (int len = Array.getLength(value), idx = 0, size = 0; idx &lt; len</span>
+<span class="fc bfc" id="L157" title="All 4 branches covered.">                        &amp;&amp; size &lt; limit; idx++, size = result.size())</span>
+                {
+<span class="fc" id="L159">                    result.addAll(flatten(Array.get(value, idx), limit - size));</span>
+                }
+            }
+            else
+            {
+<span class="fc" id="L164">                result.add(value);</span>
+            }
+        }
+
+<span class="fc" id="L168">        return result;</span>
+    }
+
+    /**
+     * Performs the actual work as advertised by the {@code parse()} method.
+     * This method delegates to {@link #flatten(Object, int)} without specifying
+     * a limit.
+     *
+     * @param value the value to be processed
+     * @return a &amp;quot;flat&amp;quot; collection containing all primitive values of
+     *         the passed in object
+     */
+    private Collection&lt;?&gt; flatten(final Object value)
+    {
+<span class="fc" id="L182">        return flatten(value, Integer.MAX_VALUE);</span>
+    }
+
+    /**
+     * Flattens the given iterator. For each element in the iteration
+     * {@code flatten()} is called recursively.
+     *
+     * @param target the target collection
+     * @param it the iterator to process
+     * @param limit a limit for the number of elements to extract
+     */
+    private void flattenIterator(final Collection&lt;Object&gt; target, final Iterator&lt;?&gt; it, final int limit)
+    {
+<span class="fc" id="L195">        int size = target.size();</span>
+<span class="fc bfc" id="L196" title="All 4 branches covered.">        while (size &lt; limit &amp;&amp; it.hasNext())</span>
+        {
+<span class="fc" id="L198">            target.addAll(flatten(it.next(), limit - size));</span>
+<span class="fc" id="L199">            size = target.size();</span>
+        }
+<span class="fc" id="L201">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

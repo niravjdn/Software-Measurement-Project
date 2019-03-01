@@ -1,0 +1,693 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BeanHelper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2.beanutils</a> &gt; <span class="el_source">BeanHelper.java</span></div><h1>BeanHelper.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.configuration2.beanutils;
+
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import org.apache.commons.beanutils.BeanUtilsBean;
+import org.apache.commons.beanutils.ConvertUtilsBean;
+import org.apache.commons.beanutils.DynaBean;
+import org.apache.commons.beanutils.FluentPropertyBeanIntrospector;
+import org.apache.commons.beanutils.PropertyUtilsBean;
+import org.apache.commons.beanutils.WrapDynaBean;
+import org.apache.commons.beanutils.WrapDynaClass;
+import org.apache.commons.configuration2.ex.ConfigurationRuntimeException;
+import org.apache.commons.lang3.ClassUtils;
+
+/**
+ * &lt;p&gt;
+ * A helper class for creating bean instances that are defined in configuration
+ * files.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * This class provides utility methods related to bean creation
+ * operations. These methods simplify such operations because a client need not
+ * deal with all involved interfaces. Usually, if a bean declaration has already
+ * been obtained, a single method call is necessary to create a new bean
+ * instance.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * This class also supports the registration of custom bean factories.
+ * Implementations of the {@link BeanFactory} interface can be
+ * registered under a symbolic name using the {@code registerBeanFactory()}
+ * method. In the configuration file the name of the bean factory can be
+ * specified in the bean declaration. Then this factory will be used to create
+ * the bean.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * In order to create beans using {@code BeanHelper}, create and instance of
+ * this class and initialize it accordingly - a default {@link BeanFactory}
+ * can be passed to the constructor, and additional bean factories can be
+ * registered (see above). Then this instance can be used to create beans from
+ * {@link BeanDeclaration} objects. {@code BeanHelper} is thread-safe. So an
+ * instance can be passed around in an application and shared between multiple
+ * components.
+ * &lt;/p&gt;
+ *
+ * @since 1.3
+ * @version $Id$
+ */
+public final class BeanHelper
+{
+    /**
+     * A default instance of {@code BeanHelper} which can be shared between
+     * arbitrary components. If no special configuration is needed, this
+     * instance can be used throughout an application. Otherwise, new instances
+     * can be created with their own configuration.
+     */
+<span class="fc" id="L81">    public static final BeanHelper INSTANCE = new BeanHelper();</span>
+
+    /**
+     * A special instance of {@code BeanUtilsBean} which is used for all
+     * property set and copy operations. This instance was initialized with
+     * {@code BeanIntrospector} objects which support fluent interfaces. This is
+     * required for handling builder parameter objects correctly.
+     */
+<span class="fc" id="L89">    private static final BeanUtilsBean BEAN_UTILS_BEAN = initBeanUtilsBean();</span>
+
+    /** Stores a map with the registered bean factories. */
+<span class="fc" id="L92">    private final Map&lt;String, BeanFactory&gt; beanFactories = Collections</span>
+<span class="fc" id="L93">            .synchronizedMap(new HashMap&lt;String, BeanFactory&gt;());</span>
+
+    /**
+     * Stores the default bean factory, which is used if no other factory
+     * is provided in a bean declaration.
+     */
+    private final BeanFactory defaultBeanFactory;
+
+    /**
+     * Creates a new instance of {@code BeanHelper} with the default instance of
+     * {@link DefaultBeanFactory} as default {@link BeanFactory}.
+     */
+    public BeanHelper()
+    {
+<span class="fc" id="L107">        this(null);</span>
+<span class="fc" id="L108">    }</span>
+
+    /**
+     * Creates a new instance of {@code BeanHelper} and sets the specified
+     * default {@code BeanFactory}.
+     *
+     * @param defFactory the default {@code BeanFactory} (can be &lt;b&gt;null&lt;/b&gt;,
+     *        then a default instance is used)
+     */
+    public BeanHelper(final BeanFactory defFactory)
+<span class="fc" id="L118">    {</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">        defaultBeanFactory =</span>
+                (defFactory != null) ? defFactory : DefaultBeanFactory.INSTANCE;
+<span class="fc" id="L121">    }</span>
+
+    /**
+     * Register a bean factory under a symbolic name. This factory object can
+     * then be specified in bean declarations with the effect that this factory
+     * will be used to obtain an instance for the corresponding bean
+     * declaration.
+     *
+     * @param name the name of the factory
+     * @param factory the factory to be registered
+     */
+    public void registerBeanFactory(final String name, final BeanFactory factory)
+    {
+<span class="fc bfc" id="L134" title="All 2 branches covered.">        if (name == null)</span>
+        {
+<span class="fc" id="L136">            throw new IllegalArgumentException(</span>
+                    &quot;Name for bean factory must not be null!&quot;);
+        }
+<span class="fc bfc" id="L139" title="All 2 branches covered.">        if (factory == null)</span>
+        {
+<span class="fc" id="L141">            throw new IllegalArgumentException(&quot;Bean factory must not be null!&quot;);</span>
+        }
+
+<span class="fc" id="L144">        beanFactories.put(name, factory);</span>
+<span class="fc" id="L145">    }</span>
+
+    /**
+     * Deregisters the bean factory with the given name. After that this factory
+     * cannot be used any longer.
+     *
+     * @param name the name of the factory to be deregistered
+     * @return the factory that was registered under this name; &lt;b&gt;null&lt;/b&gt; if
+     * there was no such factory
+     */
+    public BeanFactory deregisterBeanFactory(final String name)
+    {
+<span class="fc" id="L157">        return beanFactories.remove(name);</span>
+    }
+
+    /**
+     * Returns a set with the names of all currently registered bean factories.
+     *
+     * @return a set with the names of the registered bean factories
+     */
+    public Set&lt;String&gt; registeredFactoryNames()
+    {
+<span class="fc" id="L167">        return beanFactories.keySet();</span>
+    }
+
+    /**
+     * Returns the default bean factory.
+     *
+     * @return the default bean factory
+     */
+    public BeanFactory getDefaultBeanFactory()
+    {
+<span class="fc" id="L177">        return defaultBeanFactory;</span>
+    }
+
+    /**
+     * Initializes the passed in bean. This method will obtain all the bean's
+     * properties that are defined in the passed in bean declaration. These
+     * properties will be set on the bean. If necessary, further beans will be
+     * created recursively.
+     *
+     * @param bean the bean to be initialized
+     * @param data the bean declaration
+     * @throws ConfigurationRuntimeException if a property cannot be set
+     */
+    public void initBean(final Object bean, final BeanDeclaration data)
+    {
+<span class="fc" id="L192">        initBeanProperties(bean, data);</span>
+
+<span class="fc" id="L194">        final Map&lt;String, Object&gt; nestedBeans = data.getNestedBeanDeclarations();</span>
+<span class="fc bfc" id="L195" title="All 2 branches covered.">        if (nestedBeans != null)</span>
+        {
+<span class="pc bpc" id="L197" title="1 of 2 branches missed.">            if (bean instanceof Collection)</span>
+            {
+                // This is safe because the collection stores the values of the
+                // nested beans.
+                @SuppressWarnings(&quot;unchecked&quot;)
+                final
+<span class="nc" id="L203">                Collection&lt;Object&gt; coll = (Collection&lt;Object&gt;) bean;</span>
+<span class="nc bnc" id="L204" title="All 2 branches missed.">                if (nestedBeans.size() == 1)</span>
+                {
+<span class="nc" id="L206">                    final Map.Entry&lt;String, Object&gt; e = nestedBeans.entrySet().iterator().next();</span>
+<span class="nc" id="L207">                    final String propName = e.getKey();</span>
+<span class="nc" id="L208">                    final Class&lt;?&gt; defaultClass = getDefaultClass(bean, propName);</span>
+<span class="nc bnc" id="L209" title="All 2 branches missed.">                    if (e.getValue() instanceof List)</span>
+                    {
+                        // This is safe, provided that the bean declaration is implemented
+                        // correctly.
+                        @SuppressWarnings(&quot;unchecked&quot;)
+                        final
+<span class="nc" id="L215">                        List&lt;BeanDeclaration&gt; decls = (List&lt;BeanDeclaration&gt;) e.getValue();</span>
+<span class="nc bnc" id="L216" title="All 2 branches missed.">                        for (final BeanDeclaration decl : decls)</span>
+                        {
+<span class="nc" id="L218">                            coll.add(createBean(decl, defaultClass));</span>
+<span class="nc" id="L219">                        }</span>
+<span class="nc" id="L220">                    }</span>
+                    else
+                    {
+<span class="nc" id="L223">                        final BeanDeclaration decl = (BeanDeclaration) e.getValue();</span>
+<span class="nc" id="L224">                        coll.add(createBean(decl, defaultClass));</span>
+                    }
+                }
+<span class="nc" id="L227">            }</span>
+            else
+            {
+<span class="fc bfc" id="L230" title="All 2 branches covered.">                for (final Map.Entry&lt;String, Object&gt; e : nestedBeans.entrySet())</span>
+                {
+<span class="fc" id="L232">                    final String propName = e.getKey();</span>
+<span class="fc" id="L233">                    final Class&lt;?&gt; defaultClass = getDefaultClass(bean, propName);</span>
+
+<span class="fc" id="L235">                    final Object prop = e.getValue();</span>
+
+<span class="fc bfc" id="L237" title="All 2 branches covered.">                    if (prop instanceof Collection)</span>
+                    {
+<span class="fc" id="L239">                        final Collection&lt;Object&gt; beanCollection =</span>
+<span class="fc" id="L240">                                createPropertyCollection(propName, defaultClass);</span>
+
+<span class="fc bfc" id="L242" title="All 2 branches covered.">                        for (final Object elemDef : (Collection&lt;?&gt;) prop)</span>
+                        {
+<span class="fc" id="L244">                            beanCollection</span>
+<span class="fc" id="L245">                                    .add(createBean((BeanDeclaration) elemDef));</span>
+<span class="fc" id="L246">                        }</span>
+
+<span class="fc" id="L248">                        initProperty(bean, propName, beanCollection);</span>
+<span class="fc" id="L249">                    }</span>
+                    else
+                    {
+<span class="fc" id="L252">                        initProperty(bean, propName, createBean(</span>
+<span class="fc" id="L253">                            (BeanDeclaration) e.getValue(), defaultClass));</span>
+                    }
+<span class="fc" id="L255">                }</span>
+            }
+        }
+<span class="fc" id="L258">    }</span>
+
+    /**
+     * Initializes the beans properties.
+     *
+     * @param bean the bean to be initialized
+     * @param data the bean declaration
+     * @throws ConfigurationRuntimeException if a property cannot be set
+     */
+    public static void initBeanProperties(final Object bean, final BeanDeclaration data)
+    {
+<span class="fc" id="L269">        final Map&lt;String, Object&gt; properties = data.getBeanProperties();</span>
+<span class="fc bfc" id="L270" title="All 2 branches covered.">        if (properties != null)</span>
+        {
+<span class="fc bfc" id="L272" title="All 2 branches covered.">            for (final Map.Entry&lt;String, Object&gt; e : properties.entrySet())</span>
+            {
+<span class="fc" id="L274">                final String propName = e.getKey();</span>
+<span class="fc" id="L275">                initProperty(bean, propName, e.getValue());</span>
+<span class="fc" id="L276">            }</span>
+        }
+<span class="fc" id="L278">    }</span>
+
+    /**
+     * Creates a {@code DynaBean} instance which wraps the passed in bean.
+     *
+     * @param bean the bean to be wrapped (must not be &lt;b&gt;null&lt;/b&gt;)
+     * @return a {@code DynaBean} wrapping the passed in bean
+     * @throws IllegalArgumentException if the bean is &lt;b&gt;null&lt;/b&gt;
+     * @since 2.0
+     */
+    public static DynaBean createWrapDynaBean(final Object bean)
+    {
+<span class="fc bfc" id="L290" title="All 2 branches covered.">        if (bean == null)</span>
+        {
+<span class="fc" id="L292">            throw new IllegalArgumentException(&quot;Bean must not be null!&quot;);</span>
+        }
+<span class="fc" id="L294">        final WrapDynaClass dynaClass =</span>
+<span class="fc" id="L295">                WrapDynaClass.createDynaClass(bean.getClass(),</span>
+<span class="fc" id="L296">                        BEAN_UTILS_BEAN.getPropertyUtils());</span>
+<span class="fc" id="L297">        return new WrapDynaBean(bean, dynaClass);</span>
+    }
+
+    /**
+     * Copies matching properties from the source bean to the destination bean
+     * using a specially configured {@code PropertyUtilsBean} instance. This
+     * method ensures that enhanced introspection is enabled when doing the copy
+     * operation.
+     *
+     * @param dest the destination bean
+     * @param orig the source bean
+     * @throws NoSuchMethodException exception thrown by
+     *         {@code PropertyUtilsBean}
+     * @throws InvocationTargetException exception thrown by
+     *         {@code PropertyUtilsBean}
+     * @throws IllegalAccessException exception thrown by
+     *         {@code PropertyUtilsBean}
+     * @since 2.0
+     */
+    public static void copyProperties(final Object dest, final Object orig)
+            throws IllegalAccessException, InvocationTargetException,
+            NoSuchMethodException
+    {
+<span class="fc" id="L320">        BEAN_UTILS_BEAN.getPropertyUtils().copyProperties(dest, orig);</span>
+<span class="fc" id="L321">    }</span>
+
+    /**
+     * Return the Class of the property if it can be determined.
+     * @param bean The bean containing the property.
+     * @param propName The name of the property.
+     * @return The class associated with the property or null.
+     */
+    private static Class&lt;?&gt; getDefaultClass(final Object bean, final String propName)
+    {
+        try
+        {
+<span class="fc" id="L333">            final PropertyDescriptor desc =</span>
+<span class="fc" id="L334">                    BEAN_UTILS_BEAN.getPropertyUtils().getPropertyDescriptor(</span>
+                            bean, propName);
+<span class="fc bfc" id="L336" title="All 2 branches covered.">            if (desc == null)</span>
+            {
+<span class="fc" id="L338">                return null;</span>
+            }
+<span class="fc" id="L340">            return desc.getPropertyType();</span>
+        }
+<span class="nc" id="L342">        catch (final Exception ex)</span>
+        {
+<span class="nc" id="L344">            return null;</span>
+        }
+    }
+
+    /**
+     * Sets a property on the given bean using Common Beanutils.
+     *
+     * @param bean the bean
+     * @param propName the name of the property
+     * @param value the property's value
+     * @throws ConfigurationRuntimeException if the property is not writeable or
+     * an error occurred
+     */
+    private static void initProperty(final Object bean, final String propName, final Object value)
+    {
+<span class="fc bfc" id="L359" title="All 2 branches covered.">        if (!isPropertyWriteable(bean, propName))</span>
+        {
+<span class="fc" id="L361">            throw new ConfigurationRuntimeException(&quot;Property &quot; + propName</span>
+<span class="fc" id="L362">                    + &quot; cannot be set on &quot; + bean.getClass().getName());</span>
+        }
+
+        try
+        {
+<span class="fc" id="L367">            BEAN_UTILS_BEAN.setProperty(bean, propName, value);</span>
+        }
+<span class="nc" id="L369">        catch (final IllegalAccessException iaex)</span>
+        {
+<span class="nc" id="L371">            throw new ConfigurationRuntimeException(iaex);</span>
+        }
+<span class="nc" id="L373">        catch (final InvocationTargetException itex)</span>
+        {
+<span class="nc" id="L375">            throw new ConfigurationRuntimeException(itex);</span>
+<span class="fc" id="L376">        }</span>
+<span class="fc" id="L377">    }</span>
+
+    /**
+     * Creates a concrete collection instance to populate a property of type
+     * collection. This method tries to guess an appropriate collection type.
+     * Mostly the type of the property will be one of the collection interfaces
+     * rather than a concrete class; so we have to create a concrete equivalent.
+     *
+     * @param propName the name of the collection property
+     * @param propertyClass the type of the property
+     * @return the newly created collection
+     */
+    private static Collection&lt;Object&gt; createPropertyCollection(final String propName,
+            final Class&lt;?&gt; propertyClass)
+    {
+        Collection&lt;Object&gt; beanCollection;
+
+<span class="pc bpc" id="L394" title="1 of 2 branches missed.">        if (List.class.isAssignableFrom(propertyClass))</span>
+        {
+<span class="fc" id="L396">            beanCollection = new ArrayList&lt;&gt;();</span>
+        }
+<span class="nc bnc" id="L398" title="All 2 branches missed.">        else if (Set.class.isAssignableFrom(propertyClass))</span>
+        {
+<span class="nc" id="L400">            beanCollection = new TreeSet&lt;&gt;();</span>
+        }
+        else
+        {
+<span class="nc" id="L404">            throw new UnsupportedOperationException(</span>
+                    &quot;Unable to handle collection of type : &quot;
+<span class="nc" id="L406">                            + propertyClass.getName() + &quot; for property &quot;</span>
+                            + propName);
+        }
+<span class="fc" id="L409">        return beanCollection;</span>
+    }
+
+    /**
+     * Set a property on the bean only if the property exists
+     *
+     * @param bean the bean
+     * @param propName the name of the property
+     * @param value the property's value
+     * @throws ConfigurationRuntimeException if the property is not writeable or
+     *         an error occurred
+     */
+    public static void setProperty(final Object bean, final String propName, final Object value)
+    {
+<span class="pc bpc" id="L423" title="1 of 2 branches missed.">        if (isPropertyWriteable(bean, propName))</span>
+        {
+<span class="fc" id="L425">            initProperty(bean, propName, value);</span>
+        }
+<span class="fc" id="L427">    }</span>
+
+    /**
+     * The main method for creating and initializing beans from a configuration.
+     * This method will return an initialized instance of the bean class
+     * specified in the passed in bean declaration. If this declaration does not
+     * contain the class of the bean, the passed in default class will be used.
+     * From the bean declaration the factory to be used for creating the bean is
+     * queried. The declaration may here return &lt;b&gt;null&lt;/b&gt;, then a default
+     * factory is used. This factory is then invoked to perform the create
+     * operation.
+     *
+     * @param data the bean declaration
+     * @param defaultClass the default class to use
+     * @param param an additional parameter that will be passed to the bean
+     * factory; some factories may support parameters and behave different
+     * depending on the value passed in here
+     * @return the new bean
+     * @throws ConfigurationRuntimeException if an error occurs
+     */
+    public Object createBean(final BeanDeclaration data, final Class&lt;?&gt; defaultClass,
+            final Object param)
+    {
+<span class="fc bfc" id="L450" title="All 2 branches covered.">        if (data == null)</span>
+        {
+<span class="fc" id="L452">            throw new IllegalArgumentException(</span>
+                    &quot;Bean declaration must not be null!&quot;);
+        }
+
+<span class="fc" id="L456">        final BeanFactory factory = fetchBeanFactory(data);</span>
+<span class="fc" id="L457">        final BeanCreationContext bcc =</span>
+<span class="fc" id="L458">                createBeanCreationContext(data, defaultClass, param, factory);</span>
+        try
+        {
+<span class="fc" id="L461">            return factory.createBean(bcc);</span>
+        }
+<span class="fc" id="L463">        catch (final Exception ex)</span>
+        {
+<span class="fc" id="L465">            throw new ConfigurationRuntimeException(ex);</span>
+        }
+    }
+
+    /**
+     * Returns a bean instance for the specified declaration. This method is a
+     * short cut for {@code createBean(data, null, null);}.
+     *
+     * @param data the bean declaration
+     * @param defaultClass the class to be used when in the declaration no class
+     * is specified
+     * @return the new bean
+     * @throws ConfigurationRuntimeException if an error occurs
+     */
+    public Object createBean(final BeanDeclaration data, final Class&lt;?&gt; defaultClass)
+    {
+<span class="fc" id="L481">        return createBean(data, defaultClass, null);</span>
+    }
+
+    /**
+     * Returns a bean instance for the specified declaration. This method is a
+     * short cut for {@code createBean(data, null);}.
+     *
+     * @param data the bean declaration
+     * @return the new bean
+     * @throws ConfigurationRuntimeException if an error occurs
+     */
+    public Object createBean(final BeanDeclaration data)
+    {
+<span class="fc" id="L494">        return createBean(data, null);</span>
+    }
+
+    /**
+     * Returns a {@code java.lang.Class} object for the specified name.
+     * Because class loading can be tricky in some environments the code for
+     * retrieving a class by its name was extracted into this helper method. So
+     * if changes are necessary, they can be made at a single place.
+     *
+     * @param name the name of the class to be loaded
+     * @return the class object for the specified name
+     * @throws ClassNotFoundException if the class cannot be loaded
+     */
+    static Class&lt;?&gt; loadClass(final String name) throws ClassNotFoundException
+    {
+<span class="fc" id="L509">        return ClassUtils.getClass(name);</span>
+    }
+
+    /**
+     * Checks whether the specified property of the given bean instance supports
+     * write access.
+     *
+     * @param bean the bean instance
+     * @param propName the name of the property in question
+     * @return &lt;b&gt;true&lt;/b&gt; if this property can be written, &lt;b&gt;false&lt;/b&gt;
+     *         otherwise
+     */
+    private static boolean isPropertyWriteable(final Object bean, final String propName)
+    {
+<span class="fc" id="L523">        return BEAN_UTILS_BEAN.getPropertyUtils().isWriteable(bean, propName);</span>
+    }
+
+    /**
+     * Determines the class of the bean to be created. If the bean declaration
+     * contains a class name, this class is used. Otherwise it is checked
+     * whether a default class is provided. If this is not the case, the
+     * factory's default class is used. If this class is undefined, too, an
+     * exception is thrown.
+     *
+     * @param data the bean declaration
+     * @param defaultClass the default class
+     * @param factory the bean factory to use
+     * @return the class of the bean to be created
+     * @throws ConfigurationRuntimeException if the class cannot be determined
+     */
+    private static Class&lt;?&gt; fetchBeanClass(final BeanDeclaration data,
+            final Class&lt;?&gt; defaultClass, final BeanFactory factory)
+    {
+<span class="fc" id="L542">        final String clsName = data.getBeanClassName();</span>
+<span class="fc bfc" id="L543" title="All 2 branches covered.">        if (clsName != null)</span>
+        {
+            try
+            {
+<span class="fc" id="L547">                return loadClass(clsName);</span>
+            }
+<span class="fc" id="L549">            catch (final ClassNotFoundException cex)</span>
+            {
+<span class="fc" id="L551">                throw new ConfigurationRuntimeException(cex);</span>
+            }
+        }
+
+<span class="fc bfc" id="L555" title="All 2 branches covered.">        if (defaultClass != null)</span>
+        {
+<span class="fc" id="L557">            return defaultClass;</span>
+        }
+
+<span class="fc" id="L560">        final Class&lt;?&gt; clazz = factory.getDefaultBeanClass();</span>
+<span class="fc bfc" id="L561" title="All 2 branches covered.">        if (clazz == null)</span>
+        {
+<span class="fc" id="L563">            throw new ConfigurationRuntimeException(</span>
+                    &quot;Bean class is not specified!&quot;);
+        }
+<span class="fc" id="L566">        return clazz;</span>
+    }
+
+    /**
+     * Obtains the bean factory to use for creating the specified bean. This
+     * method will check whether a factory is specified in the bean declaration.
+     * If this is not the case, the default bean factory will be used.
+     *
+     * @param data the bean declaration
+     * @return the bean factory to use
+     * @throws ConfigurationRuntimeException if the factory cannot be determined
+     */
+    private BeanFactory fetchBeanFactory(final BeanDeclaration data)
+    {
+<span class="fc" id="L580">        final String factoryName = data.getBeanFactoryName();</span>
+<span class="fc bfc" id="L581" title="All 2 branches covered.">        if (factoryName != null)</span>
+        {
+<span class="fc" id="L583">            final BeanFactory factory = beanFactories.get(factoryName);</span>
+<span class="fc bfc" id="L584" title="All 2 branches covered.">            if (factory == null)</span>
+            {
+<span class="fc" id="L586">                throw new ConfigurationRuntimeException(</span>
+                        &quot;Unknown bean factory: &quot; + factoryName);
+            }
+<span class="fc" id="L589">            return factory;</span>
+        }
+<span class="fc" id="L591">        return getDefaultBeanFactory();</span>
+    }
+
+    /**
+     * Creates a {@code BeanCreationContext} object for the creation of the
+     * specified bean.
+     *
+     * @param data the bean declaration
+     * @param defaultClass the default class to use
+     * @param param an additional parameter that will be passed to the bean
+     *        factory; some factories may support parameters and behave
+     *        different depending on the value passed in here
+     * @param factory the current bean factory
+     * @return the {@code BeanCreationContext}
+     * @throws ConfigurationRuntimeException if the bean class cannot be
+     *         determined
+     */
+    private BeanCreationContext createBeanCreationContext(
+            final BeanDeclaration data, final Class&lt;?&gt; defaultClass,
+            final Object param, final BeanFactory factory)
+    {
+<span class="fc" id="L612">        final Class&lt;?&gt; beanClass = fetchBeanClass(data, defaultClass, factory);</span>
+<span class="fc" id="L613">        return new BeanCreationContextImpl(this, beanClass, data, param);</span>
+    }
+
+    /**
+     * Initializes the shared {@code BeanUtilsBean} instance. This method sets
+     * up custom bean introspection in a way that fluent parameter interfaces
+     * are supported.
+     *
+     * @return the {@code BeanUtilsBean} instance to be used for all property
+     *         set operations
+     */
+    private static BeanUtilsBean initBeanUtilsBean()
+    {
+<span class="fc" id="L626">        final PropertyUtilsBean propUtilsBean = new PropertyUtilsBean();</span>
+<span class="fc" id="L627">        propUtilsBean.addBeanIntrospector(new FluentPropertyBeanIntrospector());</span>
+<span class="fc" id="L628">        return new BeanUtilsBean(new ConvertUtilsBean(), propUtilsBean);</span>
+    }
+
+    /**
+     * An implementation of the {@code BeanCreationContext} interface used by
+     * {@code BeanHelper} to communicate with a {@code BeanFactory}. This class
+     * contains all information required for the creation of a bean. The methods
+     * for creating and initializing bean instances are implemented by calling
+     * back to the provided {@code BeanHelper} instance (which is the instance
+     * that created this object).
+     */
+    private static final class BeanCreationContextImpl implements BeanCreationContext
+    {
+        /** The association BeanHelper instance. */
+        private final BeanHelper beanHelper;
+
+        /** The class of the bean to be created. */
+        private final Class&lt;?&gt; beanClass;
+
+        /** The underlying bean declaration. */
+        private final BeanDeclaration data;
+
+        /** The parameter for the bean factory. */
+        private final Object param;
+
+        private BeanCreationContextImpl(final BeanHelper helper, final Class&lt;?&gt; beanClass,
+                final BeanDeclaration data, final Object param)
+<span class="fc" id="L655">        {</span>
+<span class="fc" id="L656">            beanHelper = helper;</span>
+<span class="fc" id="L657">            this.beanClass = beanClass;</span>
+<span class="fc" id="L658">            this.param = param;</span>
+<span class="fc" id="L659">            this.data = data;</span>
+<span class="fc" id="L660">        }</span>
+
+        @Override
+        public void initBean(final Object bean, final BeanDeclaration data)
+        {
+<span class="fc" id="L665">            beanHelper.initBean(bean, data);</span>
+<span class="fc" id="L666">        }</span>
+
+        @Override
+        public Object getParameter()
+        {
+<span class="fc" id="L671">            return param;</span>
+        }
+
+        @Override
+        public BeanDeclaration getBeanDeclaration()
+        {
+<span class="fc" id="L677">            return data;</span>
+        }
+
+        @Override
+        public Class&lt;?&gt; getBeanClass()
+        {
+<span class="fc" id="L683">            return beanClass;</span>
+        }
+
+        @Override
+        public Object createBean(final BeanDeclaration data)
+        {
+<span class="nc" id="L689">            return beanHelper.createBean(data);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

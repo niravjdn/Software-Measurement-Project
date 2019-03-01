@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FixedOrderComparator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Collections</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.collections4.comparators</a> &gt; <span class="el_source">FixedOrderComparator.java</span></div><h1>FixedOrderComparator.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.collections4.comparators;
+
+import java.io.Serializable;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * A Comparator which imposes a specific order on a specific set of Objects.
+ * Objects are presented to the FixedOrderComparator in a specified order and
+ * subsequent calls to {@link #compare(Object, Object) compare} yield that order.
+ * For example:
+ * &lt;pre&gt;
+ * String[] planets = {&quot;Mercury&quot;, &quot;Venus&quot;, &quot;Earth&quot;, &quot;Mars&quot;};
+ * FixedOrderComparator distanceFromSun = new FixedOrderComparator(planets);
+ * Arrays.sort(planets);                     // Sort to alphabetical order
+ * Arrays.sort(planets, distanceFromSun);    // Back to original order
+ * &lt;/pre&gt;
+ * &lt;p&gt;
+ * Once &lt;code&gt;compare&lt;/code&gt; has been called, the FixedOrderComparator is locked
+ * and attempts to modify it yield an UnsupportedOperationException.
+ * &lt;p&gt;
+ * Instances of FixedOrderComparator are not synchronized.  The class is not
+ * thread-safe at construction time, but it is thread-safe to perform
+ * multiple comparisons  after all the setup operations are complete.
+ * &lt;p&gt;
+ * This class is Serializable from Commons Collections 4.0.
+ *
+ * @param &lt;T&gt; the type of objects compared by this comparator
+ * @since 3.0
+ */
+public class FixedOrderComparator&lt;T&gt; implements Comparator&lt;T&gt;, Serializable {
+
+    /** Serialization version from Collections 4.0. */
+    private static final long serialVersionUID = 82794675842863201L;
+
+    /**
+     * Unknown object behavior enum.
+     * @since 4.0
+     */
+<span class="fc" id="L58">    public enum UnknownObjectBehavior {</span>
+<span class="fc" id="L59">        BEFORE, AFTER, EXCEPTION;</span>
+    }
+
+    /** Internal map of object to position */
+<span class="fc" id="L63">    private final Map&lt;T, Integer&gt; map = new HashMap&lt;&gt;();</span>
+
+    /** Counter used in determining the position in the map */
+<span class="fc" id="L66">    private int counter = 0;</span>
+
+    /** Is the comparator locked against further change */
+<span class="fc" id="L69">    private boolean isLocked = false;</span>
+
+    /** The behaviour in the case of an unknown object */
+<span class="fc" id="L72">    private UnknownObjectBehavior unknownObjectBehavior = UnknownObjectBehavior.EXCEPTION;</span>
+
+    // Constructors
+    //-----------------------------------------------------------------------
+    /**
+     * Constructs an empty FixedOrderComparator.
+     */
+    public FixedOrderComparator() {
+<span class="fc" id="L80">        super();</span>
+<span class="fc" id="L81">    }</span>
+
+    /**
+     * Constructs a FixedOrderComparator which uses the order of the given array
+     * to compare the objects.
+     * &lt;p&gt;
+     * The array is copied, so later changes will not affect the comparator.
+     *
+     * @param items  the items that the comparator can compare in order
+     * @throws NullPointerException if the array is null
+     */
+    public FixedOrderComparator(final T... items) {
+<span class="fc" id="L93">        super();</span>
+<span class="pc bpc" id="L94" title="1 of 2 branches missed.">        if (items == null) {</span>
+<span class="nc" id="L95">            throw new NullPointerException(&quot;The list of items must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L97" title="All 2 branches covered.">        for (final T item : items) {</span>
+<span class="fc" id="L98">            add(item);</span>
+        }
+<span class="fc" id="L100">    }</span>
+
+    /**
+     * Constructs a FixedOrderComparator which uses the order of the given list
+     * to compare the objects.
+     * &lt;p&gt;
+     * The list is copied, so later changes will not affect the comparator.
+     *
+     * @param items  the items that the comparator can compare in order
+     * @throws NullPointerException if the list is null
+     */
+    public FixedOrderComparator(final List&lt;T&gt; items) {
+<span class="fc" id="L112">        super();</span>
+<span class="pc bpc" id="L113" title="1 of 2 branches missed.">        if (items == null) {</span>
+<span class="nc" id="L114">            throw new NullPointerException(&quot;The list of items must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L116" title="All 2 branches covered.">        for (final T t : items) {</span>
+<span class="fc" id="L117">            add(t);</span>
+<span class="fc" id="L118">        }</span>
+<span class="fc" id="L119">    }</span>
+
+    // Bean methods / state querying methods
+    //-----------------------------------------------------------------------
+    /**
+     * Returns true if modifications cannot be made to the FixedOrderComparator.
+     * FixedOrderComparators cannot be modified once they have performed a comparison.
+     *
+     * @return true if attempts to change the FixedOrderComparator yield an
+     *  UnsupportedOperationException, false if it can be changed.
+     */
+    public boolean isLocked() {
+<span class="fc" id="L131">        return isLocked;</span>
+    }
+
+    /**
+     * Checks to see whether the comparator is now locked against further changes.
+     *
+     * @throws UnsupportedOperationException if the comparator is locked
+     */
+    protected void checkLocked() {
+<span class="fc bfc" id="L140" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L141">            throw new UnsupportedOperationException(&quot;Cannot modify a FixedOrderComparator after a comparison&quot;);</span>
+        }
+<span class="fc" id="L143">    }</span>
+
+    /**
+     * Gets the behavior for comparing unknown objects.
+     *
+     * @return {@link UnknownObjectBehavior}
+     */
+    public UnknownObjectBehavior getUnknownObjectBehavior() {
+<span class="fc" id="L151">        return unknownObjectBehavior;</span>
+    }
+
+    /**
+     * Sets the behavior for comparing unknown objects.
+     *
+     * @param unknownObjectBehavior  the flag for unknown behaviour -
+     * UNKNOWN_AFTER, UNKNOWN_BEFORE or UNKNOWN_THROW_EXCEPTION
+     * @throws UnsupportedOperationException if a comparison has been performed
+     * @throws NullPointerException if unknownObjectBehavior is null
+     */
+    public void setUnknownObjectBehavior(final UnknownObjectBehavior unknownObjectBehavior) {
+<span class="fc" id="L163">        checkLocked();</span>
+<span class="pc bpc" id="L164" title="1 of 2 branches missed.">        if (unknownObjectBehavior == null) {</span>
+<span class="nc" id="L165">            throw new NullPointerException(&quot;Unknown object behavior must not be null&quot;);</span>
+        }
+<span class="fc" id="L167">        this.unknownObjectBehavior = unknownObjectBehavior;</span>
+<span class="fc" id="L168">    }</span>
+
+    // Methods for adding items
+    //-----------------------------------------------------------------------
+    /**
+     * Adds an item, which compares as after all items known to the Comparator.
+     * If the item is already known to the Comparator, its old position is
+     * replaced with the new position.
+     *
+     * @param obj  the item to be added to the Comparator.
+     * @return true if obj has been added for the first time, false if
+     *  it was already known to the Comparator.
+     * @throws UnsupportedOperationException if a comparison has already been made
+     */
+    public boolean add(final T obj) {
+<span class="fc" id="L183">        checkLocked();</span>
+<span class="fc" id="L184">        final Integer position = map.put(obj, Integer.valueOf(counter++));</span>
+<span class="pc bpc" id="L185" title="1 of 2 branches missed.">        return position == null;</span>
+    }
+
+    /**
+     * Adds a new item, which compares as equal to the given existing item.
+     *
+     * @param existingObj  an item already in the Comparator's set of
+     *  known objects
+     * @param newObj  an item to be added to the Comparator's set of
+     *  known objects
+     * @return true if newObj has been added for the first time, false if
+     *  it was already known to the Comparator.
+     * @throws IllegalArgumentException if existingObject is not in the
+     *  Comparator's set of known objects.
+     * @throws UnsupportedOperationException if a comparison has already been made
+     */
+    public boolean addAsEqual(final T existingObj, final T newObj) {
+<span class="fc" id="L202">        checkLocked();</span>
+<span class="fc" id="L203">        final Integer position = map.get(existingObj);</span>
+<span class="pc bpc" id="L204" title="1 of 2 branches missed.">        if (position == null) {</span>
+<span class="nc" id="L205">            throw new IllegalArgumentException(existingObj + &quot; not known to &quot; + this);</span>
+        }
+<span class="fc" id="L207">        final Integer result = map.put(newObj, position);</span>
+<span class="pc bpc" id="L208" title="1 of 2 branches missed.">        return result == null;</span>
+    }
+
+    // Comparator methods
+    //-----------------------------------------------------------------------
+    /**
+     * Compares two objects according to the order of this Comparator.
+     * &lt;p&gt;
+     * It is important to note that this class will throw an IllegalArgumentException
+     * in the case of an unrecognized object. This is not specified in the
+     * Comparator interface, but is the most appropriate exception.
+     *
+     * @param obj1  the first object to compare
+     * @param obj2  the second object to compare
+     * @return negative if obj1 is less, positive if greater, zero if equal
+     * @throws IllegalArgumentException if obj1 or obj2 are not known
+     *  to this Comparator and an alternative behavior has not been set
+     *  via {@link #setUnknownObjectBehavior(UnknownObjectBehavior)}.
+     */
+    @Override
+    public int compare(final T obj1, final T obj2) {
+<span class="fc" id="L229">        isLocked = true;</span>
+<span class="fc" id="L230">        final Integer position1 = map.get(obj1);</span>
+<span class="fc" id="L231">        final Integer position2 = map.get(obj2);</span>
+<span class="fc bfc" id="L232" title="All 4 branches covered.">        if (position1 == null || position2 == null) {</span>
+<span class="pc bpc" id="L233" title="1 of 4 branches missed.">            switch (unknownObjectBehavior) {</span>
+            case BEFORE:
+<span class="fc bfc" id="L235" title="All 4 branches covered.">                return position1 == null ? position2 == null ? 0 : -1 : 1;</span>
+            case AFTER:
+<span class="fc bfc" id="L237" title="All 4 branches covered.">                return position1 == null ? position2 == null ? 0 : 1 : -1;</span>
+            case EXCEPTION:
+<span class="fc bfc" id="L239" title="All 2 branches covered.">                final Object unknownObj = position1 == null ? obj1 : obj2;</span>
+<span class="fc" id="L240">                throw new IllegalArgumentException(&quot;Attempting to compare unknown object &quot;</span>
+                        + unknownObj);
+            default: //could be null
+<span class="nc" id="L243">                throw new UnsupportedOperationException(&quot;Unknown unknownObjectBehavior: &quot;</span>
+                        + unknownObjectBehavior);
+            }
+        }
+<span class="fc" id="L247">        return position1.compareTo(position2);</span>
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Implement a hash code for this comparator that is consistent with
+     * {@link #equals(Object) equals}.
+     *
+     * @return a hash code for this comparator.
+     */
+    @Override
+    public int hashCode() {
+<span class="fc" id="L259">        int total = 17;</span>
+<span class="pc bpc" id="L260" title="1 of 2 branches missed.">        total = total*37 + (map == null ? 0 : map.hashCode());</span>
+<span class="pc bpc" id="L261" title="1 of 2 branches missed.">        total = total*37 + (unknownObjectBehavior == null ? 0 : unknownObjectBehavior.hashCode());</span>
+<span class="fc" id="L262">        total = total*37 + counter;</span>
+<span class="pc bpc" id="L263" title="1 of 2 branches missed.">        total = total*37 + (isLocked ? 0 : 1);</span>
+<span class="fc" id="L264">        return total;</span>
+    }
+
+    /**
+     * Returns &lt;code&gt;true&lt;/code&gt; iff &lt;i&gt;that&lt;/i&gt; Object is
+     * is a {@link Comparator} whose ordering is known to be
+     * equivalent to mine.
+     * &lt;p&gt;
+     * This implementation returns &lt;code&gt;true&lt;/code&gt;
+     * iff &lt;code&gt;&lt;i&gt;that&lt;/i&gt;&lt;/code&gt; is a {@link FixedOrderComparator}
+     * whose attributes are equal to mine.
+     *
+     * @param object  the object to compare to
+     * @return true if equal
+     */
+    @Override
+    public boolean equals(final Object object) {
+<span class="fc bfc" id="L281" title="All 2 branches covered.">        if (this == object) {</span>
+<span class="fc" id="L282">            return true;</span>
+        }
+<span class="fc bfc" id="L284" title="All 2 branches covered.">        if (null == object) {</span>
+<span class="fc" id="L285">            return false;</span>
+        }
+<span class="pc bpc" id="L287" title="1 of 2 branches missed.">        if (object.getClass().equals(this.getClass())) {</span>
+<span class="fc" id="L288">            final FixedOrderComparator&lt;?&gt; comp = (FixedOrderComparator&lt;?&gt;) object;</span>
+<span class="pc bpc" id="L289" title="11 of 18 branches missed.">            return (null == map ? null == comp.map : map.equals(comp.map)) &amp;&amp;</span>
+                   (null == unknownObjectBehavior ? null == comp.unknownObjectBehavior :
+                        unknownObjectBehavior == comp.unknownObjectBehavior &amp;&amp;
+                        counter == comp.counter &amp;&amp;
+                        isLocked == comp.isLocked &amp;&amp;
+                        unknownObjectBehavior == comp.unknownObjectBehavior);
+        }
+<span class="nc" id="L296">        return false;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.1.201803210924</span></div></body></html>

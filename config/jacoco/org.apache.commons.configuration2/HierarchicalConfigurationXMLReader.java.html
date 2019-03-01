@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HierarchicalConfigurationXMLReader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2</a> &gt; <span class="el_source">HierarchicalConfigurationXMLReader.java</span></div><h1>HierarchicalConfigurationXMLReader.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.commons.configuration2;
+
+import org.apache.commons.configuration2.tree.ConfigurationNodeVisitorAdapter;
+import org.apache.commons.configuration2.tree.NodeHandler;
+import org.apache.commons.configuration2.tree.NodeTreeWalker;
+import org.xml.sax.Attributes;
+import org.xml.sax.helpers.AttributesImpl;
+
+/**
+ * &lt;p&gt;
+ * A specialized SAX2 XML parser that &quot;parses&quot; hierarchical configuration
+ * objects.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * This class mimics to be a SAX conform XML parser. Instead of parsing XML
+ * documents it processes a {@code Configuration} object and generates SAX
+ * events for the single properties defined there. This enables the whole world
+ * of XML processing for configuration objects.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * The {@code HierarchicalConfiguration} object to be parsed can be specified
+ * using a constructor or the {@code setConfiguration()} method. This object
+ * will be processed by the {@code parse()} methods. Note that these methods
+ * ignore their argument.
+ * &lt;/p&gt;
+ *
+ * @version $Id$
+ * @param &lt;T&gt; the type of the nodes supported by this reader
+ */
+public class HierarchicalConfigurationXMLReader&lt;T&gt; extends
+        ConfigurationXMLReader
+{
+    /** Stores the configuration object to be parsed. */
+    private HierarchicalConfiguration&lt;T&gt; configuration;
+
+    /**
+     * Creates a new instance of {@code HierarchicalConfigurationXMLReader}.
+     */
+    public HierarchicalConfigurationXMLReader()
+    {
+<span class="fc" id="L58">        super();</span>
+<span class="fc" id="L59">    }</span>
+
+    /**
+     * Creates a new instance of {@code HierarchicalConfigurationXMLReader} and
+     * sets the configuration to be parsed.
+     *
+     * @param config the configuration object
+     */
+    public HierarchicalConfigurationXMLReader(
+            final HierarchicalConfiguration&lt;T&gt; config)
+    {
+<span class="fc" id="L70">        this();</span>
+<span class="fc" id="L71">        setConfiguration(config);</span>
+<span class="fc" id="L72">    }</span>
+
+    /**
+     * Returns the configuration object to be parsed.
+     *
+     * @return the configuration object to be parsed
+     */
+    public HierarchicalConfiguration&lt;T&gt; getConfiguration()
+    {
+<span class="fc" id="L81">        return configuration;</span>
+    }
+
+    /**
+     * Sets the configuration object to be parsed.
+     *
+     * @param config the configuration object to be parsed
+     */
+    public void setConfiguration(final HierarchicalConfiguration&lt;T&gt; config)
+    {
+<span class="fc" id="L91">        configuration = config;</span>
+<span class="fc" id="L92">    }</span>
+
+    /**
+     * Returns the configuration object to be processed.
+     *
+     * @return the actual configuration object
+     */
+    @Override
+    public Configuration getParsedConfiguration()
+    {
+<span class="fc" id="L102">        return getConfiguration();</span>
+    }
+
+    /**
+     * Processes the actual configuration object to generate SAX parsing events.
+     */
+    @Override
+    protected void processKeys()
+    {
+<span class="fc" id="L111">        final NodeHandler&lt;T&gt; nodeHandler =</span>
+<span class="fc" id="L112">                getConfiguration().getNodeModel().getNodeHandler();</span>
+<span class="fc" id="L113">        NodeTreeWalker.INSTANCE.walkDFS(nodeHandler.getRootNode(),</span>
+                new SAXVisitor(), nodeHandler);
+<span class="fc" id="L115">    }</span>
+
+    /**
+     * A specialized visitor class for generating SAX events for a hierarchical
+     * node structure.
+     */
+<span class="fc" id="L121">    private class SAXVisitor extends ConfigurationNodeVisitorAdapter&lt;T&gt;</span>
+    {
+        /** Constant for the attribute type. */
+        private static final String ATTR_TYPE = &quot;CDATA&quot;;
+
+        /**
+         * Visits the specified node after its children have been processed.
+         *
+         * @param node the actual node
+         * @param handler the node handler
+         */
+        @Override
+        public void visitAfterChildren(final T node, final NodeHandler&lt;T&gt; handler)
+        {
+<span class="fc" id="L135">            fireElementEnd(nodeName(node, handler));</span>
+<span class="fc" id="L136">        }</span>
+
+        /**
+         * Visits the specified node.
+         *
+         * @param node the actual node
+         * @param handler the node handler
+         */
+        @Override
+        public void visitBeforeChildren(final T node, final NodeHandler&lt;T&gt; handler)
+        {
+<span class="fc" id="L147">            fireElementStart(nodeName(node, handler),</span>
+<span class="fc" id="L148">                    fetchAttributes(node, handler));</span>
+
+<span class="fc" id="L150">            final Object value = handler.getValue(node);</span>
+<span class="fc bfc" id="L151" title="All 2 branches covered.">            if (value != null)</span>
+            {
+<span class="fc" id="L153">                fireCharacters(value.toString());</span>
+            }
+<span class="fc" id="L155">        }</span>
+
+        /**
+         * Checks if iteration should be terminated. This implementation stops
+         * iteration after an exception has occurred.
+         *
+         * @return a flag if iteration should be stopped
+         */
+        @Override
+        public boolean terminate()
+        {
+<span class="pc bpc" id="L166" title="1 of 2 branches missed.">            return getException() != null;</span>
+        }
+
+        /**
+         * Returns an object with all attributes for the specified node.
+         *
+         * @param node the current node
+         * @param handler the node handler
+         * @return an object with all attributes of this node
+         */
+        protected Attributes fetchAttributes(final T node, final NodeHandler&lt;T&gt; handler)
+        {
+<span class="fc" id="L178">            final AttributesImpl attrs = new AttributesImpl();</span>
+
+<span class="fc bfc" id="L180" title="All 2 branches covered.">            for (final String attr : handler.getAttributes(node))</span>
+            {
+<span class="fc" id="L182">                final Object value = handler.getAttributeValue(node, attr);</span>
+<span class="pc bpc" id="L183" title="1 of 2 branches missed.">                if (value != null)</span>
+                {
+<span class="fc" id="L185">                    attrs.addAttribute(NS_URI, attr, attr, ATTR_TYPE,</span>
+<span class="fc" id="L186">                            value.toString());</span>
+                }
+<span class="fc" id="L188">            }</span>
+
+<span class="fc" id="L190">            return attrs;</span>
+        }
+
+        /**
+         * Helper method for determining the name of a node. If a node has no
+         * name (which is true for the root node), the specified default name
+         * will be used.
+         *
+         * @param node the node to be checked
+         * @param handler the node handler
+         * @return the name for this node
+         */
+        private String nodeName(final T node, final NodeHandler&lt;T&gt; handler)
+        {
+<span class="fc" id="L204">            final String nodeName = handler.nodeName(node);</span>
+<span class="pc bpc" id="L205" title="1 of 2 branches missed.">            return (nodeName == null) ? getRootName() : nodeName;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

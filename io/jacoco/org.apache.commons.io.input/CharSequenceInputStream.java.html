@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CharSequenceInputStream.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons IO</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.io.input</a> &gt; <span class="el_source">CharSequenceInputStream.java</span></div><h1>CharSequenceInputStream.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.commons.io.input;
+
+import static org.apache.commons.io.IOUtils.EOF;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CoderResult;
+import java.nio.charset.CodingErrorAction;
+
+/**
+ * {@link InputStream} implementation that can read from String, StringBuffer,
+ * StringBuilder or CharBuffer.
+ * &lt;p&gt;
+ * &lt;strong&gt;Note:&lt;/strong&gt; Supports {@link #mark(int)} and {@link #reset()}.
+ *
+ * @since 2.2
+ */
+public class CharSequenceInputStream extends InputStream {
+
+    private static final int BUFFER_SIZE = 2048;
+
+    private static final int NO_MARK = -1;
+
+    private final CharsetEncoder encoder;
+    private final CharBuffer cbuf;
+    private final ByteBuffer bbuf;
+
+    private int mark_cbuf; // position in cbuf
+    private int mark_bbuf; // position in bbuf
+
+    /**
+     * Constructor.
+     *
+     * @param cs the input character sequence
+     * @param charset the character set name to use
+     * @param bufferSize the buffer size to use.
+     * @throws IllegalArgumentException if the buffer is not large enough to hold a complete character
+     */
+    public CharSequenceInputStream(final CharSequence cs, final Charset charset, final int bufferSize) {
+<span class="fc" id="L62">        super();</span>
+<span class="fc" id="L63">        this.encoder = charset.newEncoder()</span>
+<span class="fc" id="L64">            .onMalformedInput(CodingErrorAction.REPLACE)</span>
+<span class="fc" id="L65">            .onUnmappableCharacter(CodingErrorAction.REPLACE);</span>
+        // Ensure that buffer is long enough to hold a complete character
+<span class="fc" id="L67">        final float maxBytesPerChar = encoder.maxBytesPerChar();</span>
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">        if (bufferSize &lt; maxBytesPerChar) {</span>
+<span class="nc" id="L69">            throw new IllegalArgumentException(&quot;Buffer size &quot; + bufferSize + &quot; is less than maxBytesPerChar &quot; +</span>
+<span class="nc" id="L70">                    maxBytesPerChar);</span>
+        }
+<span class="fc" id="L72">        this.bbuf = ByteBuffer.allocate(bufferSize);</span>
+<span class="fc" id="L73">        this.bbuf.flip();</span>
+<span class="fc" id="L74">        this.cbuf = CharBuffer.wrap(cs);</span>
+<span class="fc" id="L75">        this.mark_cbuf = NO_MARK;</span>
+<span class="fc" id="L76">        this.mark_bbuf = NO_MARK;</span>
+<span class="fc" id="L77">    }</span>
+
+    /**
+     * Constructor, calls {@link #CharSequenceInputStream(CharSequence, Charset, int)}.
+     *
+     * @param cs the input character sequence
+     * @param charset the character set name to use
+     * @param bufferSize the buffer size to use.
+     * @throws IllegalArgumentException if the buffer is not large enough to hold a complete character
+     */
+    public CharSequenceInputStream(final CharSequence cs, final String charset, final int bufferSize) {
+<span class="fc" id="L88">        this(cs, Charset.forName(charset), bufferSize);</span>
+<span class="fc" id="L89">    }</span>
+
+    /**
+     * Constructor, calls {@link #CharSequenceInputStream(CharSequence, Charset, int)}
+     * with a buffer size of 2048.
+     *
+     * @param cs the input character sequence
+     * @param charset the character set name to use
+     * @throws IllegalArgumentException if the buffer is not large enough to hold a complete character
+     */
+    public CharSequenceInputStream(final CharSequence cs, final Charset charset) {
+<span class="nc" id="L100">        this(cs, charset, BUFFER_SIZE);</span>
+<span class="nc" id="L101">    }</span>
+
+    /**
+     * Constructor, calls {@link #CharSequenceInputStream(CharSequence, String, int)}
+     * with a buffer size of 2048.
+     *
+     * @param cs the input character sequence
+     * @param charset the character set name to use
+     * @throws IllegalArgumentException if the buffer is not large enough to hold a complete character
+     */
+    public CharSequenceInputStream(final CharSequence cs, final String charset) {
+<span class="fc" id="L112">        this(cs, charset, BUFFER_SIZE);</span>
+<span class="fc" id="L113">    }</span>
+
+    /**
+     * Fills the byte output buffer from the input char buffer.
+     *
+     * @throws CharacterCodingException
+     *             an error encoding data
+     */
+    private void fillBuffer() throws CharacterCodingException {
+<span class="fc" id="L122">        this.bbuf.compact();</span>
+<span class="fc" id="L123">        final CoderResult result = this.encoder.encode(this.cbuf, this.bbuf, true);</span>
+<span class="pc bpc" id="L124" title="1 of 2 branches missed.">        if (result.isError()) {</span>
+<span class="nc" id="L125">            result.throwException();</span>
+        }
+<span class="fc" id="L127">        this.bbuf.flip();</span>
+<span class="fc" id="L128">    }</span>
+
+    @Override
+    public int read(final byte[] b, int off, int len) throws IOException {
+<span class="pc bpc" id="L132" title="1 of 2 branches missed.">        if (b == null) {</span>
+<span class="nc" id="L133">            throw new NullPointerException(&quot;Byte array is null&quot;);</span>
+        }
+<span class="pc bpc" id="L135" title="2 of 4 branches missed.">        if (len &lt; 0 || (off + len) &gt; b.length) {</span>
+<span class="nc" id="L136">            throw new IndexOutOfBoundsException(&quot;Array Size=&quot; + b.length +</span>
+<span class="nc" id="L137">                    &quot;, offset=&quot; + off + &quot;, length=&quot; + len);</span>
+        }
+<span class="fc bfc" id="L139" title="All 2 branches covered.">        if (len == 0) {</span>
+<span class="fc" id="L140">            return 0; // must return 0 for zero length read</span>
+        }
+<span class="fc bfc" id="L142" title="All 4 branches covered.">        if (!this.bbuf.hasRemaining() &amp;&amp; !this.cbuf.hasRemaining()) {</span>
+<span class="fc" id="L143">            return EOF;</span>
+        }
+<span class="fc" id="L145">        int bytesRead = 0;</span>
+<span class="fc bfc" id="L146" title="All 2 branches covered.">        while (len &gt; 0) {</span>
+<span class="fc bfc" id="L147" title="All 2 branches covered.">            if (this.bbuf.hasRemaining()) {</span>
+<span class="fc" id="L148">                final int chunk = Math.min(this.bbuf.remaining(), len);</span>
+<span class="fc" id="L149">                this.bbuf.get(b, off, chunk);</span>
+<span class="fc" id="L150">                off += chunk;</span>
+<span class="fc" id="L151">                len -= chunk;</span>
+<span class="fc" id="L152">                bytesRead += chunk;</span>
+<span class="fc" id="L153">            } else {</span>
+<span class="fc" id="L154">                fillBuffer();</span>
+<span class="pc bpc" id="L155" title="1 of 4 branches missed.">                if (!this.bbuf.hasRemaining() &amp;&amp; !this.cbuf.hasRemaining()) {</span>
+<span class="fc" id="L156">                    break;</span>
+                }
+            }
+        }
+<span class="pc bpc" id="L160" title="3 of 4 branches missed.">        return bytesRead == 0 &amp;&amp; !this.cbuf.hasRemaining() ? EOF : bytesRead;</span>
+    }
+
+    @Override
+    public int read() throws IOException {
+        for (;;) {
+<span class="fc bfc" id="L166" title="All 2 branches covered.">            if (this.bbuf.hasRemaining()) {</span>
+<span class="fc" id="L167">                return this.bbuf.get() &amp; 0xFF;</span>
+            }
+<span class="fc" id="L169">            fillBuffer();</span>
+<span class="pc bpc" id="L170" title="1 of 4 branches missed.">            if (!this.bbuf.hasRemaining() &amp;&amp; !this.cbuf.hasRemaining()) {</span>
+<span class="fc" id="L171">                return EOF;</span>
+            }
+        }
+    }
+
+    @Override
+    public int read(final byte[] b) throws IOException {
+<span class="fc" id="L178">        return read(b, 0, b.length);</span>
+    }
+
+    @Override
+    public long skip(long n) throws IOException {
+        /*
+         * This could be made more efficient by using position to skip within the current buffer.
+         */
+<span class="fc" id="L186">        long skipped = 0;</span>
+<span class="fc bfc" id="L187" title="All 4 branches covered.">        while (n &gt; 0 &amp;&amp; available() &gt; 0) {</span>
+<span class="fc" id="L188">            this.read();</span>
+<span class="fc" id="L189">            n--;</span>
+<span class="fc" id="L190">            skipped++;</span>
+        }
+<span class="fc" id="L192">        return skipped;</span>
+    }
+
+    /**
+     * Return an estimate of the number of bytes remaining in the byte stream.
+     * @return the count of bytes that can be read without blocking (or returning EOF).
+     *
+     * @throws IOException if an error occurs (probably not possible)
+     */
+    @Override
+    public int available() throws IOException {
+        // The cached entries are in bbuf; since encoding always creates at least one byte
+        // per character, we can add the two to get a better estimate (e.g. if bbuf is empty)
+        // Note that the previous implementation (2.4) could return zero even though there were
+        // encoded bytes still available.
+<span class="fc" id="L207">        return this.bbuf.remaining() + this.cbuf.remaining();</span>
+    }
+
+    @Override
+    public void close() throws IOException {
+<span class="fc" id="L212">    }</span>
+
+    /**
+     * {@inheritDoc}
+     * @param readlimit max read limit (ignored)
+     */
+    @Override
+    public synchronized void mark(final int readlimit) {
+<span class="fc" id="L220">        this.mark_cbuf = this.cbuf.position();</span>
+<span class="fc" id="L221">        this.mark_bbuf = this.bbuf.position();</span>
+<span class="fc" id="L222">        this.cbuf.mark();</span>
+<span class="fc" id="L223">        this.bbuf.mark();</span>
+        // It would be nice to be able to use mark &amp; reset on the cbuf and bbuf;
+        // however the bbuf is re-used so that won't work
+<span class="fc" id="L226">    }</span>
+
+    @Override
+    public synchronized void reset() throws IOException {
+        /*
+         * This is not the most efficient implementation, as it re-encodes from the beginning.
+         *
+         * Since the bbuf is re-used, in general it's necessary to re-encode the data.
+         *
+         * It should be possible to apply some optimisations however:
+         * + use mark/reset on the cbuf and bbuf. This would only work if the buffer had not been (re)filled since
+         * the mark. The code would have to catch InvalidMarkException - does not seem possible to check if mark is
+         * valid otherwise. + Try saving the state of the cbuf before each fillBuffer; it might be possible to
+         * restart from there.
+         */
+<span class="fc bfc" id="L241" title="All 2 branches covered.">        if (this.mark_cbuf != NO_MARK) {</span>
+            // if cbuf is at 0, we have not started reading anything, so skip re-encoding
+<span class="pc bpc" id="L243" title="1 of 2 branches missed.">            if (this.cbuf.position() != 0) {</span>
+<span class="fc" id="L244">                this.encoder.reset();</span>
+<span class="fc" id="L245">                this.cbuf.rewind();</span>
+<span class="fc" id="L246">                this.bbuf.rewind();</span>
+<span class="fc" id="L247">                this.bbuf.limit(0); // rewind does not clear the buffer</span>
+<span class="fc bfc" id="L248" title="All 2 branches covered.">                while(this.cbuf.position() &lt; this.mark_cbuf) {</span>
+<span class="fc" id="L249">                    this.bbuf.rewind(); // empty the buffer (we only refill when empty during normal processing)</span>
+<span class="fc" id="L250">                    this.bbuf.limit(0);</span>
+<span class="fc" id="L251">                    fillBuffer();</span>
+                }
+            }
+<span class="pc bpc" id="L254" title="1 of 2 branches missed.">            if (this.cbuf.position() != this.mark_cbuf) {</span>
+<span class="nc" id="L255">                throw new IllegalStateException(&quot;Unexpected CharBuffer postion: actual=&quot; + cbuf.position() + &quot; &quot; +</span>
+<span class="nc" id="L256">                        &quot;expected=&quot; + this.mark_cbuf);</span>
+            }
+<span class="fc" id="L258">            this.bbuf.position(this.mark_bbuf);</span>
+<span class="fc" id="L259">            this.mark_cbuf = NO_MARK;</span>
+<span class="fc" id="L260">            this.mark_bbuf = NO_MARK;</span>
+        }
+<span class="fc" id="L262">    }</span>
+
+    @Override
+    public boolean markSupported() {
+<span class="fc" id="L266">        return true;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

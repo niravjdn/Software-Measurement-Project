@@ -1,0 +1,1112 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ModelTransaction.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2.tree</a> &gt; <span class="el_source">ModelTransaction.java</span></div><h1>ModelTransaction.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.configuration2.tree;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
+/**
+ * &lt;p&gt;
+ * An internally used helper class for an atomic update of an
+ * {@link InMemoryNodeModel}.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * This class performs updates on the node structure of a node model consisting
+ * of {@link ImmutableNode} objects. Because the nodes themselves cannot be
+ * changed updates are achieved by replacing parts of the structure with new
+ * nodes; the new nodes are copies of original nodes with the corresponding
+ * manipulations applied. Therefore, each update of a node in the structure
+ * results in a new structure in which the affected node is replaced by a new
+ * one, and this change bubbles up to the root node (because all parent nodes
+ * have to be replaced by instances with an updated child reference).
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * A single update of a model may consist of multiple changes on nodes. For
+ * instance, a remove property operation can include many nodes. There are some
+ * reasons why such updates should be handled in a single &quot;transaction&quot; rather
+ * than executing them on altered node structures one by one:
+ * &lt;ul&gt;
+ * &lt;li&gt;An operation is typically executed on a set of source nodes from the
+ * original node hierarchy. While manipulating nodes, nodes of this set may be
+ * replaced by new ones. The handling of these replacements complicates things a
+ * lot.&lt;/li&gt;
+ * &lt;li&gt;Performing all updates one after the other may cause more updates of
+ * nodes than necessary. Nodes near to the root node always have to be replaced
+ * when a child of them gets manipulated. If all these updates are deferred and
+ * handled in a single transaction, the resulting operation is more efficient.&lt;/li&gt;
+ * &lt;/ul&gt;
+ * &lt;/p&gt;
+ *
+ * @version $Id$
+ */
+class ModelTransaction
+{
+    /**
+     * Constant for the maximum number of entries in the replacement mapping. If
+     * this number is exceeded, the parent mapping is reconstructed. The number
+     * is a bit arbitrary. If it is too low, updates - especially on large node
+     * structures - are expensive because the parent mapping is often rebuild.
+     * If it is too big, read access to the model is slowed down because looking
+     * up the parent of a node is more complicated.
+     */
+    private static final int MAX_REPLACEMENTS = 200;
+
+    /** Constant for an unknown level. */
+    private static final int LEVEL_UNKNOWN = -1;
+
+    /** Stores the current tree data of the calling node model. */
+    private final TreeData currentData;
+
+    /** The root node for query operations. */
+    private final ImmutableNode queryRoot;
+
+    /** The selector to the root node of this transaction. */
+    private final NodeSelector rootNodeSelector;
+
+    /** The {@code NodeKeyResolver} to be used for this transaction. */
+    private final NodeKeyResolver&lt;ImmutableNode&gt; resolver;
+
+    /** A new replacement mapping. */
+    private final Map&lt;ImmutableNode, ImmutableNode&gt; replacementMapping;
+
+    /** The nodes replaced in this transaction. */
+    private final Map&lt;ImmutableNode, ImmutableNode&gt; replacedNodes;
+
+    /** A new parent mapping. */
+    private final Map&lt;ImmutableNode, ImmutableNode&gt; parentMapping;
+
+    /** A collection with nodes which have been added. */
+    private final Collection&lt;ImmutableNode&gt; addedNodes;
+
+    /** A collection with nodes which have been removed. */
+    private final Collection&lt;ImmutableNode&gt; removedNodes;
+
+    /**
+     * Stores all nodes which have been removed in this transaction (not only
+     * the root nodes of removed trees).
+     */
+    private final Collection&lt;ImmutableNode&gt; allRemovedNodes;
+
+    /**
+     * Stores the operations to be executed during this transaction. The map is
+     * sorted by the levels of the nodes to be manipulated: Operations on nodes
+     * down in the hierarchy are executed first because they affect the nodes
+     * closer to the root.
+     */
+    private final SortedMap&lt;Integer, Map&lt;ImmutableNode, Operations&gt;&gt; operations;
+
+    /** A map with reference objects to be added during this transaction. */
+    private Map&lt;ImmutableNode, Object&gt; newReferences;
+
+    /** The new root node. */
+    private ImmutableNode newRoot;
+
+    /**
+     * Creates a new instance of {@code ModelTransaction} for the current tree
+     * data.
+     *
+     * @param treeData the current {@code TreeData} structure to operate on
+     * @param selector an optional {@code NodeSelector} defining the target root
+     *        node for this transaction; this can be used to perform operations
+     *        on tracked nodes
+     * @param resolver the {@code NodeKeyResolver}
+     */
+    public ModelTransaction(final TreeData treeData, final NodeSelector selector,
+            final NodeKeyResolver&lt;ImmutableNode&gt; resolver)
+<span class="fc" id="L139">    {</span>
+<span class="fc" id="L140">        currentData = treeData;</span>
+<span class="fc" id="L141">        this.resolver = resolver;</span>
+<span class="fc" id="L142">        replacementMapping = getCurrentData().copyReplacementMapping();</span>
+<span class="fc" id="L143">        replacedNodes = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L144">        parentMapping = getCurrentData().copyParentMapping();</span>
+<span class="fc" id="L145">        operations = new TreeMap&lt;&gt;();</span>
+<span class="fc" id="L146">        addedNodes = new LinkedList&lt;&gt;();</span>
+<span class="fc" id="L147">        removedNodes = new LinkedList&lt;&gt;();</span>
+<span class="fc" id="L148">        allRemovedNodes = new LinkedList&lt;&gt;();</span>
+<span class="fc" id="L149">        queryRoot = initQueryRoot(treeData, selector);</span>
+<span class="fc" id="L150">        rootNodeSelector = selector;</span>
+<span class="fc" id="L151">    }</span>
+
+    /**
+     * Returns the {@code NodeKeyResolver} used by this transaction.
+     *
+     * @return the {@code NodeKeyResolver}
+     */
+    public NodeKeyResolver&lt;ImmutableNode&gt; getResolver()
+    {
+<span class="fc" id="L160">        return resolver;</span>
+    }
+
+    /**
+     * Returns the root node to be used within queries. This is not necessarily
+     * the current root node of the model. If the operation is executed on a
+     * tracked node, this node has to be passed as root nodes to the expression
+     * engine.
+     *
+     * @return the root node for queries and calls to the expression engine
+     */
+    public ImmutableNode getQueryRoot()
+    {
+<span class="fc" id="L173">        return queryRoot;</span>
+    }
+
+    /**
+     * Adds an operation for adding a number of new children to a given parent
+     * node.
+     *
+     * @param parent the parent node
+     * @param newNodes the collection of new child nodes
+     */
+    public void addAddNodesOperation(final ImmutableNode parent,
+            final Collection&lt;? extends ImmutableNode&gt; newNodes)
+    {
+<span class="fc" id="L186">        final ChildrenUpdateOperation op = new ChildrenUpdateOperation();</span>
+<span class="fc" id="L187">        op.addNewNodes(newNodes);</span>
+<span class="fc" id="L188">        fetchOperations(parent, LEVEL_UNKNOWN).addChildrenOperation(op);</span>
+<span class="fc" id="L189">    }</span>
+
+    /**
+     * Adds an operation for adding a new child to a given parent node.
+     *
+     * @param parent the parent node
+     * @param newChild the new child to be added
+     */
+    public void addAddNodeOperation(final ImmutableNode parent, final ImmutableNode newChild)
+    {
+<span class="fc" id="L199">        final ChildrenUpdateOperation op = new ChildrenUpdateOperation();</span>
+<span class="fc" id="L200">        op.addNewNode(newChild);</span>
+<span class="fc" id="L201">        fetchOperations(parent, LEVEL_UNKNOWN).addChildrenOperation(op);</span>
+<span class="fc" id="L202">    }</span>
+
+    /**
+     * Adds an operation for adding an attribute to a target node.
+     *
+     * @param target the target node
+     * @param name the name of the attribute
+     * @param value the value of the attribute
+     */
+    public void addAttributeOperation(final ImmutableNode target, final String name,
+            final Object value)
+    {
+<span class="fc" id="L214">        fetchOperations(target, LEVEL_UNKNOWN).addOperation(</span>
+                new AddAttributeOperation(name, value));
+<span class="fc" id="L216">    }</span>
+
+    /**
+     * Adds an operation for adding multiple attributes to a target node.
+     *
+     * @param target the target node
+     * @param attributes the map with attributes to be set
+     */
+    public void addAttributesOperation(final ImmutableNode target,
+            final Map&lt;String, Object&gt; attributes)
+    {
+<span class="fc" id="L227">        fetchOperations(target, LEVEL_UNKNOWN).addOperation(</span>
+                new AddAttributesOperation(attributes));
+<span class="fc" id="L229">    }</span>
+
+    /**
+     * Adds an operation for removing a child node of a given node.
+     *
+     * @param parent the parent node
+     * @param node the child node to be removed
+     */
+    public void addRemoveNodeOperation(final ImmutableNode parent, final ImmutableNode node)
+    {
+<span class="fc" id="L239">        final ChildrenUpdateOperation op = new ChildrenUpdateOperation();</span>
+<span class="fc" id="L240">        op.addNodeToRemove(node);</span>
+<span class="fc" id="L241">        fetchOperations(parent, LEVEL_UNKNOWN).addChildrenOperation(op);</span>
+<span class="fc" id="L242">    }</span>
+
+    /**
+     * Adds an operation for removing an attribute from a target node.
+     *
+     * @param target the target node
+     * @param name the name of the attribute
+     */
+    public void addRemoveAttributeOperation(final ImmutableNode target, final String name)
+    {
+<span class="fc" id="L252">        fetchOperations(target, LEVEL_UNKNOWN).addOperation(</span>
+                new RemoveAttributeOperation(name));
+<span class="fc" id="L254">    }</span>
+
+    /**
+     * Adds an operation for clearing the value of a target node.
+     *
+     * @param target the target node
+     */
+    public void addClearNodeValueOperation(final ImmutableNode target)
+    {
+<span class="fc" id="L263">        addChangeNodeValueOperation(target, null);</span>
+<span class="fc" id="L264">    }</span>
+
+    /**
+     * Adds an operation for changing the value of a target node.
+     *
+     * @param target the target node
+     * @param newValue the new value for this node
+     */
+    public void addChangeNodeValueOperation(final ImmutableNode target,
+            final Object newValue)
+    {
+<span class="fc" id="L275">        fetchOperations(target, LEVEL_UNKNOWN).addOperation(</span>
+                new ChangeNodeValueOperation(newValue));
+<span class="fc" id="L277">    }</span>
+
+    /**
+     * Adds an operation for changing the name of a target node.
+     *
+     * @param target the target node
+     * @param newName the new name for this node
+     */
+    public void addChangeNodeNameOperation(final ImmutableNode target, final String newName)
+    {
+<span class="fc" id="L287">        fetchOperations(target, LEVEL_UNKNOWN).addOperation(</span>
+                new ChangeNodeNameOperation(newName));
+<span class="fc" id="L289">    }</span>
+
+    /**
+     * Adds a map with new reference objects. The entries in this map are passed
+     * to the {@code ReferenceTracker} during execution of this transaction.
+     *
+     * @param refs the map with new reference objects
+     */
+    public void addNewReferences(final Map&lt;ImmutableNode, ?&gt; refs)
+    {
+<span class="fc" id="L299">        fetchReferenceMap().putAll(refs);</span>
+<span class="fc" id="L300">    }</span>
+
+    /**
+     * Adds a new reference object for the given node.
+     *
+     * @param node the affected node
+     * @param ref the reference object for this node
+     */
+    public void addNewReference(final ImmutableNode node, final Object ref)
+    {
+<span class="fc" id="L310">        fetchReferenceMap().put(node, ref);</span>
+<span class="fc" id="L311">    }</span>
+
+    /**
+     * Executes this transaction resulting in a new {@code TreeData} object. The
+     * object returned by this method serves as the definition of a new node
+     * structure for the calling model.
+     *
+     * @return the updated {@code TreeData}
+     */
+    public TreeData execute()
+    {
+<span class="fc" id="L322">        executeOperations();</span>
+<span class="fc" id="L323">        updateParentMapping();</span>
+<span class="fc" id="L324">        return new TreeData(newRoot, parentMapping, replacementMapping,</span>
+<span class="fc" id="L325">                currentData.getNodeTracker().update(newRoot, rootNodeSelector,</span>
+<span class="fc" id="L326">                        getResolver(), getCurrentData()), updateReferenceTracker()</span>
+        );
+    }
+
+    /**
+     * Returns the current {@code TreeData} object this transaction operates on.
+     * @return the associated {@code TreeData} object
+     */
+    public TreeData getCurrentData()
+    {
+<span class="fc" id="L336">        return currentData;</span>
+    }
+
+    /**
+     * Returns the parent node of the given node.
+     *
+     * @param node the node in question
+     * @return the parent of this node
+     */
+    ImmutableNode getParent(final ImmutableNode node)
+    {
+<span class="fc" id="L347">        return getCurrentData().getParent(node);</span>
+    }
+
+    /**
+     * Obtains the {@code Operations} object for manipulating the specified
+     * node. If no such object exists yet, it is created. The level can be
+     * undefined, then it is determined based on the target node.
+     *
+     * @param target the target node
+     * @param level the level of the target node (may be undefined)
+     * @return the {@code Operations} object for this node
+     */
+    Operations fetchOperations(final ImmutableNode target, final int level)
+    {
+<span class="fc bfc" id="L361" title="All 2 branches covered.">        final Integer nodeLevel =</span>
+<span class="fc" id="L362">                Integer.valueOf((level == LEVEL_UNKNOWN) ? level(target)</span>
+                        : level);
+<span class="fc" id="L364">        Map&lt;ImmutableNode, Operations&gt; levelOperations =</span>
+<span class="fc" id="L365">                operations.get(nodeLevel);</span>
+<span class="fc bfc" id="L366" title="All 2 branches covered.">        if (levelOperations == null)</span>
+        {
+<span class="fc" id="L368">            levelOperations = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L369">            operations.put(nodeLevel, levelOperations);</span>
+        }
+<span class="fc" id="L371">        Operations ops = levelOperations.get(target);</span>
+<span class="fc bfc" id="L372" title="All 2 branches covered.">        if (ops == null)</span>
+        {
+<span class="fc" id="L374">            ops = new Operations();</span>
+<span class="fc" id="L375">            levelOperations.put(target, ops);</span>
+        }
+<span class="fc" id="L377">        return ops;</span>
+    }
+
+    /**
+     * Initializes the root node to be used within queries. If a tracked node
+     * selector is provided, this node becomes the root node. Otherwise, the
+     * actual root node is used.
+     *
+     * @param treeData the current data of the model
+     * @param selector an optional {@code NodeSelector} defining the target root
+     * @return the query root node for this transaction
+     */
+    private ImmutableNode initQueryRoot(final TreeData treeData, final NodeSelector selector)
+    {
+<span class="fc bfc" id="L391" title="All 2 branches covered.">        return (selector == null) ? treeData.getRootNode() : treeData</span>
+<span class="fc" id="L392">                .getNodeTracker().getTrackedNode(selector);</span>
+    }
+
+    /**
+     * Determines the level of the specified node in the current hierarchy. The
+     * level of the root node is 0, the children of the root have level 1 and so
+     * on.
+     *
+     * @param node the node in question
+     * @return the level of this node
+     */
+    private int level(final ImmutableNode node)
+    {
+<span class="fc" id="L405">        ImmutableNode current = getCurrentData().getParent(node);</span>
+<span class="fc" id="L406">        int level = 0;</span>
+<span class="fc bfc" id="L407" title="All 2 branches covered.">        while (current != null)</span>
+        {
+<span class="fc" id="L409">            level++;</span>
+<span class="fc" id="L410">            current = getCurrentData().getParent(current);</span>
+        }
+<span class="fc" id="L412">        return level;</span>
+    }
+
+    /**
+     * Executes all operations in this transaction.
+     */
+    private void executeOperations()
+    {
+<span class="fc bfc" id="L420" title="All 2 branches covered.">        while (!operations.isEmpty())</span>
+        {
+<span class="fc" id="L422">            final Integer level = operations.lastKey(); // start down in hierarchy</span>
+<span class="fc" id="L423">            final Map&lt;ImmutableNode, Operations&gt; levelOps = operations.remove(level);</span>
+<span class="fc bfc" id="L424" title="All 2 branches covered.">            for (final Map.Entry&lt;ImmutableNode, Operations&gt; e : levelOps.entrySet())</span>
+            {
+<span class="fc" id="L426">                e.getValue().apply(e.getKey(), level);</span>
+<span class="fc" id="L427">            }</span>
+<span class="fc" id="L428">        }</span>
+<span class="fc" id="L429">    }</span>
+
+    /**
+     * Updates the parent mapping for the resulting {@code TreeData} instance.
+     * This method is called after all update operations have been executed. It
+     * ensures that the parent mapping is updated for the changes on the nodes
+     * structure.
+     */
+    private void updateParentMapping()
+    {
+<span class="fc" id="L439">        replacementMapping.putAll(replacedNodes);</span>
+<span class="fc bfc" id="L440" title="All 2 branches covered.">        if (replacementMapping.size() &gt; MAX_REPLACEMENTS)</span>
+        {
+<span class="fc" id="L442">            rebuildParentMapping();</span>
+        }
+        else
+        {
+<span class="fc" id="L446">            updateParentMappingForAddedNodes();</span>
+<span class="fc" id="L447">            updateParentMappingForRemovedNodes();</span>
+        }
+<span class="fc" id="L449">    }</span>
+
+    /**
+     * Rebuilds the parent mapping from scratch. This method is called if the
+     * replacement mapping exceeds its maximum size. In this case, it is
+     * cleared, and a new parent mapping is constructed for the new root node.
+     */
+    private void rebuildParentMapping()
+    {
+<span class="fc" id="L458">        replacementMapping.clear();</span>
+<span class="fc" id="L459">        parentMapping.clear();</span>
+<span class="fc" id="L460">        InMemoryNodeModel.updateParentMapping(parentMapping, newRoot);</span>
+<span class="fc" id="L461">    }</span>
+
+    /**
+     * Adds newly added nodes and their children to the parent mapping.
+     */
+    private void updateParentMappingForAddedNodes()
+    {
+<span class="fc bfc" id="L468" title="All 2 branches covered.">        for (final ImmutableNode node : addedNodes)</span>
+        {
+<span class="fc" id="L470">            InMemoryNodeModel.updateParentMapping(parentMapping, node);</span>
+<span class="fc" id="L471">        }</span>
+<span class="fc" id="L472">    }</span>
+
+    /**
+     * Removes nodes that have been removed during this transaction from the
+     * parent and replacement mappings.
+     */
+    private void updateParentMappingForRemovedNodes()
+    {
+<span class="fc bfc" id="L480" title="All 2 branches covered.">        for (final ImmutableNode node : removedNodes)</span>
+        {
+<span class="fc" id="L482">            removeNodesFromParentAndReplacementMapping(node);</span>
+<span class="fc" id="L483">        }</span>
+<span class="fc" id="L484">    }</span>
+
+    /**
+     * Removes a node and its children (recursively) from the parent and the
+     * replacement mappings.
+     *
+     * @param root the root of the subtree to be removed
+     */
+    private void removeNodesFromParentAndReplacementMapping(final ImmutableNode root)
+    {
+<span class="fc" id="L494">        NodeTreeWalker.INSTANCE.walkBFS(root,</span>
+                new ConfigurationNodeVisitorAdapter&lt;ImmutableNode&gt;()
+<span class="fc" id="L496">                {</span>
+                    @Override
+                    public void visitBeforeChildren(final ImmutableNode node,
+                            final NodeHandler&lt;ImmutableNode&gt; handler)
+                    {
+<span class="fc" id="L501">                        allRemovedNodes.add(node);</span>
+<span class="fc" id="L502">                        parentMapping.remove(node);</span>
+<span class="fc" id="L503">                        removeNodeFromReplacementMapping(node);</span>
+<span class="fc" id="L504">                    }</span>
+<span class="fc" id="L505">                }, getCurrentData());</span>
+<span class="fc" id="L506">    }</span>
+
+    /**
+     * Removes the specified node completely from the replacement mapping. This
+     * also includes the nodes that replace the given one.
+     *
+     * @param node the node to be removed
+     */
+    private void removeNodeFromReplacementMapping(final ImmutableNode node)
+    {
+<span class="fc" id="L516">        ImmutableNode replacement = node;</span>
+        do
+        {
+<span class="fc" id="L519">            replacement = replacementMapping.remove(replacement);</span>
+<span class="pc bpc" id="L520" title="1 of 2 branches missed.">        } while (replacement != null);</span>
+<span class="fc" id="L521">    }</span>
+
+    /**
+     * Returns an updated {@code ReferenceTracker} instance. The changes
+     * performed during this transaction are applied to the tracker.
+     *
+     * @return the updated tracker instance
+     */
+    private ReferenceTracker updateReferenceTracker()
+    {
+<span class="fc" id="L531">        ReferenceTracker tracker = currentData.getReferenceTracker();</span>
+<span class="fc bfc" id="L532" title="All 2 branches covered.">        if (newReferences != null)</span>
+        {
+<span class="fc" id="L534">            tracker = tracker.addReferences(newReferences);</span>
+        }
+<span class="fc" id="L536">        return tracker.updateReferences(replacedNodes, allRemovedNodes);</span>
+    }
+
+    /**
+     * Returns the map with new reference objects. It is created if necessary.
+     *
+     * @return the map with reference objects
+     */
+    private Map&lt;ImmutableNode, Object&gt; fetchReferenceMap()
+    {
+<span class="fc bfc" id="L546" title="All 2 branches covered.">        if (newReferences == null)</span>
+        {
+<span class="fc" id="L548">            newReferences = new HashMap&lt;&gt;();</span>
+        }
+<span class="fc" id="L550">        return newReferences;</span>
+    }
+
+    /**
+     * Constructs the concatenation of two collections. Both can be null.
+     *
+     * @param col1 the first collection
+     * @param col2 the second collection
+     * @param &lt;E&gt; the type of the elements involved
+     * @return the resulting collection
+     */
+    private static &lt;E&gt; Collection&lt;E&gt; concatenate(final Collection&lt;E&gt; col1,
+            final Collection&lt;? extends E&gt; col2)
+    {
+<span class="fc bfc" id="L564" title="All 2 branches covered.">        if (col2 == null)</span>
+        {
+<span class="fc" id="L566">            return col1;</span>
+        }
+
+<span class="fc bfc" id="L569" title="All 2 branches covered.">        final Collection&lt;E&gt; result =</span>
+<span class="fc" id="L570">                (col1 != null) ? col1 : new ArrayList&lt;&gt;(col2.size());</span>
+<span class="fc" id="L571">        result.addAll(col2);</span>
+<span class="fc" id="L572">        return result;</span>
+    }
+
+    /**
+     * Constructs the concatenation of two sets. Both can be null.
+     *
+     * @param set1 the first set
+     * @param set2 the second set
+     * @param &lt;E&gt; the type of the elements involved
+     * @return the resulting set
+     */
+    private static &lt;E&gt; Set&lt;E&gt; concatenate(final Set&lt;E&gt; set1, final Set&lt;? extends E&gt; set2)
+    {
+<span class="fc bfc" id="L585" title="All 2 branches covered.">        if (set2 == null)</span>
+        {
+<span class="fc" id="L587">            return set1;</span>
+        }
+
+<span class="fc bfc" id="L590" title="All 2 branches covered.">        final Set&lt;E&gt; result = (set1 != null) ? set1 : new HashSet&lt;&gt;();</span>
+<span class="fc" id="L591">        result.addAll(set2);</span>
+<span class="fc" id="L592">        return result;</span>
+    }
+
+    /**
+     * Constructs the concatenation of two maps. Both can be null.
+     *
+     * @param map1 the first map
+     * @param map2 the second map
+     * @param &lt;K&gt; the type of the keys
+     * @param &lt;V&gt; the type of the values
+     * @return the resulting map
+     */
+    private static &lt;K, V&gt; Map&lt;K, V&gt; concatenate(final Map&lt;K, V&gt; map1,
+            final Map&lt;? extends K, ? extends V&gt; map2)
+    {
+<span class="fc bfc" id="L607" title="All 2 branches covered.">        if (map2 == null)</span>
+        {
+<span class="fc" id="L609">            return map1;</span>
+        }
+
+<span class="fc bfc" id="L612" title="All 2 branches covered.">        final Map&lt;K, V&gt; result = (map1 != null) ? map1 : new HashMap&lt;&gt;();</span>
+<span class="fc" id="L613">        result.putAll(map2);</span>
+<span class="fc" id="L614">        return result;</span>
+    }
+
+    /**
+     * Appends a single element to a collection. The collection may be null,
+     * then it is created.
+     *
+     * @param col the collection
+     * @param node the element to be added
+     * @param &lt;E&gt; the type of elements involved
+     * @return the resulting collection
+     */
+    private static &lt;E&gt; Collection&lt;E&gt; append(final Collection&lt;E&gt; col, final E node)
+    {
+<span class="fc bfc" id="L628" title="All 2 branches covered.">        final Collection&lt;E&gt; result = (col != null) ? col : new LinkedList&lt;&gt;();</span>
+<span class="fc" id="L629">        result.add(node);</span>
+<span class="fc" id="L630">        return result;</span>
+    }
+
+    /**
+     * Appends a single element to a set. The set may be null then it is
+     * created.
+     *
+     * @param col the set
+     * @param elem the element to be added
+     * @param &lt;E&gt; the type of the elements involved
+     * @return the resulting set
+     */
+    private static &lt;E&gt; Set&lt;E&gt; append(final Set&lt;E&gt; col, final E elem)
+    {
+<span class="pc bpc" id="L644" title="1 of 2 branches missed.">        final Set&lt;E&gt; result = (col != null) ? col : new HashSet&lt;&gt;();</span>
+<span class="fc" id="L645">        result.add(elem);</span>
+<span class="fc" id="L646">        return result;</span>
+    }
+
+    /**
+     * Adds a single key-value pair to a map. The map may be null, then it is
+     * created.
+     *
+     * @param map the map
+     * @param key the key
+     * @param value the value
+     * @param &lt;K&gt; the type of the key
+     * @param &lt;V&gt; the type of the value
+     * @return the resulting map
+     */
+    private static &lt;K, V&gt; Map&lt;K, V&gt; append(final Map&lt;K, V&gt; map, final K key, final V value)
+    {
+<span class="pc bpc" id="L662" title="1 of 2 branches missed.">        final Map&lt;K, V&gt; result = (map != null) ? map : new HashMap&lt;&gt;();</span>
+<span class="fc" id="L663">        result.put(key, value);</span>
+<span class="fc" id="L664">        return result;</span>
+    }
+
+    /**
+     * An abstract base class representing an operation to be performed on a
+     * node. Concrete subclasses implement specific update operations.
+     */
+<span class="fc" id="L671">    private abstract class Operation</span>
+    {
+        /**
+         * Executes this operation on the provided target node returning the
+         * result.
+         *
+         * @param target the target node for this operation
+         * @param operations the current {@code Operations} instance
+         * @return the manipulated node
+         */
+        protected abstract ImmutableNode apply(ImmutableNode target,
+                Operations operations);
+    }
+
+    /**
+     * A specialized {@code Operation} implementation for replacing the children
+     * of a target node. All other properties are not touched. With this
+     * operation single children of a node can be altered or removed; new
+     * children can be added. This operation is frequently used because each
+     * update of a node causes updates of the children of all parent nodes.
+     * Therefore, it is treated in a special way and allows adding further sub
+     * operations dynamically.
+     */
+<span class="fc" id="L694">    private class ChildrenUpdateOperation extends Operation</span>
+    {
+        /** A collection with new nodes to be added. */
+        private Collection&lt;ImmutableNode&gt; newNodes;
+
+        /** A collection with nodes to be removed. */
+        private Set&lt;ImmutableNode&gt; nodesToRemove;
+
+        /**
+         * A map with nodes to be replaced by others. The keys are the nodes to
+         * be replaced, the values the replacements.
+         */
+        private Map&lt;ImmutableNode, ImmutableNode&gt; nodesToReplace;
+
+        /**
+         * Adds all operations defined by the specified object to this instance.
+         *
+         * @param op the operation to be combined
+         */
+        public void combine(final ChildrenUpdateOperation op)
+        {
+<span class="fc" id="L715">            newNodes = concatenate(newNodes, op.newNodes);</span>
+<span class="fc" id="L716">            nodesToReplace = concatenate(nodesToReplace, op.nodesToReplace);</span>
+<span class="fc" id="L717">            nodesToRemove = concatenate(nodesToRemove, op.nodesToRemove);</span>
+<span class="fc" id="L718">        }</span>
+
+        /**
+         * Adds a node to be added to the target of the operation.
+         *
+         * @param node the new node to be added
+         */
+        public void addNewNode(final ImmutableNode node)
+        {
+<span class="fc" id="L727">            newNodes = append(newNodes, node);</span>
+<span class="fc" id="L728">        }</span>
+
+        /**
+         * Adds a collection of nodes to be added to the target of the
+         * operation.
+         *
+         * @param nodes the collection with new nodes
+         */
+        public void addNewNodes(final Collection&lt;? extends ImmutableNode&gt; nodes)
+        {
+<span class="fc" id="L738">            newNodes = concatenate(newNodes, nodes);</span>
+<span class="fc" id="L739">        }</span>
+
+        /**
+         * Adds a node for a replacement operation. The original node is going
+         * to be replaced by its replacement.
+         *
+         * @param org the original node
+         * @param replacement the replacement node
+         */
+        public void addNodeToReplace(final ImmutableNode org,
+                final ImmutableNode replacement)
+        {
+<span class="fc" id="L751">            nodesToReplace = append(nodesToReplace, org, replacement);</span>
+<span class="fc" id="L752">        }</span>
+
+        /**
+         * Adds a node for a remove operation. This child node is going to be
+         * removed from its parent.
+         *
+         * @param node the child node to be removed
+         */
+        public void addNodeToRemove(final ImmutableNode node)
+        {
+<span class="fc" id="L762">            nodesToRemove = append(nodesToRemove, node);</span>
+<span class="fc" id="L763">        }</span>
+
+        /**
+         * {@inheritDoc} This implementation applies changes on the children of
+         * the passed in target node according to its configuration: new nodes
+         * are added, replacements are performed, and nodes no longer needed are
+         * removed.
+         */
+        @Override
+        protected ImmutableNode apply(final ImmutableNode target,
+                final Operations operations)
+        {
+<span class="fc" id="L775">            final Map&lt;ImmutableNode, ImmutableNode&gt; replacements =</span>
+<span class="fc" id="L776">                    fetchReplacementMap();</span>
+<span class="fc" id="L777">            final Set&lt;ImmutableNode&gt; removals = fetchRemovalSet();</span>
+<span class="fc" id="L778">            final List&lt;ImmutableNode&gt; resultNodes = new LinkedList&lt;&gt;();</span>
+
+<span class="fc bfc" id="L780" title="All 2 branches covered.">            for (final ImmutableNode nd : target.getChildren())</span>
+            {
+<span class="fc" id="L782">                final ImmutableNode repl = replacements.get(nd);</span>
+<span class="fc bfc" id="L783" title="All 2 branches covered.">                if (repl != null)</span>
+                {
+<span class="fc" id="L785">                    resultNodes.add(repl);</span>
+<span class="fc" id="L786">                    replacedNodes.put(nd, repl);</span>
+                }
+                else
+                {
+<span class="fc bfc" id="L790" title="All 2 branches covered.">                    if (removals.contains(nd))</span>
+                    {
+<span class="fc" id="L792">                        removedNodes.add(nd);</span>
+                    }
+                    else
+                    {
+<span class="fc" id="L796">                        resultNodes.add(nd);</span>
+                    }
+                }
+<span class="fc" id="L799">            }</span>
+
+<span class="fc" id="L801">            concatenate(resultNodes, newNodes);</span>
+<span class="fc" id="L802">            operations.newNodesAdded(newNodes);</span>
+<span class="fc" id="L803">            return target.replaceChildren(resultNodes);</span>
+        }
+
+        /**
+         * Obtains the map with replacement nodes. If no replacements are
+         * defined, an empty map is returned.
+         *
+         * @return the map with replacement nodes
+         */
+        private Map&lt;ImmutableNode, ImmutableNode&gt; fetchReplacementMap()
+        {
+<span class="fc bfc" id="L814" title="All 2 branches covered.">            return (nodesToReplace != null) ? nodesToReplace : Collections</span>
+<span class="fc" id="L815">                    .&lt;ImmutableNode, ImmutableNode&gt; emptyMap();</span>
+        }
+
+        /**
+         * Returns a set with nodes to be removed. If no remove operations are
+         * pending, an empty set is returned.
+         *
+         * @return the set with nodes to be removed
+         */
+        private Set&lt;ImmutableNode&gt; fetchRemovalSet()
+        {
+<span class="fc bfc" id="L826" title="All 2 branches covered.">            return (nodesToRemove != null) ? nodesToRemove : Collections</span>
+<span class="fc" id="L827">                    .&lt;ImmutableNode&gt; emptySet();</span>
+        }
+    }
+
+    /**
+     * A specialized operation class for adding an attribute to a target node.
+     */
+    private class AddAttributeOperation extends Operation
+    {
+        /** The attribute name. */
+        private final String attributeName;
+
+        /** The attribute value. */
+        private final Object attributeValue;
+
+        /**
+         * Creates a new instance of {@code AddAttributeOperation}.
+         *
+         * @param name the name of the attribute
+         * @param value the value of the attribute
+         */
+        public AddAttributeOperation(final String name, final Object value)
+<span class="fc" id="L849">        {</span>
+<span class="fc" id="L850">            attributeName = name;</span>
+<span class="fc" id="L851">            attributeValue = value;</span>
+<span class="fc" id="L852">        }</span>
+
+        @Override
+        protected ImmutableNode apply(final ImmutableNode target,
+                final Operations operations)
+        {
+<span class="fc" id="L858">            return target.setAttribute(attributeName, attributeValue);</span>
+        }
+    }
+
+    /**
+     * A specialized operation class for adding multiple attributes to a target
+     * node.
+     */
+    private class AddAttributesOperation extends Operation
+    {
+        /** The map with attributes. */
+        private final Map&lt;String, Object&gt; attributes;
+
+        /**
+         * Creates a new instance of {@code AddAttributesOperation}.
+         *
+         * @param attrs the map with attributes
+         */
+        public AddAttributesOperation(final Map&lt;String, Object&gt; attrs)
+<span class="fc" id="L877">        {</span>
+<span class="fc" id="L878">            attributes = attrs;</span>
+<span class="fc" id="L879">        }</span>
+
+        @Override
+        protected ImmutableNode apply(final ImmutableNode target,
+                final Operations operations)
+        {
+<span class="fc" id="L885">            return target.setAttributes(attributes);</span>
+        }
+    }
+
+    /**
+     * A specialized operation class for removing an attribute from a target
+     * node.
+     */
+    private class RemoveAttributeOperation extends Operation
+    {
+        /** The attribute name. */
+        private final String attributeName;
+
+        /**
+         * Creates a new instance of {@code RemoveAttributeOperation}.
+         *
+         * @param name the name of the attribute
+         */
+        public RemoveAttributeOperation(final String name)
+<span class="fc" id="L904">        {</span>
+<span class="fc" id="L905">            attributeName = name;</span>
+<span class="fc" id="L906">        }</span>
+
+        @Override
+        protected ImmutableNode apply(final ImmutableNode target,
+                final Operations operations)
+        {
+<span class="fc" id="L912">            return target.removeAttribute(attributeName);</span>
+        }
+    }
+
+    /**
+     * A specialized operation class which changes the value of a node.
+     */
+    private class ChangeNodeValueOperation extends Operation
+    {
+        /** The new value for the affected node. */
+        private final Object newValue;
+
+        /**
+         * Creates a new instance of {@code ChangeNodeValueOperation} and
+         * initializes it with the new value to set for the node.
+         *
+         * @param value the new node value
+         */
+        public ChangeNodeValueOperation(final Object value)
+<span class="fc" id="L931">        {</span>
+<span class="fc" id="L932">            newValue = value;</span>
+<span class="fc" id="L933">        }</span>
+
+        @Override
+        protected ImmutableNode apply(final ImmutableNode target,
+                final Operations operations)
+        {
+<span class="fc" id="L939">            return target.setValue(newValue);</span>
+        }
+    }
+
+    /**
+     * A specialized operation class which changes the name of a node.
+     */
+    private class ChangeNodeNameOperation extends Operation
+    {
+        /** The new node name. */
+        private final String newName;
+
+        /**
+         * Creates a new instance of {@code ChangeNodeNameOperation} and sets
+         * the new node name.
+         *
+         * @param name the new node name
+         */
+        public ChangeNodeNameOperation(final String name)
+<span class="fc" id="L958">        {</span>
+<span class="fc" id="L959">            newName = name;</span>
+<span class="fc" id="L960">        }</span>
+
+        @Override
+        protected ImmutableNode apply(final ImmutableNode target,
+                final Operations operations)
+        {
+<span class="fc" id="L966">            return target.setName(newName);</span>
+        }
+    }
+
+    /**
+     * A helper class which collects multiple update operations to be executed
+     * on a single node.
+     */
+<span class="fc" id="L974">    private class Operations</span>
+    {
+        /** An operation for manipulating child nodes. */
+        private ChildrenUpdateOperation childrenOperation;
+
+        /**
+         * A collection for the other operations to be performed on the target
+         * node.
+         */
+        private Collection&lt;Operation&gt; operations;
+
+        /** A collection with nodes added by an operation. */
+        private Collection&lt;ImmutableNode&gt; addedNodesInOperation;
+
+        /**
+         * Adds an operation which manipulates children.
+         *
+         * @param co the operation
+         */
+        public void addChildrenOperation(final ChildrenUpdateOperation co)
+        {
+<span class="fc bfc" id="L995" title="All 2 branches covered.">            if (childrenOperation == null)</span>
+            {
+<span class="fc" id="L997">                childrenOperation = co;</span>
+            }
+            else
+            {
+<span class="fc" id="L1001">                childrenOperation.combine(co);</span>
+            }
+<span class="fc" id="L1003">        }</span>
+
+        /**
+         * Adds an operation.
+         *
+         * @param op the operation
+         */
+        public void addOperation(final Operation op)
+        {
+<span class="fc" id="L1012">            operations = append(operations, op);</span>
+<span class="fc" id="L1013">        }</span>
+
+        /**
+         * Notifies this object that new nodes have been added by a sub
+         * operation. It has to be ensured that these nodes are added to the
+         * parent mapping.
+         *
+         * @param newNodes the collection of newly added nodes
+         */
+        public void newNodesAdded(final Collection&lt;ImmutableNode&gt; newNodes)
+        {
+<span class="fc" id="L1024">            addedNodesInOperation =</span>
+<span class="fc" id="L1025">                    concatenate(addedNodesInOperation, newNodes);</span>
+<span class="fc" id="L1026">        }</span>
+
+        /**
+         * Executes all operations stored in this object on the given target
+         * node. The resulting node then has to be integrated in the current
+         * node hierarchy. Unless the root node is already reached, this causes
+         * another updated operation to be created which replaces the
+         * manipulated child in the parent node.
+         *
+         * @param target the target node for this operation
+         * @param level the level of the target node
+         */
+        public void apply(final ImmutableNode target, final int level)
+        {
+<span class="fc" id="L1040">            ImmutableNode node = target;</span>
+<span class="fc bfc" id="L1041" title="All 2 branches covered.">            if (childrenOperation != null)</span>
+            {
+<span class="fc" id="L1043">                node = childrenOperation.apply(node, this);</span>
+            }
+
+<span class="fc bfc" id="L1046" title="All 2 branches covered.">            if (operations != null)</span>
+            {
+<span class="fc bfc" id="L1048" title="All 2 branches covered.">                for (final Operation op : operations)</span>
+                {
+<span class="fc" id="L1050">                    node = op.apply(node, this);</span>
+<span class="fc" id="L1051">                }</span>
+            }
+
+<span class="fc" id="L1054">            handleAddedNodes(node);</span>
+<span class="fc bfc" id="L1055" title="All 2 branches covered.">            if (level == 0)</span>
+            {
+                // reached the root node
+<span class="fc" id="L1058">                newRoot = node;</span>
+<span class="fc" id="L1059">                replacedNodes.put(target, node);</span>
+            }
+            else
+            {
+                // propagate change
+<span class="fc" id="L1064">                propagateChange(target, node, level);</span>
+            }
+<span class="fc" id="L1066">        }</span>
+
+        /**
+         * Propagates the changes on the target node to the next level above of
+         * the hierarchy. If the updated node is no longer defined, it can even
+         * be removed from its parent. Otherwise, it is just replaced.
+         *
+         * @param target the target node for this operation
+         * @param node the resulting node after applying all operations
+         * @param level the level of the target node
+         */
+        private void propagateChange(final ImmutableNode target, final ImmutableNode node,
+                final int level)
+        {
+<span class="fc" id="L1080">            final ImmutableNode parent = getParent(target);</span>
+<span class="fc" id="L1081">            final ChildrenUpdateOperation co = new ChildrenUpdateOperation();</span>
+<span class="fc bfc" id="L1082" title="All 2 branches covered.">            if (InMemoryNodeModel.checkIfNodeDefined(node))</span>
+            {
+<span class="fc" id="L1084">                co.addNodeToReplace(target, node);</span>
+            }
+            else
+            {
+<span class="fc" id="L1088">                co.addNodeToRemove(target);</span>
+            }
+<span class="fc" id="L1090">            fetchOperations(parent, level - 1).addChildrenOperation(co);</span>
+<span class="fc" id="L1091">        }</span>
+
+        /**
+         * Checks whether new nodes have been added during operation execution.
+         * If so, the parent mapping has to be updated.
+         *
+         * @param node the resulting node after applying all operations
+         */
+        private void handleAddedNodes(final ImmutableNode node)
+        {
+<span class="fc bfc" id="L1101" title="All 2 branches covered.">            if (addedNodesInOperation != null)</span>
+            {
+<span class="fc bfc" id="L1103" title="All 2 branches covered.">                for (final ImmutableNode child : addedNodesInOperation)</span>
+                {
+<span class="fc" id="L1105">                    parentMapping.put(child, node);</span>
+<span class="fc" id="L1106">                    addedNodes.add(child);</span>
+<span class="fc" id="L1107">                }</span>
+            }
+<span class="fc" id="L1109">        }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

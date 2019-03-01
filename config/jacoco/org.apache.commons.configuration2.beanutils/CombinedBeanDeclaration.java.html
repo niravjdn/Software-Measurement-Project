@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CombinedBeanDeclaration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache Commons Configuration</a> &gt; <a href="index.source.html" class="el_package">org.apache.commons.configuration2.beanutils</a> &gt; <span class="el_source">CombinedBeanDeclaration.java</span></div><h1>CombinedBeanDeclaration.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.commons.configuration2.beanutils;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * &lt;p&gt;
+ * A special implementation of the {@code BeanDeclaration} interface which
+ * allows combining multiple {@code BeanDeclaration} objects.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * An instance of this class can be used if a bean is defined using multiple
+ * sources. For instance, there can be one definition with default values and
+ * one with actual values; if actual values are provided, they are used;
+ * otherwise, the default values apply.
+ * &lt;/p&gt;
+ * &lt;p&gt;
+ * When constructing an instance an arbitrary number of child
+ * {@code BeanDeclaration} objects can be specified. The implementations of the
+ * {@code BeanDeclaration} methods implement a logical combination of the data
+ * returned by these child declarations. The order in which child declarations
+ * are added is relevant; first entries take precedence over later ones. The
+ * comments of the single methods explain in which way a combination of the
+ * child declarations is built.
+ * &lt;/p&gt;
+ *
+ * @version $Id$
+ * @since 2.0
+ */
+public class CombinedBeanDeclaration implements BeanDeclaration
+{
+    /** A list with the child declarations. */
+    private final List&lt;BeanDeclaration&gt; childDeclarations;
+
+    /**
+     * Creates a new instance of {@code CombinedBeanDeclaration} and initializes
+     * it with the given child declarations.
+     *
+     * @param decl the child declarations
+     * @throws NullPointerException if the array with child declarations is
+     *         &lt;b&gt;null&lt;/b&gt;
+     */
+    public CombinedBeanDeclaration(final BeanDeclaration... decl)
+<span class="fc" id="L65">    {</span>
+<span class="fc" id="L66">        childDeclarations = new ArrayList&lt;&gt;(Arrays.asList(decl));</span>
+<span class="fc" id="L67">    }</span>
+
+    /**
+     * {@inheritDoc} This implementation iterates over the list of child
+     * declarations and asks them for a bean factory name. The first
+     * non-&lt;b&gt;null&lt;/b&gt; value is returned. If none of the child declarations have
+     * a defined bean factory name, result is &lt;b&gt;null&lt;/b&gt;.
+     */
+    @Override
+    public String getBeanFactoryName()
+    {
+<span class="fc bfc" id="L78" title="All 2 branches covered.">        for (final BeanDeclaration d : childDeclarations)</span>
+        {
+<span class="fc" id="L80">            final String factoryName = d.getBeanFactoryName();</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">            if (factoryName != null)</span>
+            {
+<span class="fc" id="L83">                return factoryName;</span>
+            }
+<span class="fc" id="L85">        }</span>
+<span class="fc" id="L86">        return null;</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation iterates over the list of child
+     * declarations and asks them for a bean factory parameter. The first
+     * non-&lt;b&gt;null&lt;/b&gt; value is returned. If none of the child declarations have
+     * a defined bean factory parameter, result is &lt;b&gt;null&lt;/b&gt;.
+     */
+    @Override
+    public Object getBeanFactoryParameter()
+    {
+<span class="fc bfc" id="L98" title="All 2 branches covered.">        for (final BeanDeclaration d : childDeclarations)</span>
+        {
+<span class="fc" id="L100">            final Object factoryParam = d.getBeanFactoryParameter();</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">            if (factoryParam != null)</span>
+            {
+<span class="fc" id="L103">                return factoryParam;</span>
+            }
+<span class="fc" id="L105">        }</span>
+<span class="fc" id="L106">        return null;</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation iterates over the list of child
+     * declarations and asks them for the bean class name. The first
+     * non-&lt;b&gt;null&lt;/b&gt; value is returned. If none of the child declarations have
+     * a defined bean class, result is &lt;b&gt;null&lt;/b&gt;.
+     */
+    @Override
+    public String getBeanClassName()
+    {
+<span class="fc bfc" id="L118" title="All 2 branches covered.">        for (final BeanDeclaration d : childDeclarations)</span>
+        {
+<span class="fc" id="L120">            final String beanClassName = d.getBeanClassName();</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">            if (beanClassName != null)</span>
+            {
+<span class="fc" id="L123">                return beanClassName;</span>
+            }
+<span class="fc" id="L125">        }</span>
+<span class="fc" id="L126">        return null;</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation creates a union of the properties
+     * returned by all child declarations. If a property is defined in multiple
+     * child declarations, the declaration that comes before in the list of
+     * children takes precedence.
+     */
+    @Override
+    public Map&lt;String, Object&gt; getBeanProperties()
+    {
+<span class="fc" id="L138">        final Map&lt;String, Object&gt; result = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L139" title="All 2 branches covered.">        for (int i = childDeclarations.size() - 1; i &gt;= 0; i--)</span>
+        {
+<span class="fc" id="L141">            final Map&lt;String, Object&gt; props =</span>
+<span class="fc" id="L142">                    childDeclarations.get(i).getBeanProperties();</span>
+<span class="fc bfc" id="L143" title="All 2 branches covered.">            if (props != null)</span>
+            {
+<span class="fc" id="L145">                result.putAll(props);</span>
+            }
+        }
+<span class="fc" id="L148">        return result;</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation creates a union of the nested bean
+     * declarations returned by all child declarations. If a complex property is
+     * defined in multiple child declarations, the declaration that comes before
+     * in the list of children takes precedence.
+     */
+    @Override
+    public Map&lt;String, Object&gt; getNestedBeanDeclarations()
+    {
+<span class="fc" id="L160">        final Map&lt;String, Object&gt; result = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L161" title="All 2 branches covered.">        for (int i = childDeclarations.size() - 1; i &gt;= 0; i--)</span>
+        {
+<span class="fc" id="L163">            final Map&lt;String, Object&gt; decls =</span>
+<span class="fc" id="L164">                    childDeclarations.get(i).getNestedBeanDeclarations();</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">            if (decls != null)</span>
+            {
+<span class="fc" id="L167">                result.putAll(decls);</span>
+            }
+        }
+<span class="fc" id="L170">        return result;</span>
+    }
+
+    /**
+     * {@inheritDoc} This implementation iterates over the list of child
+     * declarations and asks them for constructor arguments. The first
+     * non-&lt;b&gt;null&lt;/b&gt; and non empty collection is returned. If none of the
+     * child declarations provide constructor arguments, result is an empty
+     * collection.
+     */
+    @Override
+    public Collection&lt;ConstructorArg&gt; getConstructorArgs()
+    {
+<span class="fc bfc" id="L183" title="All 2 branches covered.">        for (final BeanDeclaration d : childDeclarations)</span>
+        {
+<span class="fc" id="L185">            final Collection&lt;ConstructorArg&gt; args = d.getConstructorArgs();</span>
+<span class="fc bfc" id="L186" title="All 4 branches covered.">            if (args != null &amp;&amp; !args.isEmpty())</span>
+            {
+<span class="fc" id="L188">                return args;</span>
+            }
+<span class="fc" id="L190">        }</span>
+<span class="fc" id="L191">        return Collections.emptyList();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>
