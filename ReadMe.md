@@ -7,4 +7,6 @@ Jacoco - Code Coverage - https://www.eclemma.org/jacoco/
 PIT - Mutation Testing - http://pitest.org/
 
 
+Correlation Reference (Python and Panda): https://www.datascience.com/blog/introduction-to-correlation-learn-data-science-tutorials
+
 Data - http://smproject.techfunda.tk/
