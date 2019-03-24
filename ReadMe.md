@@ -16,6 +16,24 @@ https://www.mkyong.com/maven/maven-pitest-mutation-testing-example/
 
 http://pages.cs.aueb.gr/~kintism/papers/emse2017/
 
+### How did we run for our project
+
+Added Dependency Plugin in pom.xml for PITest as below
+
+Following command to compile and run unit tests
+
+```
+mvn clean install
+```
+
+Following command to run PI Test
+
+```
+mvn org.pitest:pitest-maven:mutationCoverage -X
+```
+
+X is for debug mode so we can see what's going on.
+
 ## Maven Installation Locally
 
 https://maven.apache.org/install.html
