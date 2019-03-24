@@ -12,6 +12,7 @@ effectively count lines grouped by programming languages - http://cloc.sourcefor
 
 http://pitest.org/
 https://www.mkyong.com/maven/maven-pitest-mutation-testing-example/
+http://pages.cs.aueb.gr/~kintism/papers/emse2017/
 
 ## Maven Installation Locally
 
