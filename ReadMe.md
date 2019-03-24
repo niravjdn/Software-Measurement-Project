@@ -20,6 +20,16 @@ http://pages.cs.aueb.gr/~kintism/papers/emse2017/
 
 Added Dependency Plugin in pom.xml for PITest as below
 
+
+```
+<plugin>
+    <groupId>org.pitest</groupId>
+    <artifactId>pitest-maven</artifactId>
+    <version>LATEST</version>
+ </plugin>
+```
+Reference : http://pitest.org/quickstart/maven/
+
 Following command to compile and run unit tests
 
 ```
