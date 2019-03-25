@@ -1,0 +1,4603 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="../style.css">
+</head>
+<body>
+
+
+<h1>MersenneTwister.java</h1>
+
+<table class="src">
+
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_1'/>
+1
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_1'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>/*</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_2'/>
+2
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_2'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * Licensed to the Apache Software Foundation (ASF) under one or more</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_3'/>
+3
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_3'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * contributor license agreements.  See the NOTICE file distributed with</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_4'/>
+4
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_4'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * this work for additional information regarding copyright ownership.</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_5'/>
+5
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_5'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * The ASF licenses this file to You under the Apache License, Version 2.0</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_6'/>
+6
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_6'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * (the &#34;License&#34;); you may not use this file except in compliance with</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_7'/>
+7
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_7'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * the License.  You may obtain a copy of the License at</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_8'/>
+8
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_8'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> *</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_9'/>
+9
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_9'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> *      http://www.apache.org/licenses/LICENSE-2.0</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_10'/>
+10
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_10'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> *</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_11'/>
+11
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_11'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * Unless required by applicable law or agreed to in writing, software</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_12'/>
+12
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_12'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * distributed under the License is distributed on an &#34;AS IS&#34; BASIS,</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_13'/>
+13
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_13'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_14'/>
+14
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_14'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * See the License for the specific language governing permissions and</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_15'/>
+15
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_15'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * limitations under the License.</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_16'/>
+16
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_16'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> */</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_17'/>
+17
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_17'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>package org.apache.commons.math3.random;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_18'/>
+18
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_18'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_19'/>
+19
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_19'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import java.io.Serializable;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_20'/>
+20
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_20'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_21'/>
+21
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_21'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>import org.apache.commons.math3.util.FastMath;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_22'/>
+22
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_22'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_23'/>
+23
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_23'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_24'/>
+24
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_24'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>/** This class implements a powerful pseudo-random number generator</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_25'/>
+25
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_25'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * developed by Makoto Matsumoto and Takuji Nishimura during</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_26'/>
+26
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_26'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * 1996-1997.</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_27'/>
+27
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_27'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_28'/>
+28
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_28'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * &#60;p&#62;This generator features an extremely long period</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_29'/>
+29
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_29'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * (2&#60;sup&#62;19937&#60;/sup&#62;-1) and 623-dimensional equidistribution up to 32</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_30'/>
+30
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_30'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * bits accuracy. The home page for this generator is located at &#60;a</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_31'/>
+31
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_31'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * href=&#34;http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html&#34;&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_32'/>
+32
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_32'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html&#60;/a&#62;.&#60;/p&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_33'/>
+33
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_33'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_34'/>
+34
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_34'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * &#60;p&#62;This generator is described in a paper by Makoto Matsumoto and</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_35'/>
+35
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_35'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * Takuji Nishimura in 1998: &#60;a</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_36'/>
+36
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_36'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * href=&#34;http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/ARTICLES/mt.pdf&#34;&#62;Mersenne</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_37'/>
+37
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_37'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * Twister: A 623-Dimensionally Equidistributed Uniform Pseudo-Random</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_38'/>
+38
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_38'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * Number Generator&#60;/a&#62;, ACM Transactions on Modeling and Computer</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_39'/>
+39
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_39'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * Simulation, Vol. 8, No. 1, January 1998, pp 3--30&#60;/p&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_40'/>
+40
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_40'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_41'/>
+41
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_41'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * &#60;p&#62;This class is mainly a Java port of the 2002-01-26 version of</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_42'/>
+42
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_42'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * the generator written in C by Makoto Matsumoto and Takuji</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_43'/>
+43
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_43'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * Nishimura. Here is their original copyright:&#60;/p&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_44'/>
+44
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_44'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_45'/>
+45
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_45'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * &#60;table border=&#34;0&#34; width=&#34;80%&#34; cellpadding=&#34;10&#34; align=&#34;center&#34; bgcolor=&#34;#E0E0E0&#34;&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_46'/>
+46
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_46'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * &#60;tr&#62;&#60;td&#62;Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_47'/>
+47
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_47'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> *     All rights reserved.&#60;/td&#62;&#60;/tr&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_48'/>
+48
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_48'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_49'/>
+49
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_49'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * &#60;tr&#62;&#60;td&#62;Redistribution and use in source and binary forms, with or without</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_50'/>
+50
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_50'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * modification, are permitted provided that the following conditions</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_51'/>
+51
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_51'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * are met:</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_52'/>
+52
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_52'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * &#60;ol&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_53'/>
+53
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_53'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> *   &#60;li&#62;Redistributions of source code must retain the above copyright</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_54'/>
+54
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_54'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> *       notice, this list of conditions and the following disclaimer.&#60;/li&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_55'/>
+55
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_55'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> *   &#60;li&#62;Redistributions in binary form must reproduce the above copyright</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_56'/>
+56
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_56'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> *       notice, this list of conditions and the following disclaimer in the</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_57'/>
+57
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_57'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> *       documentation and/or other materials provided with the distribution.&#60;/li&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_58'/>
+58
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_58'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> *   &#60;li&#62;The names of its contributors may not be used to endorse or promote</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_59'/>
+59
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_59'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> *       products derived from this software without specific prior written</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_60'/>
+60
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_60'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> *       permission.&#60;/li&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_61'/>
+61
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_61'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * &#60;/ol&#62;&#60;/td&#62;&#60;/tr&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_62'/>
+62
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_62'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_63'/>
+63
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_63'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * &#60;tr&#62;&#60;td&#62;&#60;strong&#62;THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_64'/>
+64
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_64'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * CONTRIBUTORS &#34;AS IS&#34; AND ANY EXPRESS OR IMPLIED WARRANTIES,</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_65'/>
+65
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_65'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_66'/>
+66
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_66'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_67'/>
+67
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_67'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_68'/>
+68
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_68'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_69'/>
+69
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_69'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_70'/>
+70
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_70'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_71'/>
+71
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_71'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_72'/>
+72
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_72'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_73'/>
+73
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_73'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_74'/>
+74
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_74'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_75'/>
+75
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_75'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * DAMAGE.&#60;/strong&#62;&#60;/td&#62;&#60;/tr&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_76'/>
+76
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_76'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * &#60;/table&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_77'/>
+77
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_77'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_78'/>
+78
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_78'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> * @since 2.0</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_79'/>
+79
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_79'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_80'/>
+80
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_80'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''> */</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_81'/>
+81
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_81'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>public class MersenneTwister extends BitsStreamGenerator implements Serializable {</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_82'/>
+82
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_82'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_83'/>
+83
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_83'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    /** Serializable version identifier. */</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_84'/>
+84
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_84'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private static final long serialVersionUID = 8661194735290153518L;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_85'/>
+85
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_85'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_86'/>
+86
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_86'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    /** Size of the bytes pool. */</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_87'/>
+87
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_87'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private static final int   N     = 624;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_88'/>
+88
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_88'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_89'/>
+89
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_89'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    /** Period second parameter. */</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_90'/>
+90
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_90'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private static final int   M     = 397;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_91'/>
+91
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_91'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_92'/>
+92
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_92'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    /** X * MATRIX_A for X = {0, 1}. */</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_93'/>
+93
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_93'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    private static final int[] MAG01 = { 0x0, 0x9908b0df };</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_94'/>
+94
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_94'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_95'/>
+95
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_95'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    /** Bytes pool. */</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_96'/>
+96
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_96'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private int[] mt;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_97'/>
+97
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_97'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_98'/>
+98
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_98'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    /** Current index in the bytes pool. */</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_99'/>
+99
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_99'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    private int   mti;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_100'/>
+100
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_100'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_101'/>
+101
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_101'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    /** Creates a new random number generator.</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_102'/>
+102
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_102'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * &#60;p&#62;The instance is initialized using the current time plus the</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_103'/>
+103
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_103'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * system identity hash code of this instance as the seed.&#60;/p&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_104'/>
+104
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_104'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     */</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_105'/>
+105
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_105'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    public MersenneTwister() {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_106'/>
+106
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_106'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        mt = new int[N];</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_107'/>
+107
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_107'>2</a>
+<span>
+1. <init> : Replaced long addition with subtraction &rarr; SURVIVED<br/>
+2. <init> : removed call to org/apache/commons/math3/random/MersenneTwister::setSeed &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>        setSeed(System.currentTimeMillis() + System.identityHashCode(this));</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_108'/>
+108
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_108'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_109'/>
+109
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_109'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_110'/>
+110
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_110'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    /** Creates a new random number generator using a single int seed.</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_111'/>
+111
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_111'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * @param seed the initial seed (32 bits integer)</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_112'/>
+112
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_112'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     */</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_113'/>
+113
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_113'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    public MersenneTwister(int seed) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_114'/>
+114
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_114'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        mt = new int[N];</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_115'/>
+115
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_115'>1</a>
+<span>
+1. <init> : removed call to org/apache/commons/math3/random/MersenneTwister::setSeed &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        setSeed(seed);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_116'/>
+116
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_116'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_117'/>
+117
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_117'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_118'/>
+118
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_118'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    /** Creates a new random number generator using an int array seed.</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_119'/>
+119
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_119'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * @param seed the initial seed (32 bits integers array), if null</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_120'/>
+120
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_120'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * the seed of the generator will be related to the current time</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_121'/>
+121
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_121'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     */</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_122'/>
+122
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_122'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    public MersenneTwister(int[] seed) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_123'/>
+123
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_123'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        mt = new int[N];</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_124'/>
+124
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_124'>1</a>
+<span>
+1. <init> : removed call to org/apache/commons/math3/random/MersenneTwister::setSeed &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        setSeed(seed);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_125'/>
+125
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_125'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_126'/>
+126
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_126'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_127'/>
+127
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_127'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    /** Creates a new random number generator using a single long seed.</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_128'/>
+128
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_128'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * @param seed the initial seed (64 bits integer)</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_129'/>
+129
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_129'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     */</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_130'/>
+130
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_130'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    public MersenneTwister(long seed) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_131'/>
+131
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_131'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        mt = new int[N];</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_132'/>
+132
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_132'>1</a>
+<span>
+1. <init> : removed call to org/apache/commons/math3/random/MersenneTwister::setSeed &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        setSeed(seed);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_133'/>
+133
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_133'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_134'/>
+134
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_134'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_135'/>
+135
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_135'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    /** Reinitialize the generator as if just built with the given int seed.</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_136'/>
+136
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_136'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * &#60;p&#62;The state of the generator is exactly the same as a new</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_137'/>
+137
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_137'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * generator built with the same seed.&#60;/p&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_138'/>
+138
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_138'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * @param seed the initial seed (32 bits integer)</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_139'/>
+139
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_139'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     */</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_140'/>
+140
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_140'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    @Override</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_141'/>
+141
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_141'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    public void setSeed(int seed) {</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_142'/>
+142
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_142'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        // we use a long masked by 0xffffffffL as a poor man unsigned int</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_143'/>
+143
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_143'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        long longMT = seed;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_144'/>
+144
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_144'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        // NB: unlike original C code, we are working with java longs, the cast below makes masking unnecessary</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_145'/>
+145
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_145'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        mt[0]= (int) longMT;</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_146'/>
+146
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_146'>3</a>
+<span>
+1. setSeed : changed conditional boundary &rarr; KILLED<br/>
+2. setSeed : Replaced integer addition with subtraction &rarr; KILLED<br/>
+3. setSeed : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        for (mti = 1; mti &#60; N; ++mti) {</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_147'/>
+147
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_147'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            // See Knuth TAOCP Vol2. 3rd Ed. P.106 for multiplier.</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_148'/>
+148
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_148'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            // initializer from the 2002-01-09 C version by Makoto Matsumoto</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_149'/>
+149
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_149'>5</a>
+<span>
+1. setSeed : Replaced Shift Right with Shift Left &rarr; KILLED<br/>
+2. setSeed : Replaced XOR with AND &rarr; KILLED<br/>
+3. setSeed : Replaced long multiplication with division &rarr; KILLED<br/>
+4. setSeed : Replaced long addition with subtraction &rarr; KILLED<br/>
+5. setSeed : Replaced bitwise AND with OR &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            longMT = (1812433253l * (longMT ^ (longMT &#62;&#62; 30)) + mti) &#38; 0xffffffffL;</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_150'/>
+150
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_150'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            mt[mti]= (int) longMT;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_151'/>
+151
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_151'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_152'/>
+152
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_152'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_153'/>
+153
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_153'>1</a>
+<span>
+1. setSeed : removed call to org/apache/commons/math3/random/MersenneTwister::clear &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        clear(); // Clear normal deviate cache</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_154'/>
+154
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_154'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_155'/>
+155
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_155'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_156'/>
+156
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_156'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    /** Reinitialize the generator as if just built with the given int array seed.</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_157'/>
+157
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_157'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * &#60;p&#62;The state of the generator is exactly the same as a new</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_158'/>
+158
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_158'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * generator built with the same seed.&#60;/p&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_159'/>
+159
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_159'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * @param seed the initial seed (32 bits integers array), if null</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_160'/>
+160
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_160'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * the seed of the generator will be the current system time plus the</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_161'/>
+161
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_161'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * system identity hash code of this instance</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_162'/>
+162
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_162'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     */</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_163'/>
+163
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_163'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    @Override</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_164'/>
+164
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_164'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    public void setSeed(int[] seed) {</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_165'/>
+165
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_165'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_166'/>
+166
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_166'>1</a>
+<span>
+1. setSeed : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        if (seed == null) {</span></pre></td></tr>
+
+
+<tr>
+<td class='uncovered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_167'/>
+167
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_167'>2</a>
+<span>
+1. setSeed : Replaced long addition with subtraction &rarr; NO_COVERAGE<br/>
+2. setSeed : removed call to org/apache/commons/math3/random/MersenneTwister::setSeed &rarr; NO_COVERAGE<br/>
+
+</span>
+</span>
+</td>
+<td class='uncovered'><pre><span  class='survived'>            setSeed(System.currentTimeMillis() + System.identityHashCode(this));</span></pre></td></tr>
+
+
+<tr>
+<td class='uncovered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_168'/>
+168
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_168'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='uncovered'><pre><span  class=''>            return;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_169'/>
+169
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_169'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_170'/>
+170
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_170'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_171'/>
+171
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_171'>1</a>
+<span>
+1. setSeed : removed call to org/apache/commons/math3/random/MersenneTwister::setSeed &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        setSeed(19650218);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_172'/>
+172
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_172'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        int i = 1;</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_173'/>
+173
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_173'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        int j = 0;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_174'/>
+174
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_174'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_175'/>
+175
+</td>
+<td class='uncertain'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_175'>2</a>
+<span>
+1. setSeed : Changed increment from -1 to 1 &rarr; TIMED_OUT<br/>
+2. setSeed : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='uncertain'>        for (int k = FastMath.max(N, seed.length); k != 0; k--) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_176'/>
+176
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_176'>4</a>
+<span>
+1. setSeed : changed conditional boundary &rarr; SURVIVED<br/>
+2. setSeed : Replaced bitwise AND with OR &rarr; KILLED<br/>
+3. setSeed : Replaced bitwise OR with AND &rarr; KILLED<br/>
+4. setSeed : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>            long l0 = (mt[i] &#38; 0x7fffffffl)   | ((mt[i]   &#60; 0) ? 0x80000000l : 0x0l);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_177'/>
+177
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_177'>6</a>
+<span>
+1. setSeed : changed conditional boundary &rarr; SURVIVED<br/>
+2. setSeed : Replaced integer subtraction with addition &rarr; KILLED<br/>
+3. setSeed : Replaced bitwise AND with OR &rarr; KILLED<br/>
+4. setSeed : Replaced integer subtraction with addition &rarr; KILLED<br/>
+5. setSeed : Replaced bitwise OR with AND &rarr; KILLED<br/>
+6. setSeed : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>            long l1 = (mt[i-1] &#38; 0x7fffffffl) | ((mt[i-1] &#60; 0) ? 0x80000000l : 0x0l);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_178'/>
+178
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_178'>6</a>
+<span>
+1. setSeed : Replaced Shift Right with Shift Left &rarr; KILLED<br/>
+2. setSeed : Replaced XOR with AND &rarr; KILLED<br/>
+3. setSeed : Replaced long multiplication with division &rarr; KILLED<br/>
+4. setSeed : Replaced XOR with AND &rarr; KILLED<br/>
+5. setSeed : Replaced long addition with subtraction &rarr; KILLED<br/>
+6. setSeed : Replaced long addition with subtraction &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            long l  = (l0 ^ ((l1 ^ (l1 &#62;&#62; 30)) * 1664525l)) + seed[j] + j; // non linear</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_179'/>
+179
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_179'>1</a>
+<span>
+1. setSeed : Replaced bitwise AND with OR &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            mt[i]   = (int) (l &#38; 0xffffffffl);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_180'/>
+180
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_180'>2</a>
+<span>
+1. setSeed : Changed increment from 1 to -1 &rarr; KILLED<br/>
+2. setSeed : Changed increment from 1 to -1 &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            i++; j++;</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_181'/>
+181
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_181'>2</a>
+<span>
+1. setSeed : changed conditional boundary &rarr; KILLED<br/>
+2. setSeed : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            if (i &#62;= N) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_182'/>
+182
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_182'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>                mt[0] = mt[N - 1];</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_183'/>
+183
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_183'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>                i = 1;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_184'/>
+184
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_184'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            }</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_185'/>
+185
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_185'>2</a>
+<span>
+1. setSeed : changed conditional boundary &rarr; KILLED<br/>
+2. setSeed : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            if (j &#62;= seed.length) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_186'/>
+186
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_186'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>                j = 0;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_187'/>
+187
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_187'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_188'/>
+188
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_188'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_189'/>
+189
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_189'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_190'/>
+190
+</td>
+<td class='uncertain'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_190'>2</a>
+<span>
+1. setSeed : Changed increment from -1 to 1 &rarr; TIMED_OUT<br/>
+2. setSeed : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='uncertain'>        for (int k = N - 1; k != 0; k--) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_191'/>
+191
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_191'>4</a>
+<span>
+1. setSeed : changed conditional boundary &rarr; SURVIVED<br/>
+2. setSeed : Replaced bitwise AND with OR &rarr; KILLED<br/>
+3. setSeed : Replaced bitwise OR with AND &rarr; KILLED<br/>
+4. setSeed : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>            long l0 = (mt[i] &#38; 0x7fffffffl)   | ((mt[i]   &#60; 0) ? 0x80000000l : 0x0l);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_192'/>
+192
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_192'>6</a>
+<span>
+1. setSeed : changed conditional boundary &rarr; SURVIVED<br/>
+2. setSeed : Replaced integer subtraction with addition &rarr; KILLED<br/>
+3. setSeed : Replaced bitwise AND with OR &rarr; KILLED<br/>
+4. setSeed : Replaced integer subtraction with addition &rarr; KILLED<br/>
+5. setSeed : Replaced bitwise OR with AND &rarr; KILLED<br/>
+6. setSeed : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>            long l1 = (mt[i-1] &#38; 0x7fffffffl) | ((mt[i-1] &#60; 0) ? 0x80000000l : 0x0l);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_193'/>
+193
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_193'>5</a>
+<span>
+1. setSeed : Replaced Shift Right with Shift Left &rarr; KILLED<br/>
+2. setSeed : Replaced XOR with AND &rarr; KILLED<br/>
+3. setSeed : Replaced long multiplication with division &rarr; KILLED<br/>
+4. setSeed : Replaced XOR with AND &rarr; KILLED<br/>
+5. setSeed : Replaced long subtraction with addition &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            long l  = (l0 ^ ((l1 ^ (l1 &#62;&#62; 30)) * 1566083941l)) - i; // non linear</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_194'/>
+194
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_194'>1</a>
+<span>
+1. setSeed : Replaced bitwise AND with OR &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            mt[i]   = (int) (l &#38; 0xffffffffL);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_195'/>
+195
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_195'>1</a>
+<span>
+1. setSeed : Changed increment from 1 to -1 &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            i++;</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_196'/>
+196
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_196'>2</a>
+<span>
+1. setSeed : changed conditional boundary &rarr; KILLED<br/>
+2. setSeed : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            if (i &#62;= N) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_197'/>
+197
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_197'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>                mt[0] = mt[N - 1];</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_198'/>
+198
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_198'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>                i = 1;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_199'/>
+199
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_199'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_200'/>
+200
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_200'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_201'/>
+201
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_201'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_202'/>
+202
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_202'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>        mt[0] = 0x80000000; // MSB is 1; assuring non-zero initial array</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_203'/>
+203
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_203'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_204'/>
+204
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_204'>1</a>
+<span>
+1. setSeed : removed call to org/apache/commons/math3/random/MersenneTwister::clear &rarr; SURVIVED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>        clear(); // Clear normal deviate cache</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_205'/>
+205
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_205'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_206'/>
+206
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_206'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_207'/>
+207
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_207'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_208'/>
+208
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_208'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    /** Reinitialize the generator as if just built with the given long seed.</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_209'/>
+209
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_209'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * &#60;p&#62;The state of the generator is exactly the same as a new</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_210'/>
+210
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_210'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * generator built with the same seed.&#60;/p&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_211'/>
+211
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_211'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * @param seed the initial seed (64 bits integer)</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_212'/>
+212
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_212'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     */</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_213'/>
+213
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_213'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    @Override</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_214'/>
+214
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_214'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    public void setSeed(long seed) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_215'/>
+215
+</td>
+<td class='survived'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_215'>3</a>
+<span>
+1. setSeed : Replaced Unsigned Shift Right with Shift Left &rarr; SURVIVED<br/>
+2. setSeed : Replaced bitwise AND with OR &rarr; SURVIVED<br/>
+3. setSeed : removed call to org/apache/commons/math3/random/MersenneTwister::setSeed &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='survived'>        setSeed(new int[] { (int) (seed &#62;&#62;&#62; 32), (int) (seed &#38; 0xffffffffl) });</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_216'/>
+216
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_216'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_217'/>
+217
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_217'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_218'/>
+218
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_218'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    /** Generate next pseudorandom number.</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_219'/>
+219
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_219'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * &#60;p&#62;This method is the core generation algorithm. It is used by all the</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_220'/>
+220
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_220'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * public generation methods for the various primitive types {@link</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_221'/>
+221
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_221'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * #nextBoolean()}, {@link #nextBytes(byte[])}, {@link #nextDouble()},</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_222'/>
+222
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_222'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * {@link #nextFloat()}, {@link #nextGaussian()}, {@link #nextInt()},</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_223'/>
+223
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_223'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * {@link #next(int)} and {@link #nextLong()}.&#60;/p&#62;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_224'/>
+224
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_224'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * @param bits number of random bits to produce</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_225'/>
+225
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_225'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     * @return random bits generated</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_226'/>
+226
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_226'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>     */</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_227'/>
+227
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_227'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    @Override</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_228'/>
+228
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_228'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    protected int next(int bits) {</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_229'/>
+229
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_229'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_230'/>
+230
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_230'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        int y;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_231'/>
+231
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_231'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_232'/>
+232
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_232'>2</a>
+<span>
+1. next : changed conditional boundary &rarr; KILLED<br/>
+2. next : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        if (mti &#62;= N) { // generate N words at one time</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_233'/>
+233
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_233'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            int mtNext = mt[0];</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_234'/>
+234
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_234'>3</a>
+<span>
+1. next : changed conditional boundary &rarr; KILLED<br/>
+2. next : Changed increment from 1 to -1 &rarr; KILLED<br/>
+3. next : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            for (int k = 0; k &#60; N - M; ++k) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_235'/>
+235
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_235'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>                int mtCurr = mtNext;</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_236'/>
+236
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_236'>1</a>
+<span>
+1. next : Replaced integer addition with subtraction &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                mtNext = mt[k + 1];</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_237'/>
+237
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_237'>3</a>
+<span>
+1. next : Replaced bitwise AND with OR &rarr; KILLED<br/>
+2. next : Replaced bitwise AND with OR &rarr; KILLED<br/>
+3. next : Replaced bitwise OR with AND &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                y = (mtCurr &#38; 0x80000000) | (mtNext &#38; 0x7fffffff);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_238'/>
+238
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_238'>5</a>
+<span>
+1. next : Replaced integer addition with subtraction &rarr; KILLED<br/>
+2. next : Replaced Unsigned Shift Right with Shift Left &rarr; KILLED<br/>
+3. next : Replaced XOR with AND &rarr; KILLED<br/>
+4. next : Replaced bitwise AND with OR &rarr; KILLED<br/>
+5. next : Replaced XOR with AND &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                mt[k] = mt[k + M] ^ (y &#62;&#62;&#62; 1) ^ MAG01[y &#38; 0x1];</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_239'/>
+239
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_239'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            }</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_240'/>
+240
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_240'>3</a>
+<span>
+1. next : changed conditional boundary &rarr; KILLED<br/>
+2. next : Changed increment from 1 to -1 &rarr; KILLED<br/>
+3. next : negated conditional &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            for (int k = N - M; k &#60; N - 1; ++k) {</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_241'/>
+241
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_241'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>                int mtCurr = mtNext;</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_242'/>
+242
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_242'>1</a>
+<span>
+1. next : Replaced integer addition with subtraction &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                mtNext = mt[k + 1];</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_243'/>
+243
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_243'>3</a>
+<span>
+1. next : Replaced bitwise AND with OR &rarr; KILLED<br/>
+2. next : Replaced bitwise AND with OR &rarr; KILLED<br/>
+3. next : Replaced bitwise OR with AND &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                y = (mtCurr &#38; 0x80000000) | (mtNext &#38; 0x7fffffff);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_244'/>
+244
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_244'>5</a>
+<span>
+1. next : Replaced integer addition with subtraction &rarr; KILLED<br/>
+2. next : Replaced Unsigned Shift Right with Shift Left &rarr; KILLED<br/>
+3. next : Replaced XOR with AND &rarr; KILLED<br/>
+4. next : Replaced bitwise AND with OR &rarr; KILLED<br/>
+5. next : Replaced XOR with AND &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>                mt[k] = mt[k + (M - N)] ^ (y &#62;&#62;&#62; 1) ^ MAG01[y &#38; 0x1];</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_245'/>
+245
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_245'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>            }</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_246'/>
+246
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_246'>3</a>
+<span>
+1. next : Replaced bitwise AND with OR &rarr; KILLED<br/>
+2. next : Replaced bitwise AND with OR &rarr; KILLED<br/>
+3. next : Replaced bitwise OR with AND &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            y = (mtNext &#38; 0x80000000) | (mt[0] &#38; 0x7fffffff);</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_247'/>
+247
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_247'>4</a>
+<span>
+1. next : Replaced Unsigned Shift Right with Shift Left &rarr; KILLED<br/>
+2. next : Replaced XOR with AND &rarr; KILLED<br/>
+3. next : Replaced bitwise AND with OR &rarr; KILLED<br/>
+4. next : Replaced XOR with AND &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>            mt[N - 1] = mt[M - 1] ^ (y &#62;&#62;&#62; 1) ^ MAG01[y &#38; 0x1];</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_248'/>
+248
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_248'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_249'/>
+249
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_249'></a>
+<span>
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class=''>            mti = 0;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_250'/>
+250
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_250'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_251'/>
+251
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_251'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_252'/>
+252
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_252'>1</a>
+<span>
+1. next : Replaced integer addition with subtraction &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        y = mt[mti++];</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_253'/>
+253
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_253'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_254'/>
+254
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_254'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>        // tempering</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_255'/>
+255
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_255'>2</a>
+<span>
+1. next : Replaced Unsigned Shift Right with Shift Left &rarr; KILLED<br/>
+2. next : Replaced XOR with AND &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        y ^=  y &#62;&#62;&#62; 11;</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_256'/>
+256
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_256'>3</a>
+<span>
+1. next : Replaced Shift Left with Shift Right &rarr; KILLED<br/>
+2. next : Replaced bitwise AND with OR &rarr; KILLED<br/>
+3. next : Replaced XOR with AND &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        y ^= (y &#60;&#60;   7) &#38; 0x9d2c5680;</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_257'/>
+257
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_257'>3</a>
+<span>
+1. next : Replaced Shift Left with Shift Right &rarr; KILLED<br/>
+2. next : Replaced bitwise AND with OR &rarr; KILLED<br/>
+3. next : Replaced XOR with AND &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        y ^= (y &#60;&#60;  15) &#38; 0xefc60000;</span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_258'/>
+258
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_258'>2</a>
+<span>
+1. next : Replaced Unsigned Shift Right with Shift Left &rarr; KILLED<br/>
+2. next : Replaced XOR with AND &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        y ^=  y &#62;&#62;&#62; 18;</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_259'/>
+259
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_259'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='covered'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_260'/>
+260
+</td>
+<td class='killed'>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_260'>3</a>
+<span>
+1. next : Replaced integer subtraction with addition &rarr; KILLED<br/>
+2. next : Replaced Unsigned Shift Right with Shift Left &rarr; KILLED<br/>
+3. next : replaced return of integer sized value with (x == 0 ? 1 : 0) &rarr; KILLED<br/>
+
+</span>
+</span>
+</td>
+<td class='covered'><pre><span  class='killed'>        return y &#62;&#62;&#62; (32 - bits);</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_261'/>
+261
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_261'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_262'/>
+262
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_262'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>    }</span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_263'/>
+263
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_263'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''></span></pre></td></tr>
+
+
+<tr>
+<td class='na'>
+<a name='org.pitest.mutationtest.report.html.SourceFile@43a84fbb_264'/>
+264
+</td>
+<td class=''>
+<span class='pop'>
+<a href='#grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_264'></a>
+<span>
+</span>
+</span>
+</td>
+<td class=''><pre><span  class=''>}</span></pre></td></tr>
+
+
+
+<tr><td></td><td></td><td><h2>Mutations</h2></td></tr>
+
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_107'>107</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_107'/> 
+
+<p class='SURVIVED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b><init><br/><b>Killed by : </b>none</span></span> Replaced long addition with subtraction &rarr; SURVIVED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b><init><br/><b>Killed by : </b>org.apache.commons.math3.analysis.interpolation.MicrosphereProjectionInterpolatorTest.testLinearFunction2D(org.apache.commons.math3.analysis.interpolation.MicrosphereProjectionInterpolatorTest)</span></span> removed call to org/apache/commons/math3/random/MersenneTwister::setSeed &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_115'>115</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_115'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b><init><br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> removed call to org/apache/commons/math3/random/MersenneTwister::setSeed &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_124'>124</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_124'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b><init><br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> removed call to org/apache/commons/math3/random/MersenneTwister::setSeed &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_132'>132</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_132'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b><init><br/><b>Killed by : </b>org.apache.commons.math3.util.FastMathTest.testLogAccuracy(org.apache.commons.math3.util.FastMathTest)</span></span> removed call to org/apache/commons/math3/random/MersenneTwister::setSeed &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_146'>146</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_146'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextSecureHex(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> changed conditional boundary &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextSecureHex(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced integer addition with subtraction &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> negated conditional &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_149'>149</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_149'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced Shift Right with Shift Left &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextLong2(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced long multiplication with division &rarr; KILLED</p> <p class='KILLED'><span class='pop'>4.<span><b>4</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced long addition with subtraction &rarr; KILLED</p> <p class='KILLED'><span class='pop'>5.<span><b>5</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextInt2(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_153'>153</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_153'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testSeeding(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> removed call to org/apache/commons/math3/random/MersenneTwister::clear &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_166'>166</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_166'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> negated conditional &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_167'>167</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_167'/> 
+
+<p class='NO_COVERAGE'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>none</span></span> Replaced long addition with subtraction &rarr; NO_COVERAGE</p> <p class='NO_COVERAGE'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>none</span></span> removed call to org/apache/commons/math3/random/MersenneTwister::setSeed &rarr; NO_COVERAGE</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_171'>171</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_171'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> removed call to org/apache/commons/math3/random/MersenneTwister::setSeed &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_175'>175</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_175'/> 
+
+<p class='TIMED_OUT'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>none</span></span> Changed increment from -1 to 1 &rarr; TIMED_OUT</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> negated conditional &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_176'>176</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_176'/> 
+
+<p class='SURVIVED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>none</span></span> changed conditional boundary &rarr; SURVIVED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise OR with AND &rarr; KILLED</p> <p class='KILLED'><span class='pop'>4.<span><b>4</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> negated conditional &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_177'>177</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_177'/> 
+
+<p class='SURVIVED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>none</span></span> changed conditional boundary &rarr; SURVIVED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced integer subtraction with addition &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>4.<span><b>4</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced integer subtraction with addition &rarr; KILLED</p> <p class='KILLED'><span class='pop'>5.<span><b>5</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise OR with AND &rarr; KILLED</p> <p class='KILLED'><span class='pop'>6.<span><b>6</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> negated conditional &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_178'>178</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_178'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced Shift Right with Shift Left &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced long multiplication with division &rarr; KILLED</p> <p class='KILLED'><span class='pop'>4.<span><b>4</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> <p class='KILLED'><span class='pop'>5.<span><b>5</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced long addition with subtraction &rarr; KILLED</p> <p class='KILLED'><span class='pop'>6.<span><b>6</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced long addition with subtraction &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_179'>179</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_179'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_180'>180</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_180'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Changed increment from 1 to -1 &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Changed increment from 1 to -1 &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_181'>181</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_181'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> changed conditional boundary &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> negated conditional &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_185'>185</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_185'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> changed conditional boundary &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> negated conditional &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_190'>190</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_190'/> 
+
+<p class='TIMED_OUT'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>none</span></span> Changed increment from -1 to 1 &rarr; TIMED_OUT</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> negated conditional &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_191'>191</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_191'/> 
+
+<p class='SURVIVED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>none</span></span> changed conditional boundary &rarr; SURVIVED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise OR with AND &rarr; KILLED</p> <p class='KILLED'><span class='pop'>4.<span><b>4</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> negated conditional &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_192'>192</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_192'/> 
+
+<p class='SURVIVED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>none</span></span> changed conditional boundary &rarr; SURVIVED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced integer subtraction with addition &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>4.<span><b>4</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced integer subtraction with addition &rarr; KILLED</p> <p class='KILLED'><span class='pop'>5.<span><b>5</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise OR with AND &rarr; KILLED</p> <p class='KILLED'><span class='pop'>6.<span><b>6</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> negated conditional &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_193'>193</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_193'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced Shift Right with Shift Left &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced long multiplication with division &rarr; KILLED</p> <p class='KILLED'><span class='pop'>4.<span><b>4</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> <p class='KILLED'><span class='pop'>5.<span><b>5</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced long subtraction with addition &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_194'>194</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_194'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_195'>195</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_195'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Changed increment from 1 to -1 &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_196'>196</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_196'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> changed conditional boundary &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> negated conditional &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_204'>204</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_204'/> 
+
+<p class='SURVIVED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>none</span></span> removed call to org/apache/commons/math3/random/MersenneTwister::clear &rarr; SURVIVED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_215'>215</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_215'/> 
+
+<p class='SURVIVED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>none</span></span> Replaced Unsigned Shift Right with Shift Left &rarr; SURVIVED</p> <p class='SURVIVED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>none</span></span> Replaced bitwise AND with OR &rarr; SURVIVED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>setSeed<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testConfig(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> removed call to org/apache/commons/math3/random/MersenneTwister::setSeed &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_232'>232</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_232'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> changed conditional boundary &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> negated conditional &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_234'>234</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_234'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> changed conditional boundary &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Changed increment from 1 to -1 &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> negated conditional &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_236'>236</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_236'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced integer addition with subtraction &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_237'>237</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_237'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise OR with AND &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_238'>238</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_238'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced integer addition with subtraction &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced Unsigned Shift Right with Shift Left &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextInt2(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> <p class='KILLED'><span class='pop'>4.<span><b>4</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>5.<span><b>5</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextInt2(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_240'>240</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_240'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> changed conditional boundary &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Changed increment from 1 to -1 &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> negated conditional &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_242'>242</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_242'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced integer addition with subtraction &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_243'>243</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_243'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextInt2(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise OR with AND &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_244'>244</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_244'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced integer addition with subtraction &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced Unsigned Shift Right with Shift Left &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextInt2(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> <p class='KILLED'><span class='pop'>4.<span><b>4</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>5.<span><b>5</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextInt2(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_246'>246</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_246'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise OR with AND &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_247'>247</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_247'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced Unsigned Shift Right with Shift Left &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>4.<span><b>4</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_252'>252</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_252'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced integer addition with subtraction &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_255'>255</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_255'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced Unsigned Shift Right with Shift Left &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextInt2(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_256'>256</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_256'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced Shift Left with Shift Right &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextInt2(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_257'>257</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_257'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextInt2(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced Shift Left with Shift Right &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced bitwise AND with OR &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextInt2(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_258'>258</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_258'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced Unsigned Shift Right with Shift Left &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextUniformExclusiveEndpoints(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced XOR with AND &rarr; KILLED</p> 
+</td>
+</tr>
+<tr>
+<td><a href='#org.pitest.mutationtest.report.html.SourceFile@43a84fbb_260'>260</a></td> 
+<td></td>
+<td>
+
+<a name='grouporg.pitest.mutationtest.report.html.SourceFile@43a84fbb_260'/> 
+
+<p class='KILLED'><span class='pop'>1.<span><b>1</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextUniformExclusiveEndpoints(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced integer subtraction with addition &rarr; KILLED</p> <p class='KILLED'><span class='pop'>2.<span><b>2</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextUniformExclusiveEndpoints(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> Replaced Unsigned Shift Right with Shift Left &rarr; KILLED</p> <p class='KILLED'><span class='pop'>3.<span><b>3</b><br/><b>Location : </b>next<br/><b>Killed by : </b>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest)</span></span> replaced return of integer sized value with (x == 0 ? 1 : 0) &rarr; KILLED</p> 
+</td>
+</tr>
+
+</table>
+
+
+<h2>Active mutators</h2>
+<ul>
+<li class='mutator'>CONDITIONALS_BOUNDARY_MUTATOR</li>
+<li class='mutator'>INCREMENTS_MUTATOR</li>
+<li class='mutator'>INVERT_NEGS_MUTATOR</li>
+<li class='mutator'>MATH_MUTATOR</li>
+<li class='mutator'>NEGATE_CONDITIONALS_MUTATOR</li>
+<li class='mutator'>RETURN_VALS_MUTATOR</li>
+<li class='mutator'>VOID_METHOD_CALL_MUTATOR</li>
+
+</ul>
+
+<h2>Tests examined</h2>
+<ul>
+<li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testTwoAxes(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (8249 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextSecureLongIAE(org.apache.commons.math3.random.MersenneTwisterTest) (0 ms)</li><li>org.apache.commons.math3.random.SynchronizedRandomGeneratorTest.testAdapter(org.apache.commons.math3.random.SynchronizedRandomGeneratorTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testAddExactInt(org.apache.commons.math3.util.FastMathTest) (3 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextPoissonConsistency(org.apache.commons.math3.random.MersenneTwisterTest) (4576 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testMultiplyExactInt(org.apache.commons.math3.util.FastMathTest) (6 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testMath864(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (4 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testAcosSpecialCases(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testInitOutofbounds1(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testMath905LargePositive(org.apache.commons.math3.util.FastMathTest) (3 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testIssue1123(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (8 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testToDegrees(org.apache.commons.math3.util.FastMathTest) (32 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testAddExactLong(org.apache.commons.math3.util.FastMathTest) (2 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testIntPowLongMinValue(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextUniformUniformMaximalInterval(org.apache.commons.math3.random.MersenneTwisterTest) (2 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testNextAfter(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testOnePoint(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testExpm1Accuracy(org.apache.commons.math3.util.FastMathTest) (92 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testInitOutofbounds2(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (1 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testNullArgument(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (0 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testConvexHull(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (106 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testPowLargeIntegralDouble(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testEllipse(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (2609 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testCollinearPointsIncluded(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testCbrtAccuracy(org.apache.commons.math3.util.FastMathTest) (1960 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testRastrigin(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (27355 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testIdenticalPoints(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testCoshAccuracy(org.apache.commons.math3.util.FastMathTest) (1569 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testCigTab(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (2223 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testTablet(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (2161 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testHyperbolicInverses(org.apache.commons.math3.util.FastMathTest) (31 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testFloorDivModLong(org.apache.commons.math3.util.FastMathTest) (41 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testInputSigmaOutOfRange(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextInt2(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testExpAccuracy(org.apache.commons.math3.util.FastMathTest) (175 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testNullArgument(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (0 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testMath864(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (4 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextSecureLongNegativeToPositiveRange(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testSignumFloat(org.apache.commons.math3.util.FastMathTest) (0 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntIAE2(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntDirect(org.apache.commons.math3.random.MersenneTwisterTest) (920 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testRosen(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (2622 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testLogWithBase(org.apache.commons.math3.util.FastMathTest) (0 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextGaussian(org.apache.commons.math3.random.MersenneTwisterTest) (26 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextSecureLongPositiveRange(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextUniformExclusiveEndpoints(org.apache.commons.math3.random.MersenneTwisterTest) (0 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testMaximize(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (3817 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testConvexHull(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (107 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextFloatDirect(org.apache.commons.math3.random.MersenneTwisterTest) (0 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testHyperbolic(org.apache.commons.math3.util.FastMathTest) (78 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testFloorModLong(org.apache.commons.math3.util.FastMathTest) (55 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testIntPowSpecialCases(org.apache.commons.math3.util.FastMathTest) (16 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testMakotoNishimura(org.apache.commons.math3.random.MersenneTwisterTest) (3 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testCollinearPoints(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testPowSpecialCases(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testIssue1123(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (6 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testInitOutofbounds2(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextSample(org.apache.commons.math3.random.MersenneTwisterTest) (2 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextBinomial(org.apache.commons.math3.random.MersenneTwisterTest) (9 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testMinMaxFloat(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testFloatNextAfterSpecialCases(org.apache.commons.math3.util.FastMathTest) (0 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextSecureIntPositiveRange(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testReseed(org.apache.commons.math3.random.MersenneTwisterTest) (0 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testEmpty(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testIntPowHuge(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testTwoPoints(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (0 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testCollinearPointsIncluded(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (0 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNexBoolean2(org.apache.commons.math3.random.MersenneTwisterTest) (3 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testLogAccuracy(org.apache.commons.math3.util.FastMathTest) (142 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testSphere(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (745 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntWideRange(org.apache.commons.math3.random.MersenneTwisterTest) (148 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testDoubleScalbSpecialCases(org.apache.commons.math3.util.FastMathTest) (0 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testEmpty(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextPascal(org.apache.commons.math3.random.MersenneTwisterTest) (9 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testCollinearPointsReverse(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (1 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testCollinearPointsInAnyOrder(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextBeta(org.apache.commons.math3.random.MersenneTwisterTest) (2 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testAtan2Accuracy(org.apache.commons.math3.util.FastMathTest) (140 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testIdenticalPoints(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testMath1269(org.apache.commons.math3.util.FastMathTest) (10 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testAsinSpecialCases(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testConfig(org.apache.commons.math3.random.MersenneTwisterTest) (3 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testFloorModInt(org.apache.commons.math3.util.FastMathTest) (63 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testPowAccuracy(org.apache.commons.math3.util.FastMathTest) (263 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testIndicatorDouble(org.apache.commons.math3.util.FastMathTest) (0 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextSecureLongNegativeRange(org.apache.commons.math3.random.MersenneTwisterTest) (0 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextUniformExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextSecureHex(org.apache.commons.math3.random.MersenneTwisterTest) (0 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextPermutation(org.apache.commons.math3.random.MersenneTwisterTest) (0 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextDouble(org.apache.commons.math3.random.MersenneTwisterTest) (6 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testIdenticalPoints2(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testDoubleNextAfterSpecialCases(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testMinMaxDouble(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.analysis.interpolation.MicrosphereInterpolatorTest.testLinearFunction2D(org.apache.commons.math3.analysis.interpolation.MicrosphereInterpolatorTest) (69 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testCollinearPointsInAnyOrder(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (3 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testLog1pAccuracy(org.apache.commons.math3.util.FastMathTest) (106 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextLong2(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testAckley(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (2790 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testMultiplyExactLong(org.apache.commons.math3.util.FastMathTest) (5 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testSubtractExactLong(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextHex(org.apache.commons.math3.random.MersenneTwisterTest) (103 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntNeg(org.apache.commons.math3.random.MersenneTwisterTest) (0 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testDiffPow(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (1896 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testTwoAxes(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (3608423 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testInitOutofbounds1(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (1 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testMaximize(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (7788 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testSignumDouble(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextF(org.apache.commons.math3.random.MersenneTwisterTest) (38 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testIdenticalPoints2(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (0 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextCauchy(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextBooleanDirect(org.apache.commons.math3.random.MersenneTwisterTest) (0 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testMath905LargeNegative(org.apache.commons.math3.util.FastMathTest) (4 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntIAE(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testDecrementExactInt(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextSecureIntNegativeRange(org.apache.commons.math3.random.MersenneTwisterTest) (0 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testTablet(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (2298 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testAtan2(org.apache.commons.math3.util.FastMathTest) (0 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testFloorDivModInt(org.apache.commons.math3.util.FastMathTest) (29 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testAsinAccuracy(org.apache.commons.math3.util.FastMathTest) (1518 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testToIntExact(org.apache.commons.math3.util.FastMathTest) (0 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testInputSigmaOutOfRange(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (1 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testCollinearPointsReverse(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (0 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testSphere(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (859 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testAllIdentical(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (0 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testOnePoint(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextZipf(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testConstrainedRosen(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (3180 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testRastrigin(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (32288 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextT(org.apache.commons.math3.random.MersenneTwisterTest) (28 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testCigar(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (2027 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testDiffPow(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (2069 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testMath904(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testFitAccuracyDependsOnBoundary(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (16 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testLogSpecialCases(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testFloatScalbSpecialCases(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextUniformUniformNegaiveBounds(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testElliRotated(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (2693 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testSsDiffPow(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (4256 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testToIntExactTooHigh(org.apache.commons.math3.util.FastMathTest) (0 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testToIntExactTooLow(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testToRadians(org.apache.commons.math3.util.FastMathTest) (34 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testSeeding(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testCigTab(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (2357 ms)</li><li>org.apache.commons.math3.util.FastMathTest.checkMissingFastMathClasses(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextLongPositiveRange(org.apache.commons.math3.random.MersenneTwisterTest) (9 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testCigarWithBoundaries(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (1895 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntNegativeRange(org.apache.commons.math3.random.MersenneTwisterTest) (10 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testIndicatorFloat(org.apache.commons.math3.util.FastMathTest) (0 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testLog1pSpecialCases(org.apache.commons.math3.util.FastMathTest) (0 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testTanhAccuracy(org.apache.commons.math3.util.FastMathTest) (3001 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextLongIAE(org.apache.commons.math3.random.MersenneTwisterTest) (0 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testCollinearPointOnExistingBoundary(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (0 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextUniformUniformNegativeToPositiveBounds(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testClosePoints(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (1 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testElliRotated(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (2796 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testConvergenceException(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (1 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testDiagonalRosen(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (3968 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextHypergeometric(org.apache.commons.math3.random.MersenneTwisterTest) (9 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNexBytes(org.apache.commons.math3.random.MersenneTwisterTest) (46 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testCigarWithBoundaries(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (1875 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testSinAccuracy(org.apache.commons.math3.util.FastMathTest) (109 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testCollinearPointOnExistingBoundary(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextUniformIAE(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testInputSigmaDimensionMismatch(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testConstants(org.apache.commons.math3.util.FastMathTest) (0 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testCosAccuracy(org.apache.commons.math3.util.FastMathTest) (83 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testTwoPoints(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (1 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testCollinearPoints(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (0 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testFitAccuracyDependsOnBoundary(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (16 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testRosen(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (3064 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testBoundariesDimensionMismatch(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (1 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testInputSigmaDimensionMismatch(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (1 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testInputSigmaNegative(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (1 ms)</li><li>org.apache.commons.math3.random.SynchronizedRandomGeneratorTest.testMath899Sync(org.apache.commons.math3.random.SynchronizedRandomGeneratorTest) (2842 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testClosePoints(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (0 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testFloorDivLong(org.apache.commons.math3.util.FastMathTest) (46 ms)</li><li>org.apache.commons.math3.analysis.interpolation.MicrosphereProjectionInterpolatorTest.testLinearFunction2D(org.apache.commons.math3.analysis.interpolation.MicrosphereProjectionInterpolatorTest) (53 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextPoisson(org.apache.commons.math3.random.MersenneTwisterTest) (10 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testExpSpecialCases(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextUniformUniformPositiveBounds(org.apache.commons.math3.random.MersenneTwisterTest) (2 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextGamma(org.apache.commons.math3.random.MersenneTwisterTest) (57 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextSecureIntNegativeToPositiveRange(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest.testCollinearPointsIncludedReverse(org.apache.commons.math3.geometry.euclidean.twod.hull.MonotoneChainTest) (1 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testDiagonalRosen(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (3994 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testAllIdentical(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (0 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testAcosAccuracy(org.apache.commons.math3.util.FastMathTest) (1698 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntNegativeToPositiveRange(org.apache.commons.math3.random.MersenneTwisterTest) (6 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testIncrementExactInt(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextLongExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest) (0 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testAtan2SpecialCases(org.apache.commons.math3.util.FastMathTest) (1 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testLog10Accuracy(org.apache.commons.math3.util.FastMathTest) (272 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testTanAccuracy(org.apache.commons.math3.util.FastMathTest) (119 ms)</li><li>org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest.testCollinearPointsIncludedReverse(org.apache.commons.math3.geometry.euclidean.twod.hull.AklToussaintHeuristicTest) (0 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testBoundariesDimensionMismatch(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (1 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextLongDirect(org.apache.commons.math3.random.MersenneTwisterTest) (0 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testSubtractExactInt(org.apache.commons.math3.util.FastMathTest) (2 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextLongNegativeToPositiveRange(org.apache.commons.math3.random.MersenneTwisterTest) (5 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextLongWideRange(org.apache.commons.math3.random.MersenneTwisterTest) (1415 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testConstrainedRosen(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (2920 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testCigar(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (2064 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testAtanAccuracy(org.apache.commons.math3.util.FastMathTest) (116 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testFloorDivInt(org.apache.commons.math3.util.FastMathTest) (61 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testPowAllSpecialCases(org.apache.commons.math3.util.FastMathTest) (427 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testEllipse(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (2580 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextSecureIntIAE(org.apache.commons.math3.random.MersenneTwisterTest) (1 ms)</li><li>org.apache.commons.math3.analysis.interpolation.MicrosphereInterpolatorTest.testParaboloid2D(org.apache.commons.math3.analysis.interpolation.MicrosphereInterpolatorTest) (683 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextLongNegativeRange(org.apache.commons.math3.random.MersenneTwisterTest) (9 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testAckley(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (1985 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testIntPow(org.apache.commons.math3.util.FastMathTest) (35 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntExtremeValues(org.apache.commons.math3.random.MersenneTwisterTest) (0 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextChiSquare(org.apache.commons.math3.random.MersenneTwisterTest) (34 ms)</li><li>org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest.testInputSigmaNegative(org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizerTest) (0 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextWeibull(org.apache.commons.math3.random.MersenneTwisterTest) (2 ms)</li><li>org.apache.commons.math3.optimization.direct.CMAESOptimizerTest.testSsDiffPow(org.apache.commons.math3.optimization.direct.CMAESOptimizerTest) (3808 ms)</li><li>org.apache.commons.math3.util.FastMathTest.testSinhAccuracy(org.apache.commons.math3.util.FastMathTest) (1759 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextExponential(org.apache.commons.math3.random.MersenneTwisterTest) (3 ms)</li><li>org.apache.commons.math3.random.MersenneTwisterTest.testNextIntPositiveRange(org.apache.commons.math3.random.MersenneTwisterTest) (8 ms)</li>
+</ul>
+
+<br/>
+
+Report generated by <a href='http://pitest.org'>PIT</a> 1.4.6
+
+</body>
+</html>
