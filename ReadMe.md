@@ -20,7 +20,11 @@ http://pages.cs.aueb.gr/~kintism/papers/emse2017/
 
 Added Dependency Plugin in pom.xml for PITest as below
 
-We didn't configure it for only certains classes, instead we ran it on entire project. It took more than 2 hours for some projects. On an average, It took 1-3 hours.
+We didn't configure it for only certains classes, instead we ran it on entire project.On an average, It took 1-3 hours for 4 projects(collections, configurations, io, lang) and 8.5 hours for math.
+
+Find the screenshot below.
+
+![Apache-Commons-Math PIT Testing Time](https://raw.githubusercontent.com/niravjdn/Software-Measurement-Project/master/assets/math-pit-testing.jpg)
 
 ```
 <plugin>
