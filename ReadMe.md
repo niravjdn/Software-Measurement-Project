@@ -20,6 +20,7 @@ http://pages.cs.aueb.gr/~kintism/papers/emse2017/
 
 Added Dependency Plugin in pom.xml for PITest as below
 
+We didn't configure it for only certains classes, instead we ran it on entire project. It took more than 2 hours for some projects. On an average, It took 1-3 hours.
 
 ```
 <plugin>
