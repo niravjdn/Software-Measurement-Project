@@ -76,3 +76,12 @@ All generated data in can be found on above site as well.
 ## Hosting
 
 If you want to explore this project, you can clone this project and open index.html(in data directory), or directly paste data directory to your sever hosting directory.
+
+
+## Coverage : Branch and Statement Coverage
+
+Adding versions, number of bugs and other features for the  open source projects that we were analyzed. 
+
+Steps : https://streamable.com/819kk
+
+https://docs.google.com/spreadsheets/d/1OLc574O0LQwj4k8kOsbQ10hUkA9bAmiEJ_5mA1jgC5g/edit?ts=5c787ef2#gid=0
