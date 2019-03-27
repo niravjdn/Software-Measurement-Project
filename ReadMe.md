@@ -1,6 +1,6 @@
-## *This is the Software Measurement Project (SOEN 6611)*
+# *This is the Software Measurement Project (SOEN 6611)*
 
-## Selected Open-Source Systems
+# Selected Open-Source Systems
 
 1.Apache Common Collections - https://commons.apache.org/proper/commons-collections/
 
@@ -12,7 +12,7 @@
 
 5.Apache Common IO - https://commons.apache.org/proper/commons-io/
 
-Used tools for different metrices :
+# Used tools for different metrices :
 
 ## CLOC - Counting lines of the program 
 
