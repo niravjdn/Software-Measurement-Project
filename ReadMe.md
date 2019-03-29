@@ -38,7 +38,7 @@ We didn't configure it for only certains classes, instead we ran it on entire pr
 
 Find the screenshot below.
 
-![Apache-Commons-Math PIT Testing Time](https://raw.githubusercontent.com/niravjdn/Software-Measurement-Project/master/assets/math-pit-testing.jpg)
+![Apache-Commons-Math PIT Testing Time](https://raw.githubusercontent.com/niravjdn/Software-Measurement-Project/master/assets/pit/math.jpg)
 
 ```
 <plugin>
