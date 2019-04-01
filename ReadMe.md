@@ -42,10 +42,16 @@ Find the screenshot below.
 
 ```
 <plugin>
-    <groupId>org.pitest</groupId>
-    <artifactId>pitest-maven</artifactId>
-    <version>LATEST</version>
- </plugin>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-maven</artifactId>
+        <version>LATEST</version>
+        <configuration>
+            <outputFormats>
+                <param>HTML</param>
+                <param>CSV</param>
+            </outputFormats>
+        </configuration>
+</plugin>
 ```
 Reference : http://pitest.org/quickstart/maven/
 
