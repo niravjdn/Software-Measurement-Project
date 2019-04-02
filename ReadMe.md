@@ -28,6 +28,8 @@ Code Coverage - https://www.eclemma.org/jacoco/
 
 http://pitest.org/
 
+http://pitest.org/quickstart/basic_concepts/
+
 https://www.mkyong.com/maven/maven-pitest-mutation-testing-example/
 
 http://pages.cs.aueb.gr/~kintism/papers/emse2017/
