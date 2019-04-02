@@ -28,6 +28,8 @@ Code Coverage - https://www.eclemma.org/jacoco/
 
 http://pitest.org/
 
+http://pitest.org/quickstart/basic_concepts/
+
 https://www.mkyong.com/maven/maven-pitest-mutation-testing-example/
 
 http://pages.cs.aueb.gr/~kintism/papers/emse2017/
@@ -105,3 +107,18 @@ Adding versions, number of bugs and other features for the  open source projects
 Steps : https://streamable.com/819kk
 
 https://docs.google.com/spreadsheets/d/1OLc574O0LQwj4k8kOsbQ10hUkA9bAmiEJ_5mA1jgC5g/edit?ts=5c787ef2#gid=0
+
+
+## Find LOC and Bug Density
+
+https://docs.google.com/spreadsheets/d/1j-n2e9gYAUETZng0X2jVRi4N7cv8SaHLBsUi-e5gJM4/edit?ts=5ca1060d#gid=0
+
+## Steps to find Commit ID for all the open source project that we were analyzed
+
+Link : https://streamable.com/6ym1q
+
+## Spearman's Rank order Correlation 
+
+Spearman correlation process, calculatio procedure were all explained here in  URL.
+
+Link: https://github.com/niravjdn/Software-Measurement-Project.git
