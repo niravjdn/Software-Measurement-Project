@@ -16,6 +16,10 @@
 
 ## CLOC - Counting lines of the program 
 
+CLOC TUTORIAL
+
+https://www.youtube.com/watch?v=QxiXKZftJRw&t=161s
+
 Effectively count lines grouped by programming languages - http://cloc.sourceforge.net/
 
 ![CLOC - Output in Console](https://raw.githubusercontent.com/niravjdn/Software-Measurement-Project/master/assets/cloc/cloc.jpg)
