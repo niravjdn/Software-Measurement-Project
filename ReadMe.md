@@ -125,6 +125,6 @@ Link : https://streamable.com/6ym1q
 
 ## Spearman's Rank order Correlation 
 
-Spearman correlation process, calculatio procedure were all explained here in  URL.
+Spearman correlation calculation procedure were all explained here in  URL.
 
-Link: https://github.com/niravjdn/Software-Measurement-Project.git
+Link: https://statistics.laerd.com/statistical-guides/spearmans-rank-order-correlation-statistical-guide.php
