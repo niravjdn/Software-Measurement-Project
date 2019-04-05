@@ -129,6 +129,16 @@ Spearman correlation calculation procedure were all explained here in  URL.
 
 Link: https://statistics.laerd.com/statistical-guides/spearmans-rank-order-correlation-statistical-guide.php
 
+## Metric 6 Calculation (Relative Churned Code)
+
+Step 1.
+
+https://streamable.com/vabz9
+
+Step 2.
+
+https://streamable.com/malqv
+
 ## Jupyter Notebook
 
 https://drive.google.com/open?id=1kB3hoNvKrX-gr6AuuCWKLyCX2E-MSnBL
