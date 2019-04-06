@@ -130,6 +130,9 @@ Spearman correlation calculation procedure were all explained here in  URL.
 Link: https://statistics.laerd.com/statistical-guides/spearmans-rank-order-correlation-statistical-guide.php
 
 Link: https://stackoverflow.com/questions/25571882/pandas-columns-correlation-with-statistical-significance
+
+Link: https://geographyfieldwork.com/SpearmansRankCalculator.html
+
 ## Metric 6 Calculation (Relative Churned Code)
 
 Step 1.
