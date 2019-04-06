@@ -133,6 +133,8 @@ Link: https://stackoverflow.com/questions/25571882/pandas-columns-correlation-wi
 
 Link: https://geographyfieldwork.com/SpearmansRankCalculator.html
 
+Link: https://data-flair.training/blogs/python-statistics/
+
 ## Metric 6 Calculation (Relative Churned Code)
 
 Step 1.
