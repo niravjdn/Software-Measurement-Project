@@ -3,7 +3,7 @@
 # Team Member Details
 
 | Name | Student ID | Email ID |
-| --- | --- |
+| --- | --- | --- |
 | Nirav Ashvinkumar Patel | 40081268 | niravjdn@gmail.com |
 | Himansi Patel | 40072262 | himansipatel1994@gmail.com |
 | name2 | studentId2 | |
