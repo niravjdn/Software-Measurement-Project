@@ -1,5 +1,12 @@
 # *This is the Software Measurement Project (SOEN 6611)*
 
+#Team Member Details
+
+| Name | Student ID |
+| --- | --- |
+| Nirav Ashvinkumar Patel | 40081268 |
+| name2 | studentId2 |
+
 # Selected Open-Source Systems
 
 1.Apache Common Collections - https://commons.apache.org/proper/commons-collections/
