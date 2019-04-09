@@ -14,12 +14,16 @@
 
 # Directory Structure
 
+Presentaion of the project - 4th April, 2019
 [Presentation](Presentation/)
 
+Proposal of the project
 [Proposal](Proposal/)
 
+Images or other screenshots
 [assets](assets/)
 
+Raw Data - CSV, HTML (All Metrics)
 [Data](data/)
 
 # Used tools for different metrices :
