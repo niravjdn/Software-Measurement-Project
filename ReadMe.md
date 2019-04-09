@@ -14,13 +14,13 @@
 
 # Directory Structure
 
-[a relative Presentation](Presentation/)
+[relative Presentation](Presentation/)
 
-[a relative Proposal](Proposal/)
+[relative Proposal](Proposal/)
 
-[a relative assets](assets/)
+[relative assets](assets/)
 
-[a relative Data](data/)
+[relative Data](data/)
 
 # Used tools for different metrices :
 
