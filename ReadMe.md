@@ -1,11 +1,14 @@
 # *This is the Software Measurement Project (SOEN 6611)*
 
-#Team Member Details
+# Team Member Details
 
-| Name | Student ID |
+| Name | Student ID | Email ID |
 | --- | --- |
-| Nirav Ashvinkumar Patel | 40081268 |
-| name2 | studentId2 |
+| Nirav Ashvinkumar Patel | 40081268 | niravjdn@gmail.com |
+| Himansi Patel | 40072262 | himansipatel1994@gmail.com |
+| name2 | studentId2 | |
+| name2 | studentId2 | |
+| name2 | studentId2 | |
 
 # Selected Open-Source Systems
 
