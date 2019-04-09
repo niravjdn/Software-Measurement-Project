@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | Nirav Ashvinkumar Patel | 40081268 | niravjdn@gmail.com |
 | Himansi Patel | 40072262 | himansipatel1994@gmail.com |
-| name2 | studentId2 | |
+| Krishnan Krishnamoorthy | 40089054 |krish27794@gmail.com |
 | name2 | studentId2 | |
 | name2 | studentId2 | |
 
