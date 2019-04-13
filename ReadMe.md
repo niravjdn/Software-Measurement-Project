@@ -1,5 +1,7 @@
 # *This is the Software Measurement Project (SOEN 6611)*
 
+### Professor: Jinqiu Yang
+
 # Team Member Details
 
 | Name | Student ID | Email ID |
@@ -12,15 +14,15 @@
 
 # Selected Open-Source Systems
 
-1.Apache Common Collections - https://commons.apache.org/proper/commons-collections/
+1. Apache Common Collections - https://commons.apache.org/proper/commons-collections/
 
-2.Apache Common Configuration - https://commons.apache.org/proper/commons-configuration/
+2. Apache Common Configuration - https://commons.apache.org/proper/commons-configuration/
 
-3.Apache Common Math - http://commons.apache.org/proper/commons-math/
+3. Apache Common Math - http://commons.apache.org/proper/commons-math/
 
-4.Apache Common Lang - https://commons.apache.org/proper/commons-lang/
+4. Apache Common Lang - https://commons.apache.org/proper/commons-lang/
 
-5.Apache Common IO - https://commons.apache.org/proper/commons-io/
+5. Apache Common IO - https://commons.apache.org/proper/commons-io/
 
 # Directory Structure
 
