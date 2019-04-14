@@ -40,7 +40,7 @@ https://www.youtube.com/watch?v=QxiXKZftJRw&t=161s
 
 Effectively count lines grouped by programming languages - http://cloc.sourceforge.net/
 
-![CLOC - Output in Console](https://raw.githubusercontent.com/niravjdn/Software-Measurement-Project/master/assets/cloc/cloc.jpg)
+![CLOC - Output in Console](https://github.com/niravjdn/Software-Measurement-Project/blob/master/assets/cloc/cloc.jpg)
 
 ### Jacoco 
 
@@ -66,7 +66,7 @@ We didn't configure it for only certains classes, instead we ran it on entire pr
 
 Find the screenshot below.
 
-![Apache-Commons-Math PIT Testing Time](https://github.com/niravjdn/Software-Measurement-Project/blob/master/assets/cloc/commons-math-cloc.png)
+![Apache-Commons-Math PIT Testing Time](https://github.com/niravjdn/Software-Measurement-Project/blob/master/assets/pit/math.jpg)
 
 ```
 <plugin>
