@@ -153,10 +153,9 @@ Link : https://docs.google.com/spreadsheets/d/1OLc574O0LQwj4k8kOsbQ10hUkA9bAmiEJ
 
 ### Metric 6 Calculation (Relative Churned Code)
 
-Step 1.
 [*Step 1*](https://streamable.com/vabz9) 
 
-[*Step 1*](https://streamable.com/malqv) 
+[*Step 2*](https://streamable.com/malqv) 
 
 ### Jupyter Notebook
 
