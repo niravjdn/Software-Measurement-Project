@@ -15,7 +15,7 @@ The aim of this project is to calculate several software metrices and to define 
 | Darwin Anirudh Godavari | 40093368 | darwinanirudh@gmail.com |
 | Jayaprakash Kumar | 40083709 | jayaprakash6034@gmail.com |
 
-## We calculated followin metrices.
+## We calculated following metrices.
 
 1. **Statement Coverage:** Statement coverage is a white box testing technique, which involves the execution of all the statements at least once in the source code. It is a metric, which is used to calculate and measure the number of statements in the source code which have been executed.
 2. **Branch Coverage:** ranch coverage is a testing method, which aims to ensure that each one of the possible branch from each decision point is executed at least once and thereby ensuring that all reachable code is executed.
