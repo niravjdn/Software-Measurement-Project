@@ -37,8 +37,8 @@ The aim of this project is to calculate several software metrices and to define 
 
     .                                   
     ├── Presentation         # Presentaion of the project - 4th April, 2019
-    ├── Proposal]            # Proposal of the project
-    ├── assets]              # Images or other screenshots
+    ├── Proposal             # Proposal of the project
+    ├── assets               # Images or other screenshots
     ├── Data                 # Raw Data - CSV, HTML (All Metrics)
     ├── Jupyter Notebook     # Jupyter Notebook Source Code
     └── README.md
