@@ -1,4 +1,4 @@
-# *This is the Software Measurement Project (SOEN 6611)*
+# *Software Measurement Project (SOEN 6611)*
 -------------------------------------------------------
 
 The aim of this project is to calculate several software metrices and to define correlation between them.
