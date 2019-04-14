@@ -119,10 +119,9 @@ http://smproject.techfunda.tk/
 
 All generated data in can be found on above site as well.
 
-## Hosting
+### Hosting
 
 If you want to explore this project, you can clone this project and open index.html(in data directory), or directly paste data directory to your sever hosting directory.
-
 
 ### Find LOC and Bug Density
 
@@ -149,6 +148,7 @@ Link: https://data-flair.training/blogs/python-statistics/
 Link : https://docs.google.com/spreadsheets/d/1OLc574O0LQwj4k8kOsbQ10hUkA9bAmiEJ_5mA1jgC5g/edit?usp=sharing
 
 [Data](https://docs.google.com/spreadsheets/d/1OLc574O0LQwj4k8kOsbQ10hUkA9bAmiEJ_5mA1jgC5g/edit?usp=sharing)
+
 [Video](https://streamable.com/819kk)
 
 ### Metric 6 Calculation (Relative Churned Code)
