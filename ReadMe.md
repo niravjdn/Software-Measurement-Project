@@ -46,6 +46,33 @@ Effectively count lines grouped by programming languages - http://cloc.sourcefor
 
 Code Coverage - https://www.eclemma.org/jacoco/
 
+Added Dependency Plugin in pom.xml for PIT Test as below
+
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+   <groupId>org.jacoco</groupId>
+   <artifactId>jacoco-maven-plugin</artifactId>
+   <version>0.7.7.201606060606</version>
+   <executions>
+      <execution>
+         <goals>
+            <goal>prepare-agent</goal>
+         </goals>
+      </execution>
+      <execution>
+         <id>report</id>
+         <phase>prepare-package</phase>
+         <goals>
+            <goal>report</goal>
+         </goals>
+      </execution>
+   </executions>
+</plugin>
+```
+
+### How did we run Jacoco for our project
+
 ### PIT - Mutation Testing 
 
 http://pitest.org/
@@ -58,7 +85,7 @@ http://pages.cs.aueb.gr/~kintism/papers/emse2017/
 
 https://www.youtube.com/watch?v=wZeZMtqVmck&feature=youtu.be
 
-### How did we run for our project
+### How did we run for PIT Tool for our project
 
 Added Dependency Plugin in pom.xml for PIT Test as below
 
@@ -123,9 +150,6 @@ All generated data in can be found on above site as well.
 
 If you want to explore this project, you can clone this project and open index.html(in data directory), or directly paste data directory to your sever hosting directory.
 
-### Find LOC and Bug Density
-
-https://docs.google.com/spreadsheets/d/1j-n2e9gYAUETZng0X2jVRi4N7cv8SaHLBsUi-e5gJM4/edit?ts=5ca1060d#gid=0
 
 ### Steps to find Commit ID for all the open source project that we were analyzed
 
