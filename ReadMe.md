@@ -2,7 +2,7 @@
 
 ### Professor: Jinqiu Yang
 
-# Team Member Details
+## Team Member Details
 
 | Name | Student ID | Email ID |
 | --- | --- | --- |
@@ -12,7 +12,7 @@
 | name2 | studentId2 | |
 | name2 | studentId2 | |
 
-# Selected Open-Source Systems
+## Selected Open-Source Systems
 
 1. **Apache Common Collections** - [*project details*](https://commons.apache.org/proper/commons-collections/) , [*source-code*](https://github.com/apache/commons-collections) 
 2. **Apache Commons Configuration** - [*project details*](https://commons.apache.org/proper/commons-configuration/) , [*source-code*](https://github.com/apache/commons-configuration) 
@@ -20,7 +20,7 @@
 4. **Apache Commons IO** - [*project details*](https://commons.apache.org/proper/commons-io/) , [*source-code*](https://github.com/apache/commons-io) 
 5. **Apache Commons Lang** - [*project details*](https://commons.apache.org/proper/commons-lang/) , [*source-code*](https://github.com/apache/commons-lang) 
 
-# Directory Structure
+## Directory Structure
 
     .                                   
     ├── Presentation         # Presentaion of the project - 4th April, 2019
@@ -30,9 +30,9 @@
     ├── Jupyter Notebook     # Jupyter Notebook Source Code
     └── README.md
 
-# Used tools for different metrices :
+## Used tools for different metrices :
 
-## CLOC - Counting lines of the program 
+### CLOC - Counting lines of the program 
 
 CLOC TUTORIAL
 
@@ -42,11 +42,11 @@ Effectively count lines grouped by programming languages - http://cloc.sourcefor
 
 ![CLOC - Output in Console](https://raw.githubusercontent.com/niravjdn/Software-Measurement-Project/master/assets/cloc/cloc.jpg)
 
-## Jacoco 
+### Jacoco 
 
 Code Coverage - https://www.eclemma.org/jacoco/
 
-## PIT - Mutation Testing 
+### PIT - Mutation Testing 
 
 http://pitest.org/
 
@@ -97,11 +97,11 @@ mvn org.pitest:pitest-maven:mutationCoverage -X
 
 X is for debug mode so we can see what's going on.
 
-## Maven Installation Locally
+### Maven Installation Locally
 
 https://maven.apache.org/install.html
 
-## Some Maven Reference To Solve Errors While Compiling
+### Some Maven Reference To Solve Errors While Compiling
 
 Maven  Extension
 https://github.com/objectledge/maven-extensions
@@ -109,11 +109,11 @@ https://github.com/objectledge/maven-extensions
 m2e
 http://grumpyapache.blogspot.com/2011/08/mess-that-is-m2e-connectors.html
 
-## Correlation Reference (Python and Panda)
+### Correlation Reference (Python and Panda)
 
 https://www.datascience.com/blog/introduction-to-correlation-learn-data-science-tutorials
 
-## Data
+### Data
 
 http://smproject.techfunda.tk/
 
@@ -124,15 +124,15 @@ All generated data in can be found on above site as well.
 If you want to explore this project, you can clone this project and open index.html(in data directory), or directly paste data directory to your sever hosting directory.
 
 
-## Find LOC and Bug Density
+### Find LOC and Bug Density
 
 https://docs.google.com/spreadsheets/d/1j-n2e9gYAUETZng0X2jVRi4N7cv8SaHLBsUi-e5gJM4/edit?ts=5ca1060d#gid=0
 
-## Steps to find Commit ID for all the open source project that we were analyzed
+### Steps to find Commit ID for all the open source project that we were analyzed
 
 Link : https://streamable.com/6ym1q
 
-## Spearman's Rank order Correlation 
+### Spearman's Rank order Correlation 
 
 Spearman correlation calculation procedure were all explained here in  URL.
 
@@ -144,13 +144,13 @@ Link: https://geographyfieldwork.com/SpearmansRankCalculator.html
 
 Link: https://data-flair.training/blogs/python-statistics/
 
-## Metric 5 Calculation (Defect Density)
+### Metric 5 Calculation (Defect Density)
 
 Link : https://docs.google.com/spreadsheets/d/1OLc574O0LQwj4k8kOsbQ10hUkA9bAmiEJ_5mA1jgC5g/edit?usp=sharing
 
 Video : https://streamable.com/819kk
 
-## Metric 6 Calculation (Relative Churned Code)
+### Metric 6 Calculation (Relative Churned Code)
 
 Step 1.
 
@@ -160,6 +160,6 @@ Step 2.
 
 https://streamable.com/malqv
 
-## Jupyter Notebook
+### Jupyter Notebook
 
 https://drive.google.com/open?id=1kB3hoNvKrX-gr6AuuCWKLyCX2E-MSnBL
