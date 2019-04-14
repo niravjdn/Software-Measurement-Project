@@ -9,8 +9,8 @@
 | Nirav Ashvinkumar Patel | 40081268 | niravjdn@gmail.com |
 | Himansi Patel | 40072262 | himansipatel1994@gmail.com |
 | Krishnan Krishnamoorthy | 40089054 |krish27794@gmail.com |
-| name2 | studentId2 | |
-| name2 | studentId2 | |
+| Darwin Anirudh Godavari | 40093368 | darwinanirudh@gmail.com |
+| Jayaprakash Kumar | 40083709 | jayaprakash6034@gmail.com |
 
 ## Selected Open-Source Systems
 
@@ -145,9 +145,7 @@ Link: https://data-flair.training/blogs/python-statistics/
 
 ### Metric 5 Calculation (Defect Density)
 
-Link : https://docs.google.com/spreadsheets/d/1OLc574O0LQwj4k8kOsbQ10hUkA9bAmiEJ_5mA1jgC5g/edit?usp=sharing
-
-[Data](https://docs.google.com/spreadsheets/d/1OLc574O0LQwj4k8kOsbQ10hUkA9bAmiEJ_5mA1jgC5g/edit?usp=sharing)
+[Collected Data](https://docs.google.com/spreadsheets/d/1OLc574O0LQwj4k8kOsbQ10hUkA9bAmiEJ_5mA1jgC5g/edit?usp=sharing)
 
 [Video](https://streamable.com/819kk)
 
