@@ -196,10 +196,8 @@ Link: https://data-flair.training/blogs/python-statistics/
 
 ```
 cloc --diff file1.zip file2.zip
-
-![CLOC usage for calculating difference between two files](https://github.com/niravjdn/Software-Measurement-Project/blob/master/assets/cloc-diff/cloc-diff.jpg)
-
 ```
+![CLOC usage for calculating difference between two files](https://github.com/niravjdn/Software-Measurement-Project/blob/master/assets/cloc-diff/cloc-diff.jpg)
 
 ### Jupyter Notebook
 
