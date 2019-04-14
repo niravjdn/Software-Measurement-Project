@@ -14,7 +14,7 @@
 
 # Selected Open-Source Systems
 
-1. **1. Apache Common Collections** - [*project details*](https://commons.apache.org/proper/commons-collections/) , [*source-code*](https://github.com/apache/commons-collections) 
+1. **Apache Common Collections** - [*project details*](https://commons.apache.org/proper/commons-collections/) , [*source-code*](https://github.com/apache/commons-collections) 
 2. **Apache Commons Configuration** - [*project details*](https://commons.apache.org/proper/commons-configuration/) , [*source-code*](https://github.com/apache/commons-configuration) 
 3. **Apache Commons Math** - [*project details*](http://commons.apache.org/proper/commons-math/) , [*source-code*](https://github.com/apache/commons-math) 
 4. **Apache Commons IO** - [*project details*](https://commons.apache.org/proper/commons-io/) , [*source-code*](https://github.com/apache/commons-io) 
@@ -22,17 +22,12 @@
 
 # Directory Structure
 
-Presentaion of the project - 4th April, 2019
-[Presentation](Presentation/)
-
-Proposal of the project
-[Proposal](Proposal/)
-
-Images or other screenshots
-[assets](assets/)
-
-Raw Data - CSV, HTML (All Metrics)
-[Data](data/)
+├── Data                                   # Metrics of various project (alternatively `dist`)
+    ├── [Presentation](Presentation/)      # Presentaion of the project - 4th April, 2019
+    ├── [Presentation](Presentation/)      # Proposal of the project
+    ├── [assets](assets/)                  # Images or other screenshots
+    ├── [Data](data/)                      #Raw Data - CSV, HTML (All Metrics)
+    └── README.md
 
 # Used tools for different metrices :
 
