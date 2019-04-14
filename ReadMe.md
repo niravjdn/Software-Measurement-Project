@@ -1,5 +1,7 @@
 # *This is the Software Measurement Project (SOEN 6611)*
 
+## The aim of this project is to calculate several software metrices and to define correlation between them.
+
 ### Professor: Jinqiu Yang
 
 ## Team Member Details
@@ -11,6 +13,16 @@
 | Krishnan Krishnamoorthy | 40089054 |krish27794@gmail.com |
 | Darwin Anirudh Godavari | 40093368 | darwinanirudh@gmail.com |
 | Jayaprakash Kumar | 40083709 | jayaprakash6034@gmail.com |
+
+## We calculated followin metrices.
+
+1. **Statement Coverage:** Statement coverage is a white box testing technique, which involves the execution of all the statements at least once in the source code. It is a metric, which is used to calculate and measure the number of statements in the source code which have been executed.
+2. **Branch Coverage:** ranch coverage is a testing method, which aims to ensure that each one of the possible branch from each decision point is executed at least once and thereby ensuring that all reachable code is executed.
+3. **Mutation Score:** Mutation testing is used to design new software tests and evaluate the quality of existing software tests.
+4. **Cyclomatic Complexity:** Cyclomatic complexity is a software metric used to indicate the complexity of a program. It is a quantitative measure of the number of linearly independent paths through a program's source code. 
+5. **Relative Code Churn** Code churn is a measure of the amount of code change taking place within a software unit over time.
+6. **Software Defect Density**
+
 
 ## Selected Open-Source Systems
 
