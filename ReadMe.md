@@ -23,8 +23,8 @@
 # Directory Structure
 
     .                                   
-    ├── [Presentation](Presentation/)      # Presentaion of the project - 4th April, 2019
-    ├── [Proposal](Proposal/)      # Proposal of the project
+    ├── [Presentation](https://commons.apache.org/proper/commons-lang/)      # Presentaion of the project - 4th April, 2019
+    ├── [Proposal](Proposal/)              # Proposal of the project
     ├── [assets](assets/)                  # Images or other screenshots
     ├── [Data](data/)                      #Raw Data - CSV, HTML (All Metrics)
     └── README.md
