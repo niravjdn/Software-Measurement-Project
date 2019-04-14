@@ -124,15 +124,6 @@ All generated data in can be found on above site as well.
 If you want to explore this project, you can clone this project and open index.html(in data directory), or directly paste data directory to your sever hosting directory.
 
 
-## Coverage : Branch and Statement Coverage
-
-Adding versions, number of bugs and other features for the  open source projects that we were analyzed. 
-
-Steps : https://streamable.com/819kk
-
-https://docs.google.com/spreadsheets/d/1OLc574O0LQwj4k8kOsbQ10hUkA9bAmiEJ_5mA1jgC5g/edit?ts=5c787ef2#gid=0
-
-
 ## Find LOC and Bug Density
 
 https://docs.google.com/spreadsheets/d/1j-n2e9gYAUETZng0X2jVRi4N7cv8SaHLBsUi-e5gJM4/edit?ts=5ca1060d#gid=0
@@ -152,6 +143,12 @@ Link: https://stackoverflow.com/questions/25571882/pandas-columns-correlation-wi
 Link: https://geographyfieldwork.com/SpearmansRankCalculator.html
 
 Link: https://data-flair.training/blogs/python-statistics/
+
+## Metric 5 Calculation (Defect Density)
+
+Link : https://docs.google.com/spreadsheets/d/1OLc574O0LQwj4k8kOsbQ10hUkA9bAmiEJ_5mA1jgC5g/edit?usp=sharing
+
+Video : https://streamable.com/819kk
 
 ## Metric 6 Calculation (Relative Churned Code)
 
