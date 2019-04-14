@@ -188,9 +188,9 @@ Link: https://data-flair.training/blogs/python-statistics/
 
 ### Metric 6 Calculation (Relative Churned Code)
 
-[*Step 1*](https://streamable.com/vabz9) 
+[*Step 1 (Video)*](https://streamable.com/vabz9) 
 
-[*Step 2*](https://streamable.com/malqv) 
+[*Step 2 (Video)*](https://streamable.com/malqv) 
 
 ### Jupyter Notebook
 
