@@ -23,10 +23,11 @@
 # Directory Structure
 
     .                                   
-    ├── [Presentation](https://commons.apache.org/proper/commons-lang/)      # Presentaion of the project - 4th April, 2019
-    ├── [Proposal](Proposal/)              # Proposal of the project
-    ├── [assets](assets/)                  # Images or other screenshots
-    ├── [Data](data/)                      #Raw Data - CSV, HTML (All Metrics)
+    ├── Presentation         # Presentaion of the project - 4th April, 2019
+    ├── Proposal]            # Proposal of the project
+    ├── assets]              # Images or other screenshots
+    ├── Data                 # Raw Data - CSV, HTML (All Metrics)
+    ├── Jupyter Notebook     # Jupyter Notebook Source Code
     └── README.md
 
 # Used tools for different metrices :
