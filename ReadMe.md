@@ -192,6 +192,15 @@ Link: https://data-flair.training/blogs/python-statistics/
 
 [*Step 2 (Video)*](https://streamable.com/malqv) 
 
+#### CLOC Usage guide for calculating relative code churn
+
+```
+cloc --diff file1.zip file2.zip
+
+![CLOC usage for calculating difference between two files](https://github.com/niravjdn/Software-Measurement-Project/blob/master/assets/cloc-diff/cloc-diff.jpg)
+
+```
+
 ### Jupyter Notebook
 
 https://drive.google.com/open?id=1kB3hoNvKrX-gr6AuuCWKLyCX2E-MSnBL
