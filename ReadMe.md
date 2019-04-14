@@ -22,9 +22,9 @@
 
 # Directory Structure
 
-├── Data                                   # Metrics of various project (alternatively `dist`)
+    .                                   
     ├── [Presentation](Presentation/)      # Presentaion of the project - 4th April, 2019
-    ├── [Presentation](Presentation/)      # Proposal of the project
+    ├── [Proposal](Proposal/)      # Proposal of the project
     ├── [assets](assets/)                  # Images or other screenshots
     ├── [Data](data/)                      #Raw Data - CSV, HTML (All Metrics)
     └── README.md
