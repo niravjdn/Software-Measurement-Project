@@ -14,15 +14,11 @@
 
 # Selected Open-Source Systems
 
-1. Apache Common Collections - https://commons.apache.org/proper/commons-collections/
-
-2. Apache Common Configuration - https://commons.apache.org/proper/commons-configuration/
-
-3. Apache Common Math - http://commons.apache.org/proper/commons-math/
-
-4. Apache Common Lang - https://commons.apache.org/proper/commons-lang/
-
-5. Apache Common IO - https://commons.apache.org/proper/commons-io/
+1. **1. Apache Common Collections** - [*project details*](https://commons.apache.org/proper/commons-collections/) , [*source-code*](https://github.com/apache/commons-collections) 
+2. **Apache Commons Configuration** - [*project details*](https://commons.apache.org/proper/commons-configuration/) , [*source-code*](https://github.com/apache/commons-configuration) 
+3. **Apache Commons Math** - [*project details*](http://commons.apache.org/proper/commons-math/) , [*source-code*](https://github.com/apache/commons-math) 
+4. **Apache Commons IO** - [*project details*](https://commons.apache.org/proper/commons-io/) , [*source-code*](https://github.com/apache/commons-io) 
+5. **Apache Commons Lang** - [*project details*](https://commons.apache.org/proper/commons-lang/) , [*source-code*](https://github.com/apache/commons-lang) 
 
 # Directory Structure
 
