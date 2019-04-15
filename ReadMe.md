@@ -202,3 +202,5 @@ cloc --diff file1.zip file2.zip
 ### Jupyter Notebook
 
 https://drive.google.com/open?id=1kB3hoNvKrX-gr6AuuCWKLyCX2E-MSnBL
+
+HTML View : http://smproject.techfunda.tk/JN/HTML/
