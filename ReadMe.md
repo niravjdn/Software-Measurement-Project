@@ -153,15 +153,12 @@ http://grumpyapache.blogspot.com/2011/08/mess-that-is-m2e-connectors.html
 
 https://www.datascience.com/blog/introduction-to-correlation-learn-data-science-tutorials
 
-### Data
+### Data and Reports
 
 http://smproject.techfunda.tk/
 
 All generated data in can be found on above site as well.
 
-### Hosting
-
-If you want to explore this project, you can clone this project and open index.html(in data directory), or directly paste data directory to your sever hosting directory.
 
 
 ### Steps to find Commit ID for all the open source project that we were analyzed
