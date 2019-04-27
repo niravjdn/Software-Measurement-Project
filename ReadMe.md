@@ -201,3 +201,9 @@ cloc --diff file1.zip file2.zip
 https://drive.google.com/open?id=1kB3hoNvKrX-gr6AuuCWKLyCX2E-MSnBL
 
 HTML View : http://smproject.techfunda.tk/JN/HTML/
+
+## To Convert Jupyter Notebokks to HTML
+
+We created following website for converting Jupyter Notebooks to HTMl for all of the people without having local setup of python.
+
+https://juptohtml.herokuapp.com/app
