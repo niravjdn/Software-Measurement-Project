@@ -155,7 +155,7 @@ https://www.datascience.com/blog/introduction-to-correlation-learn-data-science-
 
 ### Data and Reports
 
-http://smproject.techfunda.tk/
+http://smproject.nirajdn.xyz/
 
 https://smproject.herokuapp.com/
 
@@ -202,7 +202,7 @@ cloc --diff file1.zip file2.zip
 
 https://drive.google.com/open?id=1kB3hoNvKrX-gr6AuuCWKLyCX2E-MSnBL
 
-HTML View : http://smproject.techfunda.tk/JN/HTML/
+HTML View : http://smproject.niravjdn.xyz/JN/HTML/
             https://smproject.herokuapp.com//JN/HTML/
 
 ## To Convert Jupyter Notebokks to HTML
