@@ -212,9 +212,3 @@ We created following website for converting Jupyter Notebooks to HTMl for all of
 https://juptohtml.herokuapp.com/app
 
 
-
-# Checklist
-- [x] Finish my changes
-- [ ] Push my commits to GitHub
-- [ ] Open a pull request
-
